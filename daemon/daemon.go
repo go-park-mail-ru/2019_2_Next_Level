@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -8,6 +9,8 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	db "../database"
 )
 
 type Config struct {
@@ -33,13 +36,49 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("Give %s file\n", path)
-	// fmt.Fprintln(w, file)
-	// w.Header().Set("Content-Type", "text/html")
 
 	contentType := getFileType(path)
 	w.Header().Set("Content-Type", contentType)
 	w.Write(file)
 
+}
+
+func getProfileHandler(w http.ResponseWriter, r *http.Request) {
+	status := http.StatusBadRequest
+	// w.WriteHeader(status)
+	// defer func() {
+	// 	w.WriteHeader(status)
+	// 	fmt.Printf("Status: %d\n", status)
+	// }()
+	session, err := r.Cookie("user-id")
+	if err != nil {
+		fmt.Println("Unauthorized user")
+		w.WriteHeader(status)
+		return
+	}
+	fmt.Printf("Cookie: %s\n", session.Value)
+	email, err := db.GetUserEmailBySession(session.Value)
+	if err != nil {
+		fmt.Println("Unauthorized user")
+		w.WriteHeader(status)
+		return
+	}
+	user, err := db.GetUserByEmail(email)
+	if err != nil {
+		fmt.Printf("Cannot get user: %s\n", err)
+		w.WriteHeader(status)
+		return
+	}
+	fmt.Println(user)
+	js, err := json.Marshal(user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+	status = http.StatusAccepted
+	// w.WriteHeader(status)
 }
 
 func getFileType(filename string) string {
@@ -69,6 +108,7 @@ func Run(cfg *Config) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handler)
+	mux.HandleFunc("/profile", getProfileHandler)
 
 	server := http.Server{
 		Addr:         ":" + strconv.Itoa(cfg.Port),
@@ -76,7 +116,7 @@ func Run(cfg *Config) error {
 		ReadTimeout:  10 * time.Millisecond,
 		WriteTimeout: 10 * time.Millisecond,
 	}
-
+	db.Init()
 	server.ListenAndServe()
 	if err := server.ListenAndServe(); err != nil {
 		log.Printf("Cannot start listening port %d", cfg.Port)
