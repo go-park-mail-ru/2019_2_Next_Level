@@ -34,6 +34,10 @@ func GetUserByEmail(email string) (User, error) {
 	return user, nil
 }
 
+func SetUser(u User) {
+	usersList[u.Email] = u
+	u.Email = ""
+}
 func Init() {
 	sessionBook = map[string]string{
 		"12345": "a@mail.ru",

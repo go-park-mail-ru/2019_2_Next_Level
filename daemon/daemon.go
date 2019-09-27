@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	uuid "github.com/google/uuid"
+
 	db "../database"
 )
 
@@ -45,11 +47,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func getProfileHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusBadRequest
-	// w.WriteHeader(status)
-	// defer func() {
-	// 	w.WriteHeader(status)
-	// 	fmt.Printf("Status: %d\n", status)
-	// }()
+
 	session, err := r.Cookie("user-id")
 	if err != nil {
 		fmt.Println("Unauthorized user")
@@ -78,7 +76,89 @@ func getProfileHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 	status = http.StatusAccepted
-	// w.WriteHeader(status)
+}
+
+type UserInput struct {
+	Name     string
+	Email    string
+	Password string
+}
+
+func (input *UserInput) ToUser() db.User {
+	return db.User{
+		Name:     input.Name,
+		Email:    input.Email,
+		Password: input.Password,
+	}
+}
+
+func authorizeUserHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println("Cannot get body")
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	user := UserInput{}
+	if err := json.Unmarshal(body, &user); err != nil {
+		fmt.Println("Error during parse profile", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	dbUser, err := db.GetUserByEmail(user.Email)
+	if err != nil {
+		fmt.Println("No such a user")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if dbUser.Password != user.Password {
+		fmt.Println("Wrong pasword")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	fmt.Println("Right user")
+	out, _ := uuid.NewUUID()
+	db.RegisterNewSession(out.String(), user.Email)
+	cookie := http.Cookie{
+		Name:    "user-id",
+		Value:   out.String(),
+		Expires: time.Now().Add(10 * time.Hour),
+	}
+	r.AddCookie(&cookie)
+	http.SetCookie(w, &cookie)
+
+}
+
+func registrateUserHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println("Cannot get body")
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	user := UserInput{}
+	if err := json.Unmarshal(body, &user); err != nil {
+		fmt.Println("Error during parse profile", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("User")
+	db.SetUser(user.ToUser())
+	out, _ := uuid.NewUUID()
+	db.RegisterNewSession(out.String(), user.Email)
+	cookie := http.Cookie{
+		Name:    "user-id",
+		Value:   out.String(),
+		Expires: time.Now().Add(10 * time.Hour),
+	}
+	http.SetCookie(w, &cookie)
+	w.WriteHeader(http.StatusOK)
 }
 
 func getFileType(filename string) string {
@@ -109,6 +189,8 @@ func Run(cfg *Config) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handler)
 	mux.HandleFunc("/profile", getProfileHandler)
+	mux.HandleFunc("/signup", registrateUserHandler)
+	mux.HandleFunc("/signin", authorizeUserHandler)
 
 	server := http.Server{
 		Addr:         ":" + strconv.Itoa(cfg.Port),
@@ -122,15 +204,6 @@ func Run(cfg *Config) error {
 		log.Printf("Cannot start listening port %d", cfg.Port)
 		return err
 	}
-
-	// http.HandleFunc("/", handler)
-
-	// port := ":" + strconv.Itoa(cfg.Port)
-
-	// if err := http.ListenAndServe(port, nil); err != nil {
-	// 	log.Printf("Cannot start listening port %d", cfg.Port)
-	// 	return err
-	// }
 
 	return nil
 }
