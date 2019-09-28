@@ -39,8 +39,12 @@ func SetUser(u User) {
 	u.Email = ""
 }
 
-func UpdateUser(key string, u User) {
-	usersList[key] = u
+func UpdateUser(u User) {
+	SetUser(u)
+}
+
+func GetAvaFilename(u User) string {
+	return u.Email + ".png"
 }
 func Init() {
 	sessionBook = map[string]string{
