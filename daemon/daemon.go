@@ -77,28 +77,57 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
 	handler := &CorsHandler{}
 	handler.preflightHandler(w, r)
+
+	// defer r.Body.Close()
+	// body, err := ioutil.ReadAll(r.Body)
+	// if err != nil {
+	// 	fmt.Println("Cannot get body")
+	// 	http.Error(w, err.Error(), 500)
+	// 	return
+	// }
+
+	// userInput := UserInput{}
+	// if err := json.Unmarshal(body, &userInput); err != nil {
+	// 	fmt.Println("Error during parse profile", err)
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	// fmt.Println("User")
+	// user := userInput.ToUser()
+	// db.SetUser(user)
+
+	user, err := a.parseUser(r)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	db.SetUser(user)
+	a.Authorize(&w, &user)
+}
+
+func (a *AuthHandler) parseUser(r *http.Request) (db.User, error) {
+	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Println("Cannot get body")
-		http.Error(w, err.Error(), 500)
-		return
+		// http.Error(w, err.Error(), 500)
+		return db.User{}, err
 	}
 
 	userInput := UserInput{}
 	if err := json.Unmarshal(body, &userInput); err != nil {
 		fmt.Println("Error during parse profile", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		// http.Error(w, err.Error(), http.StatusInternalServerError)
+		return db.User{}, err
 	}
 
-	fmt.Println("User")
+	// fmt.Println("User")
 	user := userInput.ToUser()
-	db.SetUser(user)
-
-	a.Authorize(&w, &user)
+	// db.SetUser(user)
+	return user, nil
 }
 
 func (a *AuthHandler) CheckAuthorization(r *http.Request) (string, error) {
@@ -153,6 +182,24 @@ func (h *DataHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
+}
+
+func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	status := http.StatusBadRequest
+	(&CorsHandler{}).preflightHandler(w, r)
+	email, err := (&AuthHandler{}).CheckAuthorization(r)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(status)
+		return
+	}
+
+	user, err := (&AuthHandler{}).parseUser(r)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	db.UpdateUser(email, user)
 }
 
 func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
@@ -218,9 +265,14 @@ func Run(cfg *Config) error {
 	authApi := &AuthHandler{}
 	dataApi := &DataHandler{}
 	corsApi := &CorsHandler{}
+	// router.HandleFunc("/auth.signup", authApi.Register).Methods("POST")
+	// router.HandleFunc("/auth.signin", authApi.Login).Methods("POST")
+	// router.HandleFunc("/settings/profile", dataApi.GetProfile).Methods("GET")
+	// router.HandleFunc("/settings/profile", dataApi.UpdateProfile).Methods("POST")
 	router.HandleFunc("/signup", authApi.Register).Methods("POST")
 	router.HandleFunc("/signin", authApi.Login).Methods("POST")
 	router.HandleFunc("/profile", dataApi.GetProfile).Methods("GET")
+	router.HandleFunc("/profile", dataApi.UpdateProfile).Methods("POST")
 	router.PathPrefix("/").HandlerFunc(dataApi.GetFront).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(corsApi.preflightHandler).Methods("OPTIONS")
 
