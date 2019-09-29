@@ -118,14 +118,27 @@ func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
 
 func (h *DataHandler) GetPersonalFile(w http.ResponseWriter, r *http.Request) {
 	log.Println("GetPersonalFile")
-	// status := http.StatusBadRequest
+	status := http.StatusBadRequest
 	(&CorsHandler{}).preflightHandler(w, r)
-	// _, err := (&AuthHandler{}).CheckAuthorization(r)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	w.WriteHeader(status)
-	// 	return
-	// }
+	_, err := (&AuthHandler{}).CheckAuthorization(r)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(status)
+		return
+	}
+	h.GetFront(w, r)
+}
+
+func (h *DataHandler) GetOpenFile(w http.ResponseWriter, r *http.Request) {
+	log.Println("get open file", r.URL.Path)
+	path := r.URL.Path
+	if res, _ := regexp.Match("^/open", []byte(path)); !res {
+		path = "/open" + path
+	}
+	if res, _ := regexp.Match("/$", []byte(path)); res {
+		path += "index.html"
+	}
+	r.URL.Path = path
 	h.GetFront(w, r)
 }
 

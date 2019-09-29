@@ -23,7 +23,7 @@ var config Config
 
 func Run(cfg *Config) error {
 	config = *cfg
-	fmt.Printf("Starting daemon on port %d\n", cfg.Port)
+	fmt.Println("Starting daemon on port ", cfg.Port)
 	db.Init()
 
 	router := mux.NewRouter()
@@ -39,7 +39,8 @@ func Run(cfg *Config) error {
 	router.HandleFunc("/profile", dataApi.GetProfile).Methods("GET")
 	router.HandleFunc("/profile", dataApi.UpdateProfile).Methods("POST")
 	// router.PathPrefix("/").HandlerFunc(dataApi.GetFront).Methods("GET")
-	router.PathPrefix("/").HandlerFunc(dataApi.GetPersonalFile).Methods("GET")
+	router.PathPrefix("/private").HandlerFunc(dataApi.GetPersonalFile).Methods("GET")
+	router.PathPrefix("/").HandlerFunc(dataApi.GetOpenFile).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(corsApi.preflightHandler).Methods("OPTIONS")
 
 	err := http.ListenAndServe(":"+cfg.Port, router)
