@@ -2,6 +2,8 @@ package daemon
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -22,6 +24,14 @@ type Config struct {
 var config Config
 
 func Run(cfg *Config) error {
+	files, err := ioutil.ReadDir(".")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, file := range files {
+		fmt.Println(file.Name(), file.IsDir())
+	}
 	config = *cfg
 	fmt.Println("Starting daemon on port ", cfg.Port)
 	db.Init()
