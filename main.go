@@ -4,6 +4,8 @@ import (
 	"back/daemon"
 	"flag"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -17,6 +19,9 @@ func inflateDaemonConfig() *daemon.Config {
 	}
 	location := filepath.Dir(ex)
 
+	var isLocalhost bool
+
+	flag.BoolVar(&isLocalhost, "local", true, "Is it local mashine")
 	flag.StringVar(&config.Port, "port", "80", "Port to listen")
 	flag.StringVar(&config.FrontendPath, "front", "./", "Path to frontend to share")
 	flag.StringVar(&config.FrontendUrl, "furl", "locahost:3001", "Address of the frontend")
@@ -28,6 +33,12 @@ func inflateDaemonConfig() *daemon.Config {
 	if osPort != "" {
 		config.Port = osPort
 	}
+
+	if !isLocalhost {
+		config.StaticDirPath = "/public"
+	}
+
+	log.Println(http.Dir("public"))
 
 	return config
 }
