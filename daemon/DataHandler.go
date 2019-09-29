@@ -116,14 +116,14 @@ func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DataHandler) GetPersonalFile(w http.ResponseWriter, r *http.Request) {
-	status := http.StatusBadRequest
+	// status := http.StatusBadRequest
 	(&CorsHandler{}).preflightHandler(w, r)
-	_, err := (&AuthHandler{}).CheckAuthorization(r)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(status)
-		return
-	}
+	// _, err := (&AuthHandler{}).CheckAuthorization(r)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	w.WriteHeader(status)
+	// 	return
+	// }
 	h.GetFront(w, r)
 }
 
