@@ -4,6 +4,7 @@ import (
 	"back/daemon"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -36,6 +37,14 @@ func inflateDaemonConfig() *daemon.Config {
 
 	if !isLocalhost {
 		config.StaticDirPath = "/public"
+		files, err := ioutil.ReadDir("/")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, file := range files {
+			fmt.Println(file.Name(), file.IsDir())
+		}
 	}
 
 	log.Println(http.Dir("public"))
