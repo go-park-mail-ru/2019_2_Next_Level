@@ -26,6 +26,12 @@ func RegisterNewSession(sessionId, email string) {
 	sessionBook[sessionId] = email
 }
 
+func InvalidateSession(sessionId, email string) {
+	if sessionBook[sessionId] == email {
+		delete(sessionBook, sessionId)
+	}
+}
+
 func GetUserByEmail(email string) (User, error) {
 	user, err := usersList[email]
 	if !err {

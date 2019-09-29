@@ -50,6 +50,19 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	a.Authorize(w, &dbUser)
 }
 
+func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	email, err := a.CheckAuthorization(r)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	session, _ := r.Cookie("user-token")
+	db.InvalidateSession(session.Value, email)
+	session.Expires = time.Now().Add(-1)
+	http.SetCookie(w, session)
+}
+
 func (a *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	handler := &CorsHandler{}
 	handler.preflightHandler(w, r)
@@ -82,7 +95,7 @@ func (a *AuthHandler) parseUser(r *http.Request) (db.User, error) {
 }
 
 func (a *AuthHandler) CheckAuthorization(r *http.Request) (string, error) {
-	session, err := r.Cookie("user-id")
+	session, err := r.Cookie("user-token")
 	if err != nil {
 		return "", errors.New("No cookie")
 	}
@@ -98,7 +111,7 @@ func (a *AuthHandler) Authorize(w http.ResponseWriter, user *db.User) {
 	out, _ := uuid.NewUUID()
 	db.RegisterNewSession(out.String(), user.Email)
 	cookie := http.Cookie{
-		Name:    "user-id",
+		Name:    "user-token",
 		Value:   out.String(),
 		Expires: time.Now().Add(10 * time.Hour),
 	}

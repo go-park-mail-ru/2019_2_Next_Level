@@ -32,7 +32,7 @@ func TestGetProfile(t *testing.T) {
 	uuid, _ := uuid.NewUUID()
 	db.RegisterNewSession(uuid.String(), user.Email)
 	r := httptest.NewRequest("GET", "/auth.signup", nil)
-	r.AddCookie(&http.Cookie{Name: "user-id", Value: uuid.String()})
+	r.AddCookie(&http.Cookie{Name: "user-token", Value: uuid.String()})
 
 	w := httptest.NewRecorder()
 	h.GetProfile(w, r)
@@ -55,7 +55,7 @@ func TestGetProfileWrongSession(t *testing.T) {
 
 	r := httptest.NewRequest("GET", "/auth.signup", nil)
 	uuid, _ := uuid.NewUUID()
-	r.AddCookie(&http.Cookie{Name: "user-id", Value: uuid.String()})
+	r.AddCookie(&http.Cookie{Name: "user-token", Value: uuid.String()})
 
 	w := httptest.NewRecorder()
 	h.GetProfile(w, r)
@@ -72,7 +72,7 @@ func TestGetProfileEmptySession(t *testing.T) {
 	r := httptest.NewRequest("GET", "/auth.signup", nil)
 	uuid, _ := uuid.NewUUID()
 	db.RegisterNewSession(uuid.String(), "email@yandex.ru")
-	r.AddCookie(&http.Cookie{Name: "user-id", Value: uuid.String()})
+	r.AddCookie(&http.Cookie{Name: "user-token", Value: uuid.String()})
 
 	w := httptest.NewRecorder()
 	h.GetProfile(w, r)
@@ -88,7 +88,7 @@ func TestGetProfileRottenSession(t *testing.T) {
 
 	r := httptest.NewRequest("GET", "/auth.signup", nil)
 	uuid, _ := uuid.NewUUID()
-	r.AddCookie(&http.Cookie{Name: "user-id", Value: uuid.String()})
+	r.AddCookie(&http.Cookie{Name: "user-token", Value: uuid.String()})
 
 	w := httptest.NewRecorder()
 	h.GetProfile(w, r)

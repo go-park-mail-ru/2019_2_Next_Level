@@ -46,6 +46,7 @@ func Run(cfg *Config) error {
 	// router.HandleFunc("/settings/profile", dataApi.UpdateProfile).Methods("POST")
 	router.HandleFunc("/api/auth/signup", authApi.Register).Methods("POST")
 	router.HandleFunc("/api/auth/signin", authApi.Login).Methods("POST")
+	router.HandleFunc("/api/auth/signout", authApi.Logout).Methods("POST")
 	router.HandleFunc("/api/profile", dataApi.GetProfile).Methods("GET")
 	router.HandleFunc("/api/profile", dataApi.UpdateProfile).Methods("POST")
 	// router.PathPrefix("/").HandlerFunc(dataApi.GetFront).Methods("GET")

@@ -54,8 +54,8 @@ func TestRegister(t *testing.T) {
 	}
 	cookie := cookies[0]
 	userById, err := db.GetUserEmailBySession(cookie.Value)
-	if cookie.Name != "user-id" || err != nil || userById != newUser.Email {
-		t.Error("Wrong user-id cookie value is set: ", cookie.Name)
+	if cookie.Name != "user-token" || err != nil || userById != newUser.Email {
+		t.Error("Wrong user-token cookie value is set: ", cookie.Name)
 	}
 
 }
@@ -133,8 +133,8 @@ func TestLogin(t *testing.T) {
 	}
 	cookie := cookies[0]
 	userById, err := db.GetUserEmailBySession(cookie.Value)
-	if cookie.Name != "user-id" || err != nil || userById != user.Email {
-		t.Error("Wrong user-id cookie value is set: ", cookie.Name)
+	if cookie.Name != "user-token" || err != nil || userById != user.Email {
+		t.Error("Wrong user-token cookie value is set: ", cookie.Name)
 	}
 }
 
@@ -237,8 +237,8 @@ func TestAuthorization(t *testing.T) {
 	}
 	cookie := cookies[0]
 	userById, err := db.GetUserEmailBySession(cookie.Value)
-	if cookie.Name != "user-id" || err != nil || userById != user.Email {
-		t.Error("Wrong user-id cookie value is set: ", cookie.Name)
+	if cookie.Name != "user-token" || err != nil || userById != user.Email {
+		t.Error("Wrong user-token cookie value is set: ", cookie.Name)
 	}
 }
 
@@ -250,7 +250,7 @@ func TestCheckAuthorization(t *testing.T) {
 	uuid, _ := uuid.NewUUID()
 	db.RegisterNewSession(uuid.String(), email)
 	r := httptest.NewRequest("GET", "/", nil)
-	r.AddCookie(&http.Cookie{Name: "user-id", Value: uuid.String()})
+	r.AddCookie(&http.Cookie{Name: "user-token", Value: uuid.String()})
 
 	resEmail, err := h.CheckAuthorization(r)
 	if err != nil {
@@ -268,7 +268,7 @@ func TestCheckNoAuthorization(t *testing.T) {
 	db.Init()
 	uuid, _ := uuid.NewUUID()
 	r := httptest.NewRequest("GET", "/", nil)
-	r.AddCookie(&http.Cookie{Name: "user-id", Value: uuid.String()})
+	r.AddCookie(&http.Cookie{Name: "user-token", Value: uuid.String()})
 
 	resEmail, err := h.CheckAuthorization(r)
 	if err == nil {
@@ -280,7 +280,7 @@ func TestCheckNoAuthorization(t *testing.T) {
 
 }
 
-// wrong user-id ket
+// wrong user-token ket
 func TestWrongCheckAuthorization(t *testing.T) {
 	h := AuthHandler{}
 	db.Init()
@@ -288,7 +288,7 @@ func TestWrongCheckAuthorization(t *testing.T) {
 	uuid, _ := uuid.NewUUID()
 	db.RegisterNewSession(uuid.String(), email)
 	r := httptest.NewRequest("GET", "/", nil)
-	r.AddCookie(&http.Cookie{Name: "user-id", Value: uuid.String() + "error"})
+	r.AddCookie(&http.Cookie{Name: "user-token", Value: uuid.String() + "error"})
 
 	resEmail, err := h.CheckAuthorization(r)
 	if err == nil {
