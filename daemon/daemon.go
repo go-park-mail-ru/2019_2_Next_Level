@@ -24,9 +24,9 @@ type Config struct {
 var config Config
 
 func Run(cfg *Config) error {
-	files, err := ioutil.ReadDir(".")
-	if err != nil {
-		log.Fatal(err)
+	files, erro := ioutil.ReadDir(".")
+	if erro != nil {
+		log.Fatal(erro)
 	}
 
 	for _, file := range files {
