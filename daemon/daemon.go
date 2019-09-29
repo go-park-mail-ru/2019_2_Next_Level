@@ -16,6 +16,7 @@ type Config struct {
 	FrontendPath  string
 	FrontendUrl   string
 	AvatarDirPath string
+	StaticDirPath string
 }
 
 var config Config

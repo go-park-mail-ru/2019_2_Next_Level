@@ -103,7 +103,7 @@ func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
 		path = "/index.html"
 	}
 	fmt.Printf("Path: %s\n", r.URL.Path)
-	path = config.FrontendPath + path
+	path = config.StaticDirPath + path
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Printf("Cannot open file %s: %s\n", path, err)

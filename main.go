@@ -13,7 +13,8 @@ func inflateDaemonConfig() *daemon.Config {
 	flag.StringVar(&config.Port, "port", "80", "Port to listen")
 	flag.StringVar(&config.FrontendPath, "front", "./", "Path to frontend to share")
 	flag.StringVar(&config.FrontendUrl, "furl", "locahost:3001", "Address of the frontend")
-	flag.StringVar(&config.AvatarDirPath, "avadir", "./static/", "Path to the avatars")
+	flag.StringVar(&config.AvatarDirPath, "avadir", "avatar/", "Path to the avatars")
+	flag.StringVar(&config.StaticDirPath, "staticdir", "static/", "Path to the avatars")
 	flag.Parse()
 
 	return config
