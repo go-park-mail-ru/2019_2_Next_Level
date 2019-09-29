@@ -1,6 +1,6 @@
 package daemon
 
-import db "../database"
+import db "back/database"
 
 type UserInput struct {
 	Name     string

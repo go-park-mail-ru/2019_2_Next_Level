@@ -8,7 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
-	db "../database"
+	// db "../database"
+	db "back/database"
 )
 
 func TestGetProfile(t *testing.T) {

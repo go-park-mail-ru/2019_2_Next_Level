@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	db "../database"
+	db "back/database"
 )
 
 type DataHandler struct {

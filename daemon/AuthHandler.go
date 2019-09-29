@@ -8,7 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	db "../database"
+	db "back/database"
+
 	"github.com/google/uuid"
 )
 

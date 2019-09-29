@@ -7,7 +7,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	db "../database"
+	// db "../database"
+	db "back/database"
 )
 
 type Config struct {

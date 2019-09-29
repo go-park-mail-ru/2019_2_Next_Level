@@ -8,7 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	db "../database"
+	db "back/database"
+
 	"github.com/google/uuid"
 )
 
