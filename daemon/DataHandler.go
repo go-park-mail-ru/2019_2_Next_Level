@@ -46,7 +46,7 @@ func (h *DataHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(user)
 	outUser := (&UserOutput{}).FromUser(user)
 
-	if config.AvatarDirPath[len(config.AvatarDirPath)-1] != '/' {
+	if len(config.AvatarDirPath) > 0 && config.AvatarDirPath[len(config.AvatarDirPath)-1] != '/' {
 		config.AvatarDirPath = config.AvatarDirPath + "/"
 	}
 	outUser.AvaUrl = config.AvatarDirPath + db.GetAvaFilename(user)

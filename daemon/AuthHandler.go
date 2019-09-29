@@ -23,13 +23,13 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Println("Cannot get body")
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	user := UserInput{}
 	if err := json.Unmarshal(body, &user); err != nil {
 		fmt.Println("Error during parse profile", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -42,11 +42,11 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if dbUser.Password != user.Password {
 		fmt.Println("Wrong pasword")
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Wrong password", http.StatusBadRequest)
 		return
 	}
 	fmt.Println("Right user")
-	a.Authorize(&w, &dbUser)
+	a.Authorize(w, &dbUser)
 }
 
 func (a *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +59,7 @@ func (a *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	db.SetUser(user)
-	a.Authorize(&w, &user)
+	a.Authorize(w, &user)
 }
 
 func (a *AuthHandler) parseUser(r *http.Request) (db.User, error) {
@@ -93,7 +93,7 @@ func (a *AuthHandler) CheckAuthorization(r *http.Request) (string, error) {
 	return email, nil
 }
 
-func (a *AuthHandler) Authorize(w *http.ResponseWriter, user *db.User) {
+func (a *AuthHandler) Authorize(w http.ResponseWriter, user *db.User) {
 	out, _ := uuid.NewUUID()
 	db.RegisterNewSession(out.String(), user.Email)
 	cookie := http.Cookie{
@@ -101,5 +101,5 @@ func (a *AuthHandler) Authorize(w *http.ResponseWriter, user *db.User) {
 		Value:   out.String(),
 		Expires: time.Now().Add(10 * time.Hour),
 	}
-	http.SetCookie(*w, &cookie)
+	http.SetCookie(w, &cookie)
 }
