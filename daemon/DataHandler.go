@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -116,6 +117,7 @@ func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DataHandler) GetPersonalFile(w http.ResponseWriter, r *http.Request) {
+	log.Println("GetPersonalFile")
 	// status := http.StatusBadRequest
 	(&CorsHandler{}).preflightHandler(w, r)
 	// _, err := (&AuthHandler{}).CheckAuthorization(r)
