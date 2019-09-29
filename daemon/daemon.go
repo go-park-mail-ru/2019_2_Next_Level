@@ -3,7 +3,6 @@ package daemon
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 
@@ -12,7 +11,7 @@ import (
 )
 
 type Config struct {
-	Port          int
+	Port          string
 	BackendPath   string
 	FrontendPath  string
 	FrontendUrl   string
@@ -42,6 +41,6 @@ func Run(cfg *Config) error {
 	router.PathPrefix("/").HandlerFunc(dataApi.GetPersonalFile).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(corsApi.preflightHandler).Methods("OPTIONS")
 
-	err := http.ListenAndServe(":"+strconv.Itoa(cfg.Port), router)
+	err := http.ListenAndServe(":"+cfg.Port, router)
 	return err
 }
