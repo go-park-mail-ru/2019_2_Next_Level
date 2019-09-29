@@ -1,10 +1,9 @@
 package main
 
 import (
+	"back/daemon"
 	"flag"
 	"fmt"
-
-	"./daemon"
 )
 
 func inflateDaemonConfig() *daemon.Config {
