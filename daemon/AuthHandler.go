@@ -114,6 +114,7 @@ func (a *AuthHandler) Authorize(w http.ResponseWriter, user *db.User) {
 		Name:    "user-token",
 		Value:   out.String(),
 		Expires: time.Now().Add(10 * time.Hour),
+		Path:    "/",
 	}
 	http.SetCookie(w, &cookie)
 }

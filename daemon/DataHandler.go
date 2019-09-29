@@ -3,13 +3,14 @@ package daemon
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/gorilla/mux"
 
 	db "back/database"
 )
@@ -70,31 +71,47 @@ func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := (&AuthHandler{}).parseUser(r)
-	if err != nil {
-		fmt.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	vars := mux.Vars(r)
 
-	file, handler, err := r.FormFile("avatar")
-	if err != nil {
-		fmt.Println("Cannot get avatar", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
+	r.ParseForm()
 
-	f, err := os.OpenFile(h.getWorkDirectory()+config.AvatarDirPath+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		fmt.Println("Cannot create avatar file", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer f.Close()
-	io.Copy(f, file)
+	user, _ := db.GetUserByEmail(email)
 
-	user.Email = email
+	switch vars["field"] {
+	case "change_name":
+		user.Name = r.PostForm["name"][0]
+		log.Println("Change name to ", user.Name)
+		break
+	default:
+		log.Println("Wrong param: ", vars["field"])
+	}
 	db.UpdateUser(user)
+
+	// user, err := (&AuthHandler{}).parseUser(r)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// }
+
+	// file, handler, err := r.FormFile("avatar")
+	// if err != nil {
+	// 	fmt.Println("Cannot get avatar", err)
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+	// defer file.Close()
+
+	// f, err := os.OpenFile(h.getWorkDirectory()+config.AvatarDirPath+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	// if err != nil {
+	// 	fmt.Println("Cannot create avatar file", err)
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+	// defer f.Close()
+	// io.Copy(f, file)
+
+	// user.Email = email
+	// db.UpdateUser(user)
 }
 
 func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {

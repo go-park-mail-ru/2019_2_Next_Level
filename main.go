@@ -24,7 +24,7 @@ func inflateDaemonConfig() *daemon.Config {
 	flag.BoolVar(&isLocalhost, "local", false, "Is it local mashine")
 	flag.StringVar(&config.Port, "port", "80", "Port to listen")
 	flag.StringVar(&config.FrontendPath, "front", "./", "Path to frontend to share")
-	flag.StringVar(&config.FrontendUrl, "furl", "locahost:3001", "Address of the frontend")
+	flag.StringVar(&config.FrontendUrl, "furl", "http://localhost:3000", "Address of the frontend")
 	flag.StringVar(&config.AvatarDirPath, "avadir", "avatar/", "Path to the avatars")
 	flag.StringVar(&config.StaticDirPath, "staticdir", location+"/public", "Path to the avatars")
 	flag.Parse()

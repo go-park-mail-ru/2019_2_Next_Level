@@ -40,16 +40,18 @@ func Run(cfg *Config) error {
 	authApi := &AuthHandler{}
 	dataApi := &DataHandler{}
 	corsApi := &CorsHandler{}
-	// router.HandleFunc("/auth.signup", authApi.Register).Methods("POST")
-	// router.HandleFunc("/auth.signin", authApi.Login).Methods("POST")
-	// router.HandleFunc("/settings/profile", dataApi.GetProfile).Methods("GET")
-	// router.HandleFunc("/settings/profile", dataApi.UpdateProfile).Methods("POST")
 	router.HandleFunc("/api/auth/signup", authApi.Register).Methods("POST")
 	router.HandleFunc("/api/auth/signin", authApi.Login).Methods("POST")
 	router.HandleFunc("/api/auth/signout", authApi.Logout).Methods("POST")
-	router.HandleFunc("/api/profile", dataApi.GetProfile).Methods("GET")
-	router.HandleFunc("/api/profile", dataApi.UpdateProfile).Methods("POST")
-	// router.PathPrefix("/").HandlerFunc(dataApi.GetFront).Methods("GET")
+	router.HandleFunc("/api/profile/get", dataApi.GetProfile).Methods("GET")
+	router.HandleFunc("/api/profile/{field}", dataApi.UpdateProfile).Methods("POST")
+
+	// router.HandleFunc("/signup", authApi.Register).Methods("POST")
+	// router.HandleFunc("/signin", authApi.Login).Methods("POST")
+	// router.HandleFunc("/signout", authApi.Logout).Methods("POST")
+	// router.HandleFunc("/profile", dataApi.GetProfile).Methods("GET")
+	// router.HandleFunc("/profile/{field}", dataApi.UpdateProfile).Methods("POST")
+
 	router.PathPrefix("/private").HandlerFunc(dataApi.GetPersonalFile).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(dataApi.GetOpenFile).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(corsApi.preflightHandler).Methods("OPTIONS")
