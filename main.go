@@ -35,7 +35,7 @@ func inflateDaemonConfig() *daemon.Config {
 	}
 
 	if !isLocalhost {
-		config.StaticDirPath = "/public"
+		config.StaticDirPath = "./public"
 	}
 
 	log.Println(http.Dir("public"))
