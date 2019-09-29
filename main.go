@@ -21,7 +21,7 @@ func inflateDaemonConfig() *daemon.Config {
 
 	var isLocalhost bool
 
-	flag.BoolVar(&isLocalhost, "local", true, "Is it local mashine")
+	flag.BoolVar(&isLocalhost, "local", false, "Is it local mashine")
 	flag.StringVar(&config.Port, "port", "80", "Port to listen")
 	flag.StringVar(&config.FrontendPath, "front", "./", "Path to frontend to share")
 	flag.StringVar(&config.FrontendUrl, "furl", "locahost:3001", "Address of the frontend")
