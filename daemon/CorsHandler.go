@@ -10,8 +10,9 @@ type CorsHandler struct {
 
 func (h *CorsHandler) preflightHandler(w http.ResponseWriter, r *http.Request) {
 	whitelist := map[string]bool{
-		config.FrontendUrl:                           true,
-		"https://next-level-mail.kerimovdev.now.sh/": true,
+		config.FrontendUrl:                               true,
+		"https://next-level-mail.kerimovdev.now.sh/":     true,
+		"https://next-level-mail.ivanovvanya111.now.sh/": true,
 	}
 	headers := w.Header()
 	// headers.Add("Access-Control-Allow-Origin", config.FrontendUrl)
