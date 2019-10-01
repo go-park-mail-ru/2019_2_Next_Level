@@ -8,10 +8,10 @@ type UserInput struct {
 	Password string
 }
 type UserOutput struct {
-	Name       string
+	Name       string `json:"name"`
 	Sirname    string
 	MiddleName string
-	Email      string
+	Email      string `json:"email"`
 	AvaUrl     string
 }
 

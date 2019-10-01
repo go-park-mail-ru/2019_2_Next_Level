@@ -57,11 +57,11 @@ func Init() {
 		"12345": "a@mail.ru",
 	}
 	usersList = map[string]User{
-		"a@mail.ru": User{
+		"aa@mail.ru": User{
 			Name:       "Ian",
 			Sirname:    "Ivanov",
 			MiddleName: "tamerlanchik",
-			Email:      "a@mail.ru",
+			Email:      "aa@mail.ru",
 			Password:   "pass",
 		},
 	}

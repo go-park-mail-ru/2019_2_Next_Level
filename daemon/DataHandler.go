@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/gorilla/mux"
-
 	db "back/database"
 )
 
@@ -30,31 +28,27 @@ func (h *DataHandler) getWorkDirectory() string {
 func (h *DataHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 	(&CorsHandler{}).preflightHandler(w, r)
-
-	status := http.StatusBadRequest
-
 	email, err := (&AuthHandler{}).CheckAuthorization(r)
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(status)
+		(&Error{ErrorNoPermission}).Send(&w)
 		return
 	}
 	user, err := db.GetUserByEmail(email)
 	if err != nil {
-		fmt.Printf("Cannot get user: %s\n", err)
-		w.WriteHeader(status)
+		(&Error{ErrorNoPermission}).Send(&w)
 		return
 	}
 	fmt.Println(user)
 	outUser := (&UserOutput{}).FromUser(user)
 
-	if len(config.AvatarDirPath) > 0 && config.AvatarDirPath[len(config.AvatarDirPath)-1] != '/' {
-		config.AvatarDirPath = config.AvatarDirPath + "/"
-	}
-	outUser.AvaUrl = config.AvatarDirPath + db.GetAvaFilename(user)
+	// if len(config.AvatarDirPath) > 0 && config.AvatarDirPath[len(config.AvatarDirPath)-1] != '/' {
+	// 	config.AvatarDirPath = config.AvatarDirPath + "/"
+	// }
+	// outUser.AvaUrl = config.AvatarDirPath + db.GetAvaFilename(user)
 	js, err := json.Marshal(outUser)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		(&Error{ErrorInternal}).Send(&w)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -62,29 +56,33 @@ func (h *DataHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	status := http.StatusBadRequest
 	(&CorsHandler{}).preflightHandler(w, r)
 	email, err := (&AuthHandler{}).CheckAuthorization(r)
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(status)
+		(&Error{ErrorNoPermission}).Send(&w)
 		return
 	}
 
-	vars := mux.Vars(r)
+	// vars := mux.Vars(r)
 
-	r.ParseForm()
+	// r.ParseForm()
+	userInput := UserInput{}
+	body, _ := ioutil.ReadAll(r.Body)
+	_ = json.Unmarshal(body, &userInput)
 
 	user, _ := db.GetUserByEmail(email)
+	user.Name = userInput.Name
+	fmt.Println(user.Name)
 
-	switch vars["field"] {
-	case "change_name":
-		user.Name = r.PostForm["name"][0]
-		log.Println("Change name to ", user.Name)
-		break
-	default:
-		log.Println("Wrong param: ", vars["field"])
-	}
+	// switch vars["field"] {
+	// case "change_name":
+	// 	user.Name = r.PostForm["name"][0]
+	// 	log.Println("Change name to ", user.Name)
+	// 	break
+	// default:
+	// 	log.Println("Wrong param: ", vars["field"])
+	// }
 	db.UpdateUser(user)
 
 	// user, err := (&AuthHandler{}).parseUser(r)
@@ -117,13 +115,14 @@ func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	if path == "/" {
-		path = "/index.html"
+		path += configuration.FileForFolder
 	}
 	fmt.Printf("Path: %s\n", r.URL.Path)
-	path = config.StaticDirPath + path
+	path = configuration.StaticDir + path
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Printf("Cannot open file %s: %s\n", path, err)
+		(&Error{"Cannot open file " + path}).Send(&w)
 		return
 	}
 	fmt.Printf("Give %s file\n", path)
@@ -135,12 +134,11 @@ func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
 
 func (h *DataHandler) GetPersonalFile(w http.ResponseWriter, r *http.Request) {
 	log.Println("GetPersonalFile")
-	status := http.StatusBadRequest
 	(&CorsHandler{}).preflightHandler(w, r)
 	_, err := (&AuthHandler{}).CheckAuthorization(r)
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(status)
+		(&Error{ErrorNoPermission}).Send(&w)
 		return
 	}
 	h.GetFront(w, r)
@@ -150,10 +148,10 @@ func (h *DataHandler) GetOpenFile(w http.ResponseWriter, r *http.Request) {
 	log.Println("get open file", r.URL.Path)
 	path := r.URL.Path
 	if res, _ := regexp.Match("^/open", []byte(path)); !res {
-		path = "/open" + path
+		path = "/" + configuration.OpenDir + path
 	}
 	if res, _ := regexp.Match("/$", []byte(path)); res {
-		path += "index.html"
+		path += configuration.FileForFolder
 	}
 	r.URL.Path = path
 	h.GetFront(w, r)
@@ -164,7 +162,6 @@ func (h *DataHandler) getFileType(filename string) string {
 		Type  string
 		Value string
 	}
-	// textPrefix := "text/"
 	types := []typePair{
 		{"js", "text/javascript"},
 		{"html", "text/html"},

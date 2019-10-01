@@ -1,0 +1,13 @@
+{
+    "whitelist": {
+        "https://next-level-mail.kerimovdev.now.sh/": true,
+        "https://next-level-mail.ivanovvanya111.now.sh": true,
+        "http://localhost:3000": true
+    },
+    "staticDir": "./public",
+    "port": "3001",
+    "fileForFolder": "index.html",
+    "openDir": "open",
+    "privateDir": "private"
+
+}
