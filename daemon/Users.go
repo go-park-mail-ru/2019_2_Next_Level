@@ -12,7 +12,7 @@ type UserOutput struct {
 	Sirname    string
 	MiddleName string
 	Email      string `json:"email"`
-	AvaUrl     string
+	Avatar     string `json:"avatar"`
 }
 
 func (u *UserOutput) FromUser(dbuser db.User) UserOutput {
@@ -21,6 +21,9 @@ func (u *UserOutput) FromUser(dbuser db.User) UserOutput {
 		Sirname:    dbuser.Sirname,
 		MiddleName: dbuser.MiddleName,
 		Email:      dbuser.Email,
+		Avatar: configuration.SelfURL + "/" +
+			configuration.PrivateDir + "/" +
+			"avatar/" + dbuser.Avatar,
 	}
 	return user
 }

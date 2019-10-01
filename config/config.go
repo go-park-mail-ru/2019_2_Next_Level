@@ -14,6 +14,7 @@ type Config struct {
 	FileForFolder string
 	OpenDir       string
 	PrivateDir    string
+	SelfURL       string
 }
 
 func (c *Config) Inflate() error {

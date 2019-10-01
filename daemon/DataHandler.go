@@ -46,6 +46,7 @@ func (h *DataHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	// 	config.AvatarDirPath = config.AvatarDirPath + "/"
 	// }
 	// outUser.AvaUrl = config.AvatarDirPath + db.GetAvaFilename(user)
+	
 	js, err := json.Marshal(outUser)
 	if err != nil {
 		(&Error{ErrorInternal}).Send(&w)
@@ -75,15 +76,6 @@ func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		user.Password = userInput.Password
 	}
 	fmt.Println(user.Name)
-
-	// switch vars["field"] {
-	// case "change_name":
-	// 	user.Name = r.PostForm["name"][0]
-	// 	log.Println("Change name to ", user.Name)
-	// 	break
-	// default:
-	// 	log.Println("Wrong param: ", vars["field"])
-	// }
 	db.UpdateUser(user)
 
 	// user, err := (&AuthHandler{}).parseUser(r)

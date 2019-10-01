@@ -25,6 +25,14 @@ func Configurate(conf *config.Config) error {
 			(*conf).Port = osPort
 		}
 	}
+	if isLocalhost {
+		// ex, err := os.Executable()
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// location := filepath.Dir(ex)
+		(*conf).SelfURL = "http://localhost:" + (*conf).Port
+	}
 	return nil
 
 }
