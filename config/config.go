@@ -15,6 +15,7 @@ type Config struct {
 	OpenDir       string
 	PrivateDir    string
 	SelfURL       string
+	DefaultAvatar string
 }
 
 func (c *Config) Inflate() error {

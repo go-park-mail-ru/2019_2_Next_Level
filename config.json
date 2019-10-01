@@ -9,6 +9,7 @@
     "fileForFolder": "index.html",
     "openDir": "open",
     "privateDir": "private",
-    "selfURL": "https://gentle-castle-33760.herokuapp.com/"
+    "selfURL": "https://gentle-castle-33760.herokuapp.com/",
+    "defaultAvatar": "default.png"
 
 }

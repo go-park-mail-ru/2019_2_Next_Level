@@ -16,6 +16,7 @@ func Run(cfg *config.Config) error {
 	configuration = *cfg
 	fmt.Println("Starting daemon on port ", cfg.Port)
 	db.Init()
+	db.SetConfig(*cfg)
 
 	router := mux.NewRouter()
 	authApi := &AuthHandler{}
