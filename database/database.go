@@ -8,6 +8,7 @@ type User struct {
 	MiddleName string
 	Email      string
 	Password   string `json:"-"`
+	Avatar     string
 }
 
 var sessionBook map[string]string
@@ -63,6 +64,7 @@ func Init() {
 			MiddleName: "tamerlanchik",
 			Email:      "aa@mail.ru",
 			Password:   "pass",
+			Avatar:     "626d57a727d65725a21a891ed278810f.jpg",
 		},
 	}
 }
