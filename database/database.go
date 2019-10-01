@@ -1,6 +1,9 @@
 package database
 
-import "errors"
+import (
+	"back/config"
+	"errors"
+)
 
 type User struct {
 	Name       string
@@ -9,6 +12,14 @@ type User struct {
 	Email      string
 	Password   string `json:"-"`
 	Avatar     string
+}
+
+var configuration config.Config
+
+func (user *User) Init() {
+	if user.Avatar == "" {
+		user.Avatar = configuration.DefaultAvatar
+	}
 }
 
 var sessionBook map[string]string
@@ -42,6 +53,7 @@ func GetUserByEmail(email string) (User, error) {
 }
 
 func SetUser(u User) {
+	u.Init()
 	usersList[u.Email] = u
 	u.Email = ""
 }
@@ -52,6 +64,9 @@ func UpdateUser(u User) {
 
 func GetAvaFilename(u User) string {
 	return u.Email + ".png"
+}
+func SetConfig(conf config.Config) {
+	configuration = conf
 }
 func Init() {
 	sessionBook = map[string]string{
