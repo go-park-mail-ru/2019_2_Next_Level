@@ -63,16 +63,17 @@ func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		(&Error{ErrorNoPermission}).Send(&w)
 		return
 	}
-
-	// vars := mux.Vars(r)
-
-	// r.ParseForm()
 	userInput := UserInput{}
 	body, _ := ioutil.ReadAll(r.Body)
 	_ = json.Unmarshal(body, &userInput)
 
 	user, _ := db.GetUserByEmail(email)
-	user.Name = userInput.Name
+	if userInput.Name != "" {
+		user.Name = userInput.Name
+	}
+	if userInput.Password != "" {
+		user.Password = userInput.Password
+	}
 	fmt.Println(user.Name)
 
 	// switch vars["field"] {
