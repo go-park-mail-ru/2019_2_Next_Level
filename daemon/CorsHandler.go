@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"back/config"
 	"log"
 	"net/http"
 )
@@ -16,7 +17,7 @@ func (h *CorsHandler) preflightHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println("origin: ", origin)
-	if !configuration.Whitelist[origin] {
+	if !config.Configuration.Whitelist[origin] {
 		log.Println("Not in whitelist: ", origin)
 		http.Error(w, "Not in whitelist", http.StatusForbidden)
 		return

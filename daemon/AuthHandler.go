@@ -48,6 +48,9 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Right user")
 	a.Authorize(w, &dbUser)
+
+	time.Sleep(20 * time.Second)
+
 }
 
 func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {

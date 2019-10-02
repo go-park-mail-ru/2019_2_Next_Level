@@ -1,6 +1,9 @@
 package daemon
 
-import db "back/database"
+import (
+	"back/config"
+	db "back/database"
+)
 
 type UserInput struct {
 	Name     string
@@ -21,8 +24,8 @@ func (u *UserOutput) FromUser(dbuser db.User) UserOutput {
 		Sirname:    dbuser.Sirname,
 		MiddleName: dbuser.MiddleName,
 		Email:      dbuser.Email,
-		Avatar: configuration.SelfURL + "/" +
-			configuration.PrivateDir + "/" +
+		Avatar: config.Configuration.SelfURL + "/" +
+			config.Configuration.PrivateDir + "/" +
 			"avatar/" + dbuser.Avatar,
 	}
 	return user

@@ -3,6 +3,7 @@ package daemon
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"back/config"
 	db "back/database"
 )
 
@@ -46,7 +48,7 @@ func (h *DataHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	// 	config.AvatarDirPath = config.AvatarDirPath + "/"
 	// }
 	// outUser.AvaUrl = config.AvatarDirPath + db.GetAvaFilename(user)
-	
+
 	js, err := json.Marshal(outUser)
 	if err != nil {
 		(&Error{ErrorInternal}).Send(&w)
@@ -54,6 +56,34 @@ func (h *DataHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
+}
+
+func (h *DataHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
+	(&CorsHandler{}).preflightHandler(w, r)
+	email, err := (&AuthHandler{}).CheckAuthorization(r)
+	if err != nil {
+		fmt.Println(err)
+		(&Error{ErrorNoPermission}).Send(&w)
+		return
+	}
+
+	user, _ := db.GetUserByEmail(email)
+
+	file, handler, err := r.FormFile("avatar")
+	path := config.Configuration.StaticDir + "/" +
+		config.Configuration.PrivateDir + "/" +
+		"avatar/" + handler.Filename
+
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println("Cannot create avatar file", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+	io.Copy(f, file)
+	user.Avatar = handler.Filename
+	db.SetUser(user)
 }
 
 func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +94,7 @@ func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		(&Error{ErrorNoPermission}).Send(&w)
 		return
 	}
+
 	userInput := UserInput{}
 	body, _ := ioutil.ReadAll(r.Body)
 	_ = json.Unmarshal(body, &userInput)
@@ -108,10 +139,10 @@ func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	if path == "/" {
-		path += configuration.FileForFolder
+		path += config.Configuration.FileForFolder
 	}
 	fmt.Printf("Path: %s\n", r.URL.Path)
-	path = configuration.StaticDir + path
+	path = config.Configuration.StaticDir + path
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Printf("Cannot open file %s: %s\n", path, err)
@@ -141,10 +172,10 @@ func (h *DataHandler) GetOpenFile(w http.ResponseWriter, r *http.Request) {
 	log.Println("get open file", r.URL.Path)
 	path := r.URL.Path
 	if res, _ := regexp.Match("^/open", []byte(path)); !res {
-		path = "/" + configuration.OpenDir + path
+		path = "/" + config.Configuration.OpenDir + path
 	}
 	if res, _ := regexp.Match("/$", []byte(path)); res {
-		path += configuration.FileForFolder
+		path += config.Configuration.FileForFolder
 	}
 	r.URL.Path = path
 	h.GetFront(w, r)
