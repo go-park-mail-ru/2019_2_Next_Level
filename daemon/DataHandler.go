@@ -28,7 +28,6 @@ func (h *DataHandler) getWorkDirectory() string {
 }
 
 func (h *DataHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
-
 	(&CorsHandler{}).preflightHandler(w, r)
 	email, err := (&AuthHandler{}).CheckAuthorization(r)
 	if err != nil {
@@ -108,32 +107,6 @@ func (h *DataHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println(user.Name)
 	db.UpdateUser(user)
-
-	// user, err := (&AuthHandler{}).parseUser(r)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// }
-
-	// file, handler, err := r.FormFile("avatar")
-	// if err != nil {
-	// 	fmt.Println("Cannot get avatar", err)
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	return
-	// }
-	// defer file.Close()
-
-	// f, err := os.OpenFile(h.getWorkDirectory()+config.AvatarDirPath+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
-	// if err != nil {
-	// 	fmt.Println("Cannot create avatar file", err)
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-	// defer f.Close()
-	// io.Copy(f, file)
-
-	// user.Email = email
-	// db.UpdateUser(user)
 }
 
 func (h *DataHandler) GetFront(w http.ResponseWriter, r *http.Request) {
