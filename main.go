@@ -38,10 +38,10 @@ func Configurate(conf *config.Config) error {
 }
 
 func main() {
-	configuration := config.Config{}
-	Configurate(&configuration)
+	config.Configuration = config.Config{}
+	Configurate(&config.Configuration)
 
-	if err := daemon.Run(&configuration); err != nil {
+	if err := daemon.Run(&config.Configuration); err != nil {
 		fmt.Printf("Error during daemon startup: %s\n", err)
 	}
 }

@@ -10,10 +10,7 @@ import (
 	db "back/database"
 )
 
-var configuration config.Config
-
 func Run(cfg *config.Config) error {
-	configuration = *cfg
 	fmt.Println("Starting daemon on port ", cfg.Port)
 	db.Init()
 	db.SetConfig(*cfg)
@@ -27,6 +24,7 @@ func Run(cfg *config.Config) error {
 	router.HandleFunc("/api/auth/signout", authApi.Logout).Methods("GET")
 	router.HandleFunc("/api/profile/get", dataApi.GetProfile).Methods("GET")
 	router.HandleFunc("/api/profile/edit", dataApi.UpdateProfile).Methods("POST")
+	router.HandleFunc("/api/profile/avatar", dataApi.UploadAvatar).Methods("POST")
 	router.PathPrefix("/private").HandlerFunc(dataApi.GetPersonalFile).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(dataApi.GetOpenFile).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(corsApi.preflightHandler).Methods("OPTIONS")

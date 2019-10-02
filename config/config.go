@@ -29,3 +29,5 @@ func (c *Config) Inflate() error {
 	json.Unmarshal([]byte(byteValue), &c)
 	return nil
 }
+
+var Configuration Config

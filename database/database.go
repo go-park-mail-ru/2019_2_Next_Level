@@ -14,11 +14,9 @@ type User struct {
 	Avatar     string
 }
 
-var configuration config.Config
-
 func (user *User) Init() {
 	if user.Avatar == "" {
-		user.Avatar = configuration.DefaultAvatar
+		user.Avatar = config.Configuration.DefaultAvatar
 	}
 }
 
@@ -66,7 +64,7 @@ func GetAvaFilename(u User) string {
 	return u.Email + ".png"
 }
 func SetConfig(conf config.Config) {
-	configuration = conf
+	config.Configuration = conf
 }
 func Init() {
 	sessionBook = map[string]string{
