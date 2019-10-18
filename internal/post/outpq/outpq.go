@@ -2,7 +2,7 @@ package outpq
 
 import (
 	"context"
-	pb "testBackend/internal/post/outpq/service"
+	pb "2019_2_Next_Level/internal/post/outpq/service"
 )
 
 const (

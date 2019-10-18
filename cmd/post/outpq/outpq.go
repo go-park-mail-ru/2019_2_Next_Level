@@ -1,13 +1,13 @@
-package main
+package outpq
 
 import (
+	"2019_2_Next_Level/internal/post/outpq"
+	pb "2019_2_Next_Level/internal/post/outpq/service"
+	"2019_2_Next_Level/internal/serverapi"
+	"2019_2_Next_Level/pkg/wormhole"
 	"context"
 	"fmt"
 	"log"
-	"net"
-	"testBackend/internal/post/outpq"
-	pb "testBackend/internal/post/outpq/service"
-	"testBackend/internal/serverapi"
 
 	"google.golang.org/grpc"
 )
@@ -16,25 +16,20 @@ const (
 	outpqPort = ":2000"
 )
 
-func main() {
+// func main() {
+func Init() {
 	log.SetPrefix("Outpq: ")
-	listener, err := net.Listen("tcp", outpqPort)
-	if err != nil {
-		log.Println("Cannot open tcp socket")
-		return
-	}
 
-	grpcServer := grpc.NewServer()
 	queue := outpq.Outpq{}
 	queue.Init()
-	pb.RegisterOutpqServer(grpcServer, &queue)
-
 	go Dequeue(&queue)
+	hole := wormhole.Wormhole{}
 
-	err = grpcServer.Serve(listener)
+	err := hole.RunServer(outpqPort, func(server *grpc.Server) {
+		pb.RegisterOutpqServer(server, &queue)
+	})
 	if err != nil {
-		fmt.Println("Cannot start grpcServer")
-		return
+		fmt.Println("Error after wormhole.runserver()")
 	}
 
 }

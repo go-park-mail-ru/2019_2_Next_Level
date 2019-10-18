@@ -1,10 +1,10 @@
-package main
+package smtpd
 
 import (
+	pb "2019_2_Next_Level/internal/post/smtpd/service"
 	"context"
 	"fmt"
 	"net"
-	pb "testBackend/internal/post/smtpd/service"
 
 	"google.golang.org/grpc"
 )
@@ -16,7 +16,8 @@ func (s *Server) Enqueue(ctx context.Context, in *pb.Email) (*pb.Empty, error) {
 	return &pb.Empty{S: true}, nil
 }
 
-func main() {
+func Init() {
+	// func main() {
 	fmt.Println("SMTPd started. Hello!")
 	// smtpd.Read()
 	listener, err := net.Listen("tcp", ":2000")

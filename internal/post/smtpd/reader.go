@@ -2,8 +2,8 @@ package smtpd
 
 import (
 	"fmt"
-	"testBackend/internal/post"
-	"testBackend/internal/post/outpq"
+	"2019_2_Next_Level/internal/post"
+	"2019_2_Next_Level/internal/post/outpq"
 )
 
 func Read() {

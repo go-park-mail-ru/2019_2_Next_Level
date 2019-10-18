@@ -2,7 +2,7 @@ package serverapi
 
 import (
 	"fmt"
-	"testBackend/internal/post"
+	"2019_2_Next_Level/internal/post"
 )
 
 var messageQueue post.Sender

@@ -1,11 +1,10 @@
 package serverapi
 
 import (
+	"2019_2_Next_Level/internal/post"
+	pb "2019_2_Next_Level/internal/post/outpq/service"
 	"context"
 	"fmt"
-	"testBackend/internal/post"
-	pb "testBackend/internal/post/outpq/service"
-	"time"
 
 	"google.golang.org/grpc"
 )
@@ -32,8 +31,9 @@ func (q *Queue) Destroy() {
 
 func (q *Queue) Put(email post.Email) error {
 	p := (&ParcelAdapter{}).FromEmail(&email)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	// defer cancel()
+	ctx := context.Background()
 	_, err := q.queue.Enqueue(ctx, &p)
 	return err
 }
