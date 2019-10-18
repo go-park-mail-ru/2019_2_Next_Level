@@ -1,9 +1,9 @@
 package smtpd
 
 import (
-	"fmt"
 	"2019_2_Next_Level/internal/post"
 	"2019_2_Next_Level/internal/post/outpq"
+	"fmt"
 )
 
 func Read() {
@@ -17,4 +17,8 @@ func Read() {
 		mail := elem.(post.Email)
 		fmt.Println(mail.Stringify())
 	}
+}
+
+func Run() {
+	
 }

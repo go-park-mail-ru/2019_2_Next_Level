@@ -9,7 +9,7 @@ import (
 func main() {
 	fmt.Println("API Server started. Hello!")
 	var a post.Sender
-	a = &serverapi.Queue{}
+	a = &serverapi.QueueClient{}
 	serverapi.SetQueue(a)
 	serverapi.Run()
 

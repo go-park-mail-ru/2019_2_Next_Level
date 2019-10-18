@@ -9,12 +9,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-type Queue struct {
+type QueueClient struct {
 	queue      pb.OutpqClient
 	Connection *grpc.ClientConn
 }
 
-func (q *Queue) Init() {
+func (q *QueueClient) Init() {
 	var err error
 	q.Connection, err = grpc.Dial("localhost:2000", grpc.WithInsecure())
 	if err != nil {
@@ -25,11 +25,11 @@ func (q *Queue) Init() {
 	q.queue = pb.NewOutpqClient(q.Connection)
 }
 
-func (q *Queue) Destroy() {
+func (q *QueueClient) Destroy() {
 	q.Connection.Close()
 }
 
-func (q *Queue) Put(email post.Email) error {
+func (q *QueueClient) Put(email post.Email) error {
 	p := (&ParcelAdapter{}).FromEmail(&email)
 	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	// defer cancel()
@@ -38,7 +38,7 @@ func (q *Queue) Put(email post.Email) error {
 	return err
 }
 
-func (q *Queue) Get() (post.Email, error) {
+func (q *QueueClient) Get() (post.Email, error) {
 	data, err := q.queue.Dequeue(context.Background(), &pb.Empty{})
 	if err != nil {
 		fmt.Println("Nil value")

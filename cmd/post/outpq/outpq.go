@@ -1,6 +1,7 @@
 package outpq
 
 import (
+	"2019_2_Next_Level/internal/post"
 	"2019_2_Next_Level/internal/post/outpq"
 	pb "2019_2_Next_Level/internal/post/outpq/service"
 	"2019_2_Next_Level/internal/serverapi"
@@ -16,32 +17,45 @@ const (
 	outpqPort = ":2000"
 )
 
-// func main() {
-func Init() {
-	log.SetPrefix("Outpq: ")
+type QueueDemon struct {
+	queue   outpq.Outpq
+	outChan chan post.Email
+	chans   post.ChanPair
+}
 
-	queue := outpq.Outpq{}
-	queue.Init()
-	go Dequeue(&queue)
+func (q *QueueDemon) SetChanPack(chs post.ChanPair) {
+	q.chans = chs
+}
+
+func (q *QueueDemon) Init() {
+	q.queue = outpq.Outpq{}
+	q.queue.Init()
+	log.SetPrefix("Outpq: ")
+}
+func (q *QueueDemon) Run() {
+	go q.Dequeue()
 	hole := wormhole.Wormhole{}
 
 	err := hole.RunServer(outpqPort, func(server *grpc.Server) {
-		pb.RegisterOutpqServer(server, &queue)
+		pb.RegisterOutpqServer(server, &q.queue)
 	})
 	if err != nil {
-		fmt.Println("Error after wormhole.runserver()")
+		fmt.Println("Error after wormhole.runserver()", err)
 	}
 
 }
 
-func Dequeue(q *outpq.Outpq) {
+func (q *QueueDemon) Dequeue() {
+	i := 0
 	for {
-		data, err := q.Dequeue(context.Background(), &pb.Empty{})
+		data, err := q.queue.Dequeue(context.Background(), &pb.Empty{})
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {
 			email := (&serverapi.ParcelAdapter{}).ToEmail(data)
-			fmt.Println(email.Stringify())
+			q.chans.Out <- email
+			fmt.Println(email.Body)
+			i++
 		}
 	}
 }
