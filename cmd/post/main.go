@@ -36,7 +36,7 @@ func main() {
 		&messagequeue.QueueDemon{Name: "outcoming"},
 		&mailsender.MailSender{},
 		&smtpd.Server{},
-		&messagequeue.QueueDemon{Name: "incomin"},
+		&messagequeue.QueueDemon{Name: "incoming"},
 	}
 	Execute(daemonList...)
 }

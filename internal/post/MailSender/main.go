@@ -6,10 +6,6 @@ import (
 	"sync"
 )
 
-// var inputChan <-chan post.Email
-// var outputChan chan<- post.Email
-// var chansQueue, chansServer post.ChanPair
-
 // MailSender : checks emails, prepares them for delivery,
 // controls if they are sent and reacts when the email cannot be sent
 type MailSender struct {
