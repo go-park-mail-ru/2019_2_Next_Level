@@ -12,7 +12,7 @@ message Email {
 message Empty {
     bool s = 1;
 }
-service Outpq {
+service MessageQueue {
     rpc Enqueue(Email) returns (Empty) {}
     rpc Dequeue(Empty) returns (Email) {}
 }

@@ -1,10 +1,11 @@
 package main
 
 import (
-	mailsender "2019_2_Next_Level/cmd/post/MailSender"
-	"2019_2_Next_Level/cmd/post/outpq"
-	"2019_2_Next_Level/cmd/post/smtpd"
+	"2019_2_Next_Level/internal/logger"
 	"2019_2_Next_Level/internal/post"
+	mailsender "2019_2_Next_Level/internal/post/MailSender"
+	"2019_2_Next_Level/internal/post/messagequeue"
+	"2019_2_Next_Level/internal/post/smtpd"
 	"sync"
 )
 
@@ -12,35 +13,14 @@ const (
 	chanSize = 100
 )
 
-type Dispatcher struct {
-	OutcomingQueue    post.ChanPair
-	IncomingQueue     post.ChanPair
-	MailSender_Queue  post.ChanPair
-	MailSender_Server post.ChanPair
-	SMTPServer_Sender post.ChanPair
-	SMTPServer_Queue  post.ChanPair
+var d post.Dispatcher
+
+type daemon interface {
+	Init(post.ChanPair, post.ChanPair) error
+	Run(*sync.WaitGroup)
 }
 
-func (d *Dispatcher) Init() {
-	d.OutcomingQueue.Out = make(chan interface{}, chanSize)
-
-	d.MailSender_Queue.In = d.OutcomingQueue.Out
-	d.MailSender_Queue.Out = make(chan interface{}, chanSize)
-
-	d.MailSender_Server.In = make(chan interface{}, chanSize)
-	d.MailSender_Server.Out = make(chan interface{}, chanSize)
-
-	d.OutcomingQueue.In = d.MailSender_Queue.Out
-
-	d.SMTPServer_Sender.In = d.MailSender_Server.Out
-	d.SMTPServer_Sender.Out = d.MailSender_Server.In
-
-	d.SMTPServer_Queue.Out = make(chan interface{}, chanSize)
-	d.IncomingQueue.In = d.SMTPServer_Queue.Out
-
-}
-
-var d Dispatcher
+var log logger.Log
 
 func main() {
 	// Должны быть компоненты:
@@ -48,24 +28,35 @@ func main() {
 	// 	* Очередь Входящих
 	// 	* Отправщик
 	// 	* SMTP-сервер
-	outcomingQueue := outpq.QueueDemon{}
-	// incomingQueue := outpq.QueueDemon{}
-	outcomingQueue.Init()
-	mailsender.Init()
-	smtpd.Init()
-	d.Init()
 
-	outcomingQueue.SetChanPack(d.OutcomingQueue)
-	mailsender.SetChanPack(d.MailSender_Queue, d.MailSender_Server)
-	smtpd.SetChanPack(d.SMTPServer_Queue, d.SMTPServer_Sender)
-	// incomingQueue.SetChanPack(d.IncomingQueue)
+	// 	outcomingQueue <------> mailsender <--------> smtpd <--------> incomingQueue
+	log.SetPrefix("PostServerMain")
 
+	daemonList := []daemon{
+		&messagequeue.QueueDemon{Name: "outcoming"},
+		&mailsender.MailSender{},
+		&smtpd.Server{},
+		&messagequeue.QueueDemon{Name: "incomin"},
+	}
+	Execute(daemonList...)
+}
+
+// Execute : starts daemon chain
+func Execute(daemons ...daemon) {
 	wg := &sync.WaitGroup{}
-	wg.Add(4)
-	go outcomingQueue.Run()
-	go mailsender.Run()
-	go smtpd.Run()
-	// go incomingQueue.Run()
-	wg.Wait()
 
+	previous := post.ChanPair{}.Init(chanSize)
+
+	for _, daemon := range daemons {
+		next := post.ChanPair{}.Init(chanSize)
+		err := daemon.Init(previous, next)
+		if err != nil {
+			log.Println("Error during initializing a daemon: ", err)
+			return
+		}
+		previous = next
+		wg.Add(1)
+		go daemon.Run(wg)
+	}
+	wg.Wait()
 }

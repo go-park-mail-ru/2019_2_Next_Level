@@ -148,108 +148,108 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// OutpqClient is the client API for Outpq service.
+// MessageQueueClient is the client API for MessageQueue service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type OutpqClient interface {
+type MessageQueueClient interface {
 	Enqueue(ctx context.Context, in *Email, opts ...grpc.CallOption) (*Empty, error)
 	Dequeue(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Email, error)
 }
 
-type outpqClient struct {
+type messagequeueClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewOutpqClient(cc *grpc.ClientConn) OutpqClient {
-	return &outpqClient{cc}
+func NewMessageQueueClient(cc *grpc.ClientConn) MessageQueueClient {
+	return &messagequeueClient{cc}
 }
 
-func (c *outpqClient) Enqueue(ctx context.Context, in *Email, opts ...grpc.CallOption) (*Empty, error) {
+func (c *messagequeueClient) Enqueue(ctx context.Context, in *Email, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/service.Outpq/Enqueue", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/service.MessageQueue/Enqueue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *outpqClient) Dequeue(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Email, error) {
+func (c *messagequeueClient) Dequeue(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Email, error) {
 	out := new(Email)
-	err := c.cc.Invoke(ctx, "/service.Outpq/Dequeue", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/service.MessageQueue/Dequeue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// OutpqServer is the server API for Outpq service.
-type OutpqServer interface {
+// MessageQueueServer is the server API for MessageQueue service.
+type MessageQueueServer interface {
 	Enqueue(context.Context, *Email) (*Empty, error)
 	Dequeue(context.Context, *Empty) (*Email, error)
 }
 
-// UnimplementedOutpqServer can be embedded to have forward compatible implementations.
-type UnimplementedOutpqServer struct {
+// UnimplementedMessageQueueServer can be embedded to have forward compatible implementations.
+type UnimplementedMessageQueueServer struct {
 }
 
-func (*UnimplementedOutpqServer) Enqueue(ctx context.Context, req *Email) (*Empty, error) {
+func (*UnimplementedMessageQueueServer) Enqueue(ctx context.Context, req *Email) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Enqueue not implemented")
 }
-func (*UnimplementedOutpqServer) Dequeue(ctx context.Context, req *Empty) (*Email, error) {
+func (*UnimplementedMessageQueueServer) Dequeue(ctx context.Context, req *Empty) (*Email, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Dequeue not implemented")
 }
 
-func RegisterOutpqServer(s *grpc.Server, srv OutpqServer) {
-	s.RegisterService(&_Outpq_serviceDesc, srv)
+func RegisterMessageQueueServer(s *grpc.Server, srv MessageQueueServer) {
+	s.RegisterService(&_MessageQueue_serviceDesc, srv)
 }
 
-func _Outpq_Enqueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MessageQueue_Enqueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Email)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OutpqServer).Enqueue(ctx, in)
+		return srv.(MessageQueueServer).Enqueue(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/service.Outpq/Enqueue",
+		FullMethod: "/service.MessageQueue/Enqueue",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OutpqServer).Enqueue(ctx, req.(*Email))
+		return srv.(MessageQueueServer).Enqueue(ctx, req.(*Email))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Outpq_Dequeue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MessageQueue_Dequeue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OutpqServer).Dequeue(ctx, in)
+		return srv.(MessageQueueServer).Dequeue(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/service.Outpq/Dequeue",
+		FullMethod: "/service.MessageQueue/Dequeue",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OutpqServer).Dequeue(ctx, req.(*Empty))
+		return srv.(MessageQueueServer).Dequeue(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Outpq_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "service.Outpq",
-	HandlerType: (*OutpqServer)(nil),
+var _MessageQueue_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "service.MessageQueue",
+	HandlerType: (*MessageQueueServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Enqueue",
-			Handler:    _Outpq_Enqueue_Handler,
+			Handler:    _MessageQueue_Enqueue_Handler,
 		},
 		{
 			MethodName: "Dequeue",
-			Handler:    _Outpq_Dequeue_Handler,
+			Handler:    _MessageQueue_Dequeue_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

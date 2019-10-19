@@ -2,7 +2,7 @@ package serverapi
 
 import (
 	"2019_2_Next_Level/internal/post"
-	pb "2019_2_Next_Level/internal/post/outpq/service"
+	pb "2019_2_Next_Level/internal/post/messagequeue/service"
 	"context"
 	"fmt"
 
@@ -10,7 +10,7 @@ import (
 )
 
 type QueueClient struct {
-	queue      pb.OutpqClient
+	queue      pb.MessageQueueClient
 	Connection *grpc.ClientConn
 }
 
@@ -22,7 +22,7 @@ func (q *QueueClient) Init() {
 		return
 	}
 
-	q.queue = pb.NewOutpqClient(q.Connection)
+	q.queue = pb.NewMessageQueueClient(q.Connection)
 }
 
 func (q *QueueClient) Destroy() {

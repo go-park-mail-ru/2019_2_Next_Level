@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 )
 
-type OutpqConfig struct {
+type MessageQueueConfig struct {
 	Config
 	Host string
 	Port string
 }
 
-func (c *OutpqConfig) Inflate() error {
+func (c *MessageQueueConfig) Inflate() error {
 	filename := "outcoming_queue.config.json"
 	var byteValue []byte
 	err := c.readFile(filename, &byteValue)
