@@ -2,9 +2,9 @@ package messagequeue
 
 import (
 	"2019_2_Next_Level/internal/logger"
+	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/post"
 	pb "2019_2_Next_Level/internal/post/messagequeue/service"
-	"2019_2_Next_Level/internal/serverapi"
 	"2019_2_Next_Level/pkg/wormhole"
 	"context"
 	"fmt"
@@ -30,22 +30,25 @@ type QueueDemon struct {
 
 // Init : gets channel pack and inits Queue gRPC service
 func (q *QueueDemon) Init(chanA, chanB post.ChanPair) error {
+	var t int
 	switch q.Name {
 	case "incoming":
 		q.Port = post.Conf.IncomingQueue.Port
 		q.Task = q.Enqueue
 		q.chans = chanA
+		t = 5
 		break
 	case "outcoming":
 		q.Port = post.Conf.OutcomingQueue.Port
 		q.Task = q.Dequeue
 		q.chans = chanB
+		t = 10
 		break
 	default:
 		q.log.Println("Unknown queue name")
 		return fmt.Errorf("unknown name was given: %s\n", q.Name)
 	}
-	q.queue = MessageQueue{}
+	q.queue = MessageQueue{Test: t}
 	q.queue.Init()
 	q.log.SetPrefix(q.Name)
 	return nil
@@ -70,11 +73,12 @@ func (q *QueueDemon) Run(externWg *sync.WaitGroup) {
 func (q *QueueDemon) Dequeue() {
 	i := 0
 	for {
-		data, err := q.queue.Dequeue(context.Background(), &pb.Empty{})
+		// data, err := q.queue.Dequeue(context.Background(), &pb.Empty{})
+		email, err := q.queue.DequeueLocal()
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {
-			email := (&serverapi.ParcelAdapter{}).ToEmail(data)
+			// email := (&model.ParcelAdapter{}).ToEmail(data)
 			q.chans.Out <- email
 			q.log.Println(email.Body)
 			i++
@@ -89,8 +93,9 @@ func (q *QueueDemon) Enqueue() {
 		email := (<-q.chans.In).(post.Email)
 		q.log.Println(email.Body)
 
-		data := (&serverapi.ParcelAdapter{}).FromEmail(&email)
+		data := (&model.ParcelAdapter{}).FromEmail(&email)
 		_, err := q.queue.Enqueue(context.Background(), &data)
+		fmt.Println("Enqueued")
 		if err != nil {
 			q.log.Println("Cannot enqueue")
 		}

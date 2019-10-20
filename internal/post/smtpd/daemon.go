@@ -44,6 +44,8 @@ func (s *Server) Init(pre, next post.ChanPair) error {
 
 	fmt.Println("SMTPd started. Hello!")
 	s.log.SetPrefix("SMTPd")
+
+	// incomingworker.outChan = next
 	return nil
 }
 
@@ -52,6 +54,11 @@ func (s *Server) Run(externwg *sync.WaitGroup) {
 	defer externwg.Done()
 	go s.RunSmtpServer()
 	go s.GetIncomingMessages()
+	for {
+		email := post.Email{"ivan", "ian", "body"}
+		s.incomingQueueChan.In <- email
+		time.Sleep(500 * time.Millisecond)
+	}
 	s.PrintAndForward()
 }
 

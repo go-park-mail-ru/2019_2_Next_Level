@@ -2,6 +2,7 @@ package main
 
 import (
 	"2019_2_Next_Level/internal/serverapi"
+	incommail "2019_2_Next_Level/internal/serverapi/IncomingMailSecretary"
 	"2019_2_Next_Level/internal/serverapi/server"
 	"2019_2_Next_Level/pkg/config"
 	"flag"
@@ -29,9 +30,12 @@ func main() {
 
 	// curl -d "to=andrey" http://localhost:3001/mail/send
 
+	incomingMailHandler := incommail.Secretary{}
+	incomingMailHandler.Init()
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	wg.Add(2)
 	go server.Run(wg)
+	go incomingMailHandler.Run(wg)
 	wg.Wait()
 
 	// if err := daemon.Run(&config.Configuration); err != nil {

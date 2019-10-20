@@ -1,4 +1,4 @@
-package serverapi
+package server
 
 import (
 	"2019_2_Next_Level/internal/post"

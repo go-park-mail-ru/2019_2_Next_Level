@@ -1,9 +1,9 @@
 package messagequeue
 
 import (
+	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/post"
 	pb "2019_2_Next_Level/internal/post/messagequeue/service"
-	"2019_2_Next_Level/internal/serverapi"
 	"context"
 )
 
@@ -14,6 +14,7 @@ const (
 // MessageQueue : class of the Queue storing emails
 type MessageQueue struct {
 	queue chan pb.Email
+	Test  int
 }
 
 // Init : initialize the queue
@@ -29,7 +30,7 @@ func (q *MessageQueue) Enqueue(ctx context.Context, email *pb.Email) (*pb.Empty,
 
 // EnqueueLocal : put a usual post.Email in the queue
 func (q *MessageQueue) EnqueueLocal(email *post.Email) error {
-	lEmail := (&serverapi.ParcelAdapter{}).FromEmail(email)
+	lEmail := (&model.ParcelAdapter{}).FromEmail(email)
 	q.queue <- lEmail
 	return nil
 }
@@ -43,6 +44,6 @@ func (q *MessageQueue) Dequeue(ctx context.Context, _ *pb.Empty) (*pb.Email, err
 // DequeueLocal : get a usual post.Email from the queue
 func (q *MessageQueue) DequeueLocal() (post.Email, error) {
 	lEmail := <-q.queue
-	email := (&serverapi.ParcelAdapter{}).ToEmail(&lEmail)
+	email := (&model.ParcelAdapter{}).ToEmail(&lEmail)
 	return email, nil
 }
