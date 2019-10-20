@@ -13,10 +13,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	messagequeuePortOutcoming = ":2000"
-	messagequeuePortIncoming  = ":2001"
-)
+// const (
+// 	messagequeuePortOutcoming = ":2000"
+// 	messagequeuePortIncoming  = ":2001"
+// )
 
 // QueueDemon : Инкапсулирует gRPC приёмник и саму очередь, предоставляя интерфейс каналов
 type QueueDemon struct {
@@ -32,12 +32,12 @@ type QueueDemon struct {
 func (q *QueueDemon) Init(chanA, chanB post.ChanPair) error {
 	switch q.Name {
 	case "incoming":
-		q.Port = messagequeuePortIncoming
+		q.Port = post.Conf.IncomingQueue.Port
 		q.Task = q.Enqueue
 		q.chans = chanA
 		break
 	case "outcoming":
-		q.Port = messagequeuePortOutcoming
+		q.Port = post.Conf.OutcomingQueue.Port
 		q.Task = q.Dequeue
 		q.chans = chanB
 		break

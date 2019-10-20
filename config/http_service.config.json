@@ -10,6 +10,7 @@
     "openDir": "open",
     "privateDir": "private",
     "selfURL": "https://gentle-castle-33760.herokuapp.com/",
-    "defaultAvatar": "default.png"
-
+    "defaultAvatar": "default.png",
+    "postServiceHost": "localhost",
+    "postServiceSendPort" : "2000"
 }

@@ -16,7 +16,7 @@ type QueueClient struct {
 
 func (q *QueueClient) Init() {
 	var err error
-	q.Connection, err = grpc.Dial("localhost:2000", grpc.WithInsecure())
+	q.Connection, err = grpc.Dial(Conf.PostServiceHost+Conf.PostServiceSendPort, grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("Cannot connect to service")
 		return

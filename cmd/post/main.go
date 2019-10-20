@@ -6,14 +6,14 @@ import (
 	mailsender "2019_2_Next_Level/internal/post/MailSender"
 	"2019_2_Next_Level/internal/post/messagequeue"
 	"2019_2_Next_Level/internal/post/smtpd"
+	"2019_2_Next_Level/pkg/config"
+	"flag"
 	"sync"
 )
 
 const (
-	chanSize = 100
+	configFilenameDefault = "post_service.config.json"
 )
-
-var d post.Dispatcher
 
 type daemon interface {
 	Init(post.ChanPair, post.ChanPair) error
@@ -31,6 +31,11 @@ func main() {
 
 	// 	outcomingQueue <------> mailsender <--------> smtpd <--------> incomingQueue
 	log.SetPrefix("PostServerMain")
+	err := initializeConfig()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	daemonList := []daemon{
 		&messagequeue.QueueDemon{Name: "outcoming"},
@@ -45,10 +50,10 @@ func main() {
 func Execute(daemons ...daemon) {
 	wg := &sync.WaitGroup{}
 
-	previous := post.ChanPair{}.Init(chanSize)
+	previous := post.ChanPair{}.Init(post.Conf.ChannelCapasity)
 
 	for _, daemon := range daemons {
-		next := post.ChanPair{}.Init(chanSize)
+		next := post.ChanPair{}.Init(post.Conf.ChannelCapasity)
 		err := daemon.Init(previous, next)
 		if err != nil {
 			log.Println("Error during initializing a daemon: ", err)
@@ -59,4 +64,11 @@ func Execute(daemons ...daemon) {
 		go daemon.Run(wg)
 	}
 	wg.Wait()
+}
+
+func initializeConfig() error {
+	configFilename := flag.String("config", configFilenameDefault, "Path to config file")
+	flag.Parse()
+
+	return config.Configurator.Inflate(*configFilename, &post.Conf)
 }

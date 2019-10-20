@@ -1,0 +1,14 @@
+{
+    "IncomingQueue" : {
+        "port": ":2001",
+        "ChannelCapasity": 100
+    },
+    "OutcomingQueue": {
+        "port": ":2000",
+        "ChannelCapasity": 100
+    },
+    "SmtpServer": {
+        "ChannelCapasity": 100
+    },
+    "ChannelCapasity": 100
+}
