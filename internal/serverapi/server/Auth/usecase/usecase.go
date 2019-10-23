@@ -1,11 +1,18 @@
 package usecase
 
 import (
+	"2019_2_Next_Level/internal/model"
+	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	"fmt"
 	"net/http"
 )
 
 type AuthUsecase struct {
+	repo auth.Repository
+}
+
+func (a *AuthUsecase) SetRepo(с *model.Connection) *AuthUsecase {
+	return a
 }
 
 func (u *AuthUsecase) Login(login, password string) error {

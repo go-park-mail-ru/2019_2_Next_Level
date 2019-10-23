@@ -43,7 +43,6 @@ func (q *QueueClient) Put(email post.Email) error {
 func (q *QueueClient) Get() (post.Email, error) {
 	data, err := q.queue.Dequeue(context.Background(), &pb.Empty{})
 	if err != nil {
-		fmt.Println("Nil value")
 		return post.Email{}, err
 	}
 

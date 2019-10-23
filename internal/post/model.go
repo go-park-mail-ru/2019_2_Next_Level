@@ -1,6 +1,8 @@
 package post
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Email struct {
 	From string

@@ -20,7 +20,7 @@ import (
 
 // QueueDemon : Инкапсулирует gRPC приёмник и саму очередь, предоставляя интерфейс каналов
 type QueueDemon struct {
-	queue MessageQueue
+	queue MessageQueueCore
 	chans post.ChanPair
 	log   logger.Log
 	Name  string
@@ -48,7 +48,7 @@ func (q *QueueDemon) Init(chanA, chanB post.ChanPair) error {
 		q.log.Println("Unknown queue name")
 		return fmt.Errorf("unknown name was given: %s\n", q.Name)
 	}
-	q.queue = MessageQueue{Test: t}
+	q.queue = MessageQueueCore{Test: t}
 	q.queue.Init()
 	q.log.SetPrefix(q.Name)
 	return nil
@@ -73,12 +73,10 @@ func (q *QueueDemon) Run(externWg *sync.WaitGroup) {
 func (q *QueueDemon) Dequeue() {
 	i := 0
 	for {
-		// data, err := q.queue.Dequeue(context.Background(), &pb.Empty{})
 		email, err := q.queue.DequeueLocal()
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {
-			// email := (&model.ParcelAdapter{}).ToEmail(data)
 			q.chans.Out <- email
 			q.log.Println(email.Body)
 			i++

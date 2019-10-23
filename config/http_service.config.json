@@ -1,8 +1,4 @@
 {
-    "incomingSecretary": {
-        "remotePort": "2001",
-        "remoteHost": "localhost"
-    },
     "HttpServer": {
         "whitelist": {
             "https://next-level-mail.kerimovdev.now.sh/": true,

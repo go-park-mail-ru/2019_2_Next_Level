@@ -27,6 +27,7 @@ func (s *MailSender) Init(pre, next post.ChanPair) error {
 func (s *MailSender) Run(externWg *sync.WaitGroup) {
 	defer externWg.Done()
 	s.ProcessEmail()
+
 }
 
 // ProcessEmail : handles messages from the queue fro sent
@@ -36,7 +37,7 @@ func (s *MailSender) ProcessEmail() {
 		email := pack.(post.Email)
 		// log.Println(email.Body)
 		// log.Debug(email.Body)
-		s.log.Println(email.Body)
+		// s.log.Println(email.Body)
 		s.smtpChan.Out <- email
 		i++
 

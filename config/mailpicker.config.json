@@ -1,0 +1,5 @@
+{
+    "remotePort": "2001",
+    "remoteHost": "localhost",
+    "remoteCheckTimeout": 500 
+}

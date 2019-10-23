@@ -5,14 +5,12 @@ import (
 	"2019_2_Next_Level/internal/post"
 	"2019_2_Next_Level/internal/post/smtpd/worker"
 	"log"
-	"strings"
 	"time"
 
 	"fmt"
 	"sync"
 
 	"github.com/emersion/go-smtp"
-	"github.com/veqryn/go-email/email"
 )
 
 // Server : class for SMTP server daemon
@@ -54,12 +52,16 @@ func (s *Server) Run(externwg *sync.WaitGroup) {
 	defer externwg.Done()
 	go s.RunSmtpServer()
 	go s.GetIncomingMessages()
+	// go s.GenAndSendMailTest()
+	s.PrintAndForward()
+}
+
+func (s *Server) GenAndSendMailTest() {
 	for {
 		email := post.Email{"ivan", "ian", "body"}
 		s.incomingQueueChan.In <- email
 		time.Sleep(500 * time.Millisecond)
 	}
-	s.PrintAndForward()
 }
 
 func (s *Server) RunSmtpServer() {
@@ -77,22 +79,9 @@ func (s *Server) GetIncomingMessages() {
 		}
 		fmt.Println("Got message")
 		fmt.Println(data.Email.Stringify())
-		reader := strings.NewReader(data.Email.Body)
-		msg, err := email.ParseMessage(reader)
-		if err != nil {
-			s.log.Println("Cannot parse email: ", err)
-			continue
-		}
-		s.log.Println(B2S(msg.Parts[1].Body))
-	}
-}
+		s.incomingQueueChan.In <- data.Email
 
-func B2S(bs []uint8) string {
-	b := make([]byte, len(bs))
-	for i, v := range bs {
-		b[i] = byte(v)
 	}
-	return string(b)
 }
 
 // PrintAndForward : gets message from MailSender, prints it and resends to IncomingQueue

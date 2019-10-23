@@ -5,44 +5,46 @@ import (
 	"2019_2_Next_Level/internal/post"
 	pb "2019_2_Next_Level/internal/post/messagequeue/service"
 	"context"
+	"fmt"
 )
 
 const (
 	queueSize = 100
 )
 
-// MessageQueue : class of the Queue storing emails
-type MessageQueue struct {
+// MessageQueueCore : class of the Queue storing emails
+type MessageQueueCore struct {
 	queue chan pb.Email
 	Test  int
 }
 
 // Init : initialize the queue
-func (q *MessageQueue) Init() {
+func (q *MessageQueueCore) Init() {
 	q.queue = make(chan pb.Email, queueSize)
 }
 
 // Enqueue : put a grpc Email in the queue
-func (q *MessageQueue) Enqueue(ctx context.Context, email *pb.Email) (*pb.Empty, error) {
+func (q *MessageQueueCore) Enqueue(ctx context.Context, email *pb.Email) (*pb.Empty, error) {
 	q.queue <- *email
 	return &pb.Empty{S: true}, nil
 }
 
 // EnqueueLocal : put a usual post.Email in the queue
-func (q *MessageQueue) EnqueueLocal(email *post.Email) error {
+func (q *MessageQueueCore) EnqueueLocal(email *post.Email) error {
 	lEmail := (&model.ParcelAdapter{}).FromEmail(email)
 	q.queue <- lEmail
 	return nil
 }
 
 // Dequeue : get a grpc Email from the queue
-func (q *MessageQueue) Dequeue(ctx context.Context, _ *pb.Empty) (*pb.Email, error) {
+func (q *MessageQueueCore) Dequeue(ctx context.Context, e *pb.Empty) (*pb.Email, error) {
 	email := <-q.queue
+	fmt.Println("dequeued")
 	return &email, nil
 }
 
 // DequeueLocal : get a usual post.Email from the queue
-func (q *MessageQueue) DequeueLocal() (post.Email, error) {
+func (q *MessageQueueCore) DequeueLocal() (post.Email, error) {
 	lEmail := <-q.queue
 	email := (&model.ParcelAdapter{}).ToEmail(&lEmail)
 	return email, nil
