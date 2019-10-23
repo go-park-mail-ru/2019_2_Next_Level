@@ -16,7 +16,7 @@ const (
 )
 
 type daemon interface {
-	Init(post.ChanPair, post.ChanPair) error
+	Init(post.ChanPair, post.ChanPair, ...interface{}) error
 	Run(*sync.WaitGroup)
 }
 

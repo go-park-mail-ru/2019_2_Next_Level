@@ -29,7 +29,7 @@ type QueueDemon struct {
 }
 
 // Init : gets channel pack and inits Queue gRPC service
-func (q *QueueDemon) Init(chanA, chanB post.ChanPair) error {
+func (q *QueueDemon) Init(chanA, chanB post.ChanPair, _ ...interface{}) error {
 	var t int
 	switch q.Name {
 	case "incoming":

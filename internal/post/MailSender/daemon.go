@@ -15,7 +15,7 @@ type MailSender struct {
 }
 
 // Init : gets channel packs
-func (s *MailSender) Init(pre, next post.ChanPair) error {
+func (s *MailSender) Init(pre, next post.ChanPair, _ ...interface{}) error {
 	s.queueChan = pre
 	s.smtpChan = next
 	s.log.SetPrefix("MailSender")
