@@ -1,4 +1,4 @@
-package repo
+package repository
 
 import "2019_2_Next_Level/internal/model"
 
@@ -19,6 +19,6 @@ func (d *Postgres) DiscardSession(string) error {
 	return nil
 }
 
-func NewPostgres(c *model.Connection) Postgres {
-	return Postgres{conn: *c}
+func NewPostgres(c *model.Connection) *Postgres {
+	return &Postgres{conn: *c}
 }

@@ -1,0 +1,178 @@
+package http
+
+import (
+	"2019_2_Next_Level/internal/model"
+	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
+	httperror "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
+	e "2019_2_Next_Level/internal/serverapi/server/error"
+	"2019_2_Next_Level/pkg/HttpTools"
+	"net/http"
+	"time"
+)
+
+const (
+	sessionTokenCookieName = "session-id"
+	cookieLifetime         = 10 * 60 // minutes
+)
+
+type AuthHandler struct {
+	usecase auth.Usecase
+	resp    *HttpTools.Response
+}
+
+func NewAuthHandler(uc auth.Usecase) AuthHandler {
+	resp := (&HttpTools.Response{}).SetAnswerForm(&OkStruct{}, httperror.OK)
+	return AuthHandler{usecase: uc, resp: resp}
+}
+
+func (a *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
+	a.resp.SetWriter(w)
+	defer a.resp.Send()
+	tokenCookie, err := r.Cookie(sessionTokenCookieName)
+	if err != nil {
+		a.resp.SetStatus(httperror.BadSession)
+		return
+	}
+	err = a.usecase.Logout(tokenCookie.Value)
+	if err != nil {
+		a.resp.SetStatus(httperror.BadSession)
+		return
+	}
+	a.setCookie(w, sessionTokenCookieName, "delete", time.Now().AddDate(0, 0, -1))
+}
+
+func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
+	a.resp.SetWriter(w)
+	defer a.resp.Send()
+	userInput := model.User{}
+	err := HttpTools.StructFromBody(*r, &userInput)
+	if err != nil {
+		a.resp.SetStatus(httperror.BadParam)
+		return
+	}
+	err = a.usecase.SignUp(userInput)
+	if err != nil {
+		status := httperror.UnknownError
+		switch err.(type) {
+		case e.Error:
+			switch err.(e.Error).Code {
+			case e.AlreadyExists:
+				status = httperror.LoginAlreadyExists
+				break
+			case e.InvalidParams:
+				internalErr, ok := err.(e.Error).Unwrap().(e.Error)
+				if !ok {
+					break
+				}
+				statusMap := map[int]string{
+					auth.ErrorWrongLogin:      httperror.IncorrectLogin,
+					auth.ErrorWrongPassword:   httperror.IncorrectPassword,
+					auth.ErrorWrongSex:        httperror.IncorrectSex,
+					auth.ErrorWrongNickName:   httperror.IncorrectNickname,
+					auth.ErrorWrongFirstName:  httperror.IncorrectName,
+					auth.ErrorWrongFamilyName: httperror.IncorrectFamilyname,
+					auth.ErrorWrongBirthDate:  httperror.IncorrectBirthDate,
+				}
+				temp, ok := statusMap[internalErr.Code]
+				if !ok {
+					break
+				}
+				status = temp
+				break
+			default:
+				break
+			}
+			break
+		default:
+			break
+		}
+		a.resp.SetStatus(status)
+		return
+	}
+	token, err := a.usecase.SignIn(userInput.Email, userInput.Password)
+	if err != nil {
+		status := httperror.UnknownError
+		switch err.(type) {
+		case e.Error:
+			status = httperror.UnknownError
+			break
+		default:
+			break // в будущем, возможно, появятся другие обработчики
+		}
+		a.resp.SetStatus(status)
+		return
+	}
+	a.setCookie(w, sessionTokenCookieName, token, time.Now().Add(cookieLifetime*time.Minute))
+}
+
+func (a *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
+	a.resp.SetWriter(w)
+	defer a.resp.Send()
+	credentials := struct {
+		login    string
+		password string
+	}{}
+	err := HttpTools.StructFromBody(*r, &credentials)
+	if err != nil {
+		a.resp.SetStatus(httperror.BadParam)
+		return
+	}
+
+	uuid, err := a.usecase.SignIn(credentials.login, credentials.password)
+	if err != nil {
+		status := httperror.UnknownError
+		switch err.(type) {
+		case e.Error:
+			switch err.(e.Error).Code {
+			case e.NotExists:
+				status = httperror.LoginNotExist
+				break
+			case e.InvalidParams:
+				status = httperror.WrongPassword
+				break
+			default:
+			}
+			break
+		default:
+		}
+		a.resp.SetStatus(status)
+		return
+	}
+	a.setCookie(w, sessionTokenCookieName, uuid, time.Now().Add(cookieLifetime*time.Minute))
+}
+
+func (a *AuthHandler) CheckAuthorization(w http.ResponseWriter, r *http.Request) {
+	a.resp.SetWriter(w)
+	defer a.resp.Send()
+	tokenCookie, err := r.Cookie(sessionTokenCookieName)
+	if err != nil {
+		a.resp.SetStatus(httperror.BadParam)
+		return
+	}
+	err = a.usecase.CheckAuth(tokenCookie.Value)
+	if err != nil {
+		switch err.(type) {
+		case e.Error:
+			switch err.(e.Error).Code {
+			case e.InvalidParams, e.NoPermission:
+				a.resp.SetStatus(httperror.BadSession)
+			default:
+				a.resp.SetStatus(httperror.UnknownError)
+			}
+		default:
+			a.resp.SetStatus(httperror.UnknownError)
+		}
+		return
+	}
+}
+
+func (a *AuthHandler) setCookie(w http.ResponseWriter, name, value string, lifetime time.Time) {
+	cookie := http.Cookie{
+		Name:     name,
+		Value:    value,
+		Expires:  lifetime,
+		Path:     "/",
+		HttpOnly: true,
+	}
+	http.SetCookie(w, &cookie)
+}

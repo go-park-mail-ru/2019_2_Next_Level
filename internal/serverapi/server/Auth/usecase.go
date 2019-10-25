@@ -1,11 +1,24 @@
 package auth
 
-import "net/http"
+import (
+	"2019_2_Next_Level/internal/model"
+)
 
+// Usecase: usecase class for Auth module
 type Usecase interface {
-	SetRepo(*Repository) *Usecase
-	Login(string, string) error
-	Logout() error
-	Register(string, string) error
-	CheckAuthorization(*http.Cookie) error
+	CheckAuth(token string) error
+	SignIn(login string, password string) (token string, result error)
+	SignUp(user model.User) error
+	Logout(uuid string) error
+	SetRepository(Repository)
 }
+
+const (
+	ErrorWrongLogin = iota
+	ErrorWrongPassword
+	ErrorWrongFirstName
+	ErrorWrongFamilyName
+	ErrorWrongNickName
+	ErrorWrongBirthDate
+	ErrorWrongSex
+)

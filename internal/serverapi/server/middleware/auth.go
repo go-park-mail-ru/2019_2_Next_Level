@@ -4,11 +4,11 @@ import (
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	"fmt"
 	"net/http"
+	e "2019_2_Next_Level/internal/serverapi/server/error"
 
 	"github.com/gorilla/mux"
 )
 
-// type MiddlewareFunc func(http.Handler) http.Handler
 
 func AuthentificationMiddleware(authCase auth.Usecase) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
@@ -16,7 +16,7 @@ func AuthentificationMiddleware(authCase auth.Usecase) mux.MiddlewareFunc {
 			cookie := http.Cookie{}
 
 			res := authCase.CheckAuthorization(&cookie)
-			if res != nil {
+			if res != e.Ok {
 				fmt.Println("No permission")
 				return
 			}
@@ -25,9 +25,3 @@ func AuthentificationMiddleware(authCase auth.Usecase) mux.MiddlewareFunc {
 
 	}
 }
-
-// func AuthentificationMiddleware(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		auth.Usecase
-// 	})
-// }
