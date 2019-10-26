@@ -108,48 +108,47 @@ func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	a.setCookie(w, sessionTokenCookieName, token, time.Now().Add(cookieLifetime*time.Minute))
 }
 
-// func (a *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
-// 	a.resp.SetWriter(w)
-// 	defer a.resp.Send()
-// 	credentials := struct {
-// 		login    string
-// 		password string
-// 	}{}
-// 	err := HttpTools.StructFromBody(*r, &credentials)
-// 	if err != nil {
-// 		a.resp.SetStatus(hr.BadParam)
-// 		return
-// 	}
+func (a *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
+	resp := a.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	credentials := struct {
+		Login    string
+		Password string
+	}{}
+	err := HttpTools.StructFromBody(*r, &credentials)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.BadParam))
+		return
+	}
 
-// 	uuid, err := a.usecase.SignIn(credentials.login, credentials.password)
-// 	if err != nil {
-// 		status := hr.UnknownError
-// 		switch err.(type) {
-// 		case e.Error:
-// 			switch err.(e.Error).Code {
-// 			case e.NotExists:
-// 				status = hr.LoginNotExist
-// 				break
-// 			case e.InvalidParams:
-// 				status = hr.WrongPassword
-// 				break
-// 			default:
-// 			}
-// 			break
-// 		default:
-// 		}
-// 		a.resp.SetStatus(status)
-// 		return
-// 	}
-// 	a.setCookie(w, sessionTokenCookieName, uuid, time.Now().Add(cookieLifetime*time.Minute))
-// }
+	uuid, err := a.usecase.SignIn(credentials.Login, credentials.Password)
+	if err != nil {
+		status := hr.UnknownError
+		switch err.(type) {
+		case e.Error:
+			switch err.(e.Error).Code {
+			case e.NotExists:
+				status = hr.LoginNotExist
+				break
+			case e.InvalidParams:
+				status = hr.WrongPassword
+				break
+			default:
+			}
+			break
+		default:
+		}
+		resp.SetError(hr.GetError(status))
+		return
+	}
+	a.setCookie(w, sessionTokenCookieName, uuid, time.Now().Add(cookieLifetime*time.Minute))
+}
 
 func (a *AuthHandler) CheckAuthorization(w http.ResponseWriter, r *http.Request) {
 	resp := a.resp.SetWriter(w).Copy()
 	defer resp.Send()
 	tokenCookie, err := r.Cookie(sessionTokenCookieName)
 	if err != nil {
-		// a.resp.SetStatus(hr.BadParam)
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
@@ -159,14 +158,11 @@ func (a *AuthHandler) CheckAuthorization(w http.ResponseWriter, r *http.Request)
 		case e.Error:
 			switch err.(e.Error).Code {
 			case e.InvalidParams, e.NoPermission:
-				// a.resp.SetStatus(hr.BadSession)
 				resp.SetError(hr.GetError(hr.BadSession))
 			default:
-				// a.resp.SetStatus(hr.UnknownError)
 				resp.SetError(hr.GetError(hr.UnknownError))
 			}
 		default:
-			// a.resp.SetStatus(hr.UnknownError)
 			resp.SetError(hr.GetError(hr.UnknownError))
 		}
 		return

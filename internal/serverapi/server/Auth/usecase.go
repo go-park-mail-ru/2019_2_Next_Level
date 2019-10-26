@@ -14,7 +14,7 @@ type Usecase interface {
 }
 
 const (
-	ErrorWrongLogin = iota
+	ErrorWrongLogin = iota - 1000
 	ErrorWrongPassword
 	ErrorWrongFirstName
 	ErrorWrongFamilyName

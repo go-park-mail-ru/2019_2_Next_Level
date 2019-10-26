@@ -141,3 +141,52 @@ func TestSignUp(t *testing.T) {
 		}
 	}
 }
+
+func TestSignIn(t *testing.T) {
+	t.Parallel()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockUsecase := mock.NewMockUsecase(mockCtrl)
+	h := NewAuthHandler(mockUsecase)
+
+	testUser := struct {
+		Login    string `json:"login"`
+		Password string `json:"password"`
+	}{"ivanov@mail.ru", "12345"}
+
+	type F func()
+	funcs := []F{
+		func() {
+			mockUsecase.EXPECT().SignIn(testUser.Login, testUser.Password).Return("uuid", nil).Times(1)
+		},
+		func() {
+			mockUsecase.EXPECT().SignIn(testUser.Login, testUser.Password).Return("", e.Error{}.SetCode(e.InvalidParams).IncludeError(e.Error{}.SetCode(auth.ErrorWrongPassword))).Times(1)
+		},
+		func() {
+			mockUsecase.EXPECT().SignIn(testUser.Login, testUser.Password).Return("", e.Error{}.SetCode(e.InvalidParams).IncludeError(e.Error{}.SetCode(auth.ErrorWrongLogin))).Times(1)
+		},
+		func() {
+			mockUsecase.EXPECT().SignIn(testUser.Login, testUser.Password).Return("", e.Error{}.SetCode(e.NotExists)).Times(1)
+		},
+	}
+	response := []interface{}{
+		httperror.HttpResponse{Status: "ok"},
+		httperror.GetError(httperror.WrongPassword),
+		httperror.GetError(httperror.WrongPassword),
+		httperror.GetError(httperror.LoginNotExist),
+	}
+	for i, test := range response {
+		js, _ := json.Marshal(testUser)
+		body := bytes.NewReader(js)
+		r := httptest.NewRequest("GET", "/auth.signin", body)
+		w := httptest.NewRecorder()
+
+		funcs[i]()
+		h.SignIn(w, r)
+		got := w.Body.String()
+		expected, _ := json.Marshal(test)
+		if string(expected) != got {
+			t.Errorf("Wrong response: %s\nWanted: %s", got, expected)
+		}
+	}
+}
