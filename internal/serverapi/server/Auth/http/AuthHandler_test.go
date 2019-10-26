@@ -4,6 +4,7 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/mock"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
+	httperror "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
 	e "2019_2_Next_Level/internal/serverapi/server/error"
 	"bytes"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 )
 
 func TestIsAuth(t *testing.T) {
+	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockUsecase := mock.NewMockUsecase(mockCtrl)
@@ -30,8 +32,8 @@ func TestIsAuth(t *testing.T) {
 		res      error
 		expected string
 	}{
-		{token.String(), nil, `{"status":"OK"}`},
-		{"123", e.Error{}.SetCode(e.InvalidParams), `{"status":"4"}`},
+		{token.String(), nil, `{"status":"ok"}`},
+		{"123", e.Error{}.SetCode(e.InvalidParams), `{"status":"error","error":{"code":4,"msg":"User is not authorized"}}`},
 	}
 	for _, test := range tests {
 		r := httptest.NewRequest("GET", "/auth.signin", &body)
@@ -53,6 +55,7 @@ func TestIsAuth(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
+	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockUsecase := mock.NewMockUsecase(mockCtrl)
@@ -65,11 +68,12 @@ func TestLogout(t *testing.T) {
 	tests := []struct {
 		param    string
 		res      error
-		expected string
+		expected interface{}
 	}{
-		{token.String(), nil, `{"status":"OK"}`},
-		{"123", e.Error{}.SetCode(e.InvalidParams), `{"status":"4"}`},
+		{token.String(), nil, httperror.HttpResponse{Status: "ok"}},
+		{"123", e.Error{}.SetCode(e.InvalidParams), httperror.GetError(httperror.BadSession)},
 	}
+
 	for _, test := range tests {
 		r := httptest.NewRequest("GET", "/auth.signin", &body)
 		w := httptest.NewRecorder()
@@ -82,7 +86,8 @@ func TestLogout(t *testing.T) {
 		mockUsecase.EXPECT().Logout(test.param).Return(test.res).Times(1)
 		h.SignOut(w, r)
 		got := w.Body.String()
-		if test.expected != got {
+		expected, _ := json.Marshal(test.expected)
+		if string(expected) != got {
 			t.Errorf("Wrong response: %s", got)
 		}
 
@@ -90,6 +95,7 @@ func TestLogout(t *testing.T) {
 }
 
 func TestSignUp(t *testing.T) {
+	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockUsecase := mock.NewMockUsecase(mockCtrl)
@@ -114,13 +120,13 @@ func TestSignUp(t *testing.T) {
 			mockUsecase.EXPECT().SignIn(testUser.Email, testUser.Password).Return("", e.Error{}.SetCode(e.InvalidParams)).Times(1)
 		},
 	}
-	tests := []string{
-		`{"status":"OK"}`,
-		`{"status":"15"}`,
-		`{"status":"19"}`,
-		`{"status":"1"}`,
+	response := []interface{}{
+		httperror.HttpResponse{Status: "ok"},
+		httperror.GetError(httperror.IncorrectBirthDate),
+		httperror.GetError(httperror.LoginAlreadyExists),
+		httperror.GetError(httperror.UnknownError),
 	}
-	for i, test := range tests {
+	for i, test := range response {
 		js, _ := json.Marshal(testUser)
 		body := bytes.NewReader(js)
 		r := httptest.NewRequest("GET", "/auth.signin", body)
@@ -129,7 +135,8 @@ func TestSignUp(t *testing.T) {
 		funcs[i]()
 		h.SignUp(w, r)
 		got := w.Body.String()
-		if test != got {
+		expected, _ := json.Marshal(test)
+		if string(expected) != got {
 			t.Errorf("Wrong response: %s", got)
 		}
 	}

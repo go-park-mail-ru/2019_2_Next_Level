@@ -2,7 +2,6 @@ package main
 
 import (
 	"2019_2_Next_Level/internal/serverapi"
-	incommail "2019_2_Next_Level/internal/serverapi/IncomingMailSecretary"
 	"2019_2_Next_Level/internal/serverapi/server"
 	"2019_2_Next_Level/pkg/config"
 	"flag"
