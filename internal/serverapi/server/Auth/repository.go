@@ -8,10 +8,4 @@ type Repository interface {
 	DeleteSession(uuiв string) error
 	AddNewUser(*model.User) error
 	GetUserCredentials(login string) ([]string, error)
-	// AddNewSession(login string, uuid string) error
-	// CheckSession(uuid string) error
-	// DiscardSession(uuid string) error
-	// Registrate(user *model.User) error
-	// GetUserCredentials(login string) (email string, password string, err error)
-
 }

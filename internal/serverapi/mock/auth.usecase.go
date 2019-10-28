@@ -35,11 +35,12 @@ func (m *MockUsecase) EXPECT() *MockUsecaseMockRecorder {
 }
 
 // CheckAuth mocks base method
-func (m *MockUsecase) CheckAuth(token string) error {
+func (m *MockUsecase) CheckAuth(token string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckAuth", token)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CheckAuth indicates an expected call of CheckAuth

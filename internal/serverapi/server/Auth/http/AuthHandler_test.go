@@ -44,7 +44,7 @@ func TestIsAuth(t *testing.T) {
 		}
 		http.SetCookie(w, &cookie)
 		r.Header = http.Header{"Cookie": w.HeaderMap["Set-Cookie"]}
-		mockUsecase.EXPECT().CheckAuth(test.param).Return(test.res).Times(1)
+		mockUsecase.EXPECT().CheckAuth(test.param).Return("", test.res).Times(1)
 		h.CheckAuthorization(w, r)
 		got := w.Body.String()
 		if test.expected != got {

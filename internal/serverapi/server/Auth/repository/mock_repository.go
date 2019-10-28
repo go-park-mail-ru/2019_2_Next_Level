@@ -15,13 +15,14 @@ func GetMock() *MockRepository {
 	return &r
 }
 
-func (r *MockRepository) RegisterNewSession(login, uuid string) error {
+func (r *MockRepository) AddNewSession(login, uuid string) error {
 	if err := r.checkUserExist(login); err != nil {
 		return err
 	}
 	r.sessionBook[uuid] = login
 	return nil
 }
+
 
 func (r *MockRepository) CheckSession(id string) error {
 	if _, ok := r.sessionBook[id]; !ok {

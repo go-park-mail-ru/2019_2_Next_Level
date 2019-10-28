@@ -152,7 +152,7 @@ func (a *AuthHandler) CheckAuthorization(w http.ResponseWriter, r *http.Request)
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	err = a.usecase.CheckAuth(tokenCookie.Value)
+	_, err = a.usecase.CheckAuth(tokenCookie.Value)
 	if err != nil {
 		switch err.(type) {
 		case e.Error:

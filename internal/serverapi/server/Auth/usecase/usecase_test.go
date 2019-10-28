@@ -37,9 +37,9 @@ func TestCheckAuth(t *testing.T) {
 
 	for i, test := range expected {
 		funcs[i]()
-		got := u.CheckAuth(uuid)
-		if !e.CompareErrors(got, test, e.CompareByCode) {
-			t.Errorf("Wrong response: %s\nWanted: %s", got, test)
+		_, gotErr := u.CheckAuth(uuid)
+		if !e.CompareErrors(gotErr, test, e.CompareByCode) {
+			t.Errorf("Wrong response: %s\nWanted: %s", gotErr, test)
 		}
 	}
 

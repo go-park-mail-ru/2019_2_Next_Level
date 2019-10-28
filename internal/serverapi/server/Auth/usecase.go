@@ -6,7 +6,7 @@ import (
 
 // Usecase: usecase class for Auth module
 type Usecase interface {
-	CheckAuth(token string) error
+	CheckAuth(token string) (login string, err error)
 	SignIn(login string, password string) (token string, result error)
 	SignUp(user model.User) error
 	Logout(uuid string) error
