@@ -16,25 +16,9 @@ func TestAuth(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockUsecase := mock.NewMockUsecase(mockCtrl)
 	mockHttpHandler := mock.NewMockHandler(mockCtrl)
-	// h := authHttp.NewAuthHandler(mockUsecase)
-
-	// body := bytes.Reader{}
-	// r := httptest.NewRequest("GET", "/auth.signin", &body)
-	// w := httptest.NewRecorder()
 
 	login := "aaa"
 	uuid := "12345"
-
-	// cookie := http.Cookie{
-	// 	Name:  "session-id",
-	// 	Value: uuid,
-	// }
-	// http.SetCookie(w, &cookie)
-	// r.Header = http.Header{"Cookie": w.HeaderMap["Set-Cookie"]}
-
-	// mockUsecase.EXPECT().CheckAuth(uuid).Return(login, nil).Times(1)
-	// r.Header.Set("login", login)
-	// mockHttpHandler.EXPECT().ServeHTTP(w, r).Return().Times(1)
 
 	type F func(*httptest.ResponseRecorder, *http.Request)
 	funcs := []F{

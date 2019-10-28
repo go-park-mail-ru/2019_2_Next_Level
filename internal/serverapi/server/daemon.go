@@ -1,8 +1,7 @@
 package server
 
 import (
-	"2019_2_Next_Level/internal/model"
-	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
+	authhandler "2019_2_Next_Level/internal/serverapi/server/Auth/http"
 	authrepo "2019_2_Next_Level/internal/serverapi/server/Auth/repository"
 	authusecase "2019_2_Next_Level/internal/serverapi/server/Auth/usecase"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/handlers"
@@ -17,47 +16,39 @@ import (
 	db "back/database"
 )
 
-func Run(externwg *sync.WaitGroup, conn *model.Connection) error {
-	if conn == nil {
-		// create personal connction to db
-	}
+func Run(externwg *sync.WaitGroup) error {
+	// if conn == nil {
+	// 	// create personal connction to db
+	// }
 	defer externwg.Done()
 	fmt.Println("Starting daemon on port ", Conf.Port)
 
-	authUseCase := authusecase.GetUsecase()
-	//authUseCase.SetRepo(authrepo.NewPostgres(conn))
-	// mailUseCase := mail.MailUseCase{repository.Postgres{conn}}
-	// authUseCase.CheckAuthorization()
+	// authUseCase := authusecase.NewAuthUsecase()
 
 	db.Init()
 
-	router := mux.NewRouter()
-	InflateRouter(router)
-	// private := router.PathPrefix("/mail").Subrouter()
-	// // userMux := mux.NewRouter()
-	// handlers.NewMailHandler(private, &mailboxusecase.MailBoxUsecase{})
-	// router.Use(mux.CORSMethodMiddleware(router))
+	router := mux.NewRouter().PathPrefix("/api").Subrouter()
 
-	// private.Use(middleware.AuthentificationMiddleware(&authusecase.AuthUsecase{}))
-	// router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-	// 	fmt.Println("test")
-	// })
+	InflateRouter(router)
 
 	err := http.ListenAndServe(Conf.Port, router)
 	return err
 }
 
 func InflateRouter(router *mux.Router) {
-	private := router.PathPrefix("/mail").Subrouter()
+	router.Use(middleware.AccessLogMiddleware())
+	router.Use(mux.CORSMethodMiddleware(router)) // CORS for all requests
 
-	handlers.NewMailHandler(private, &mailboxusecase.MailBoxUsecase{})
-	router.Use(mux.CORSMethodMiddleware(router))
+	authRouter := router.PathPrefix("/auth").Subrouter()
+	authRepo := authrepo.GetMock()
+	authUseCase := authusecase.NewAuthUsecase(&authRepo)
+	authHandler := authhandler.NewAuthHandler(&authUseCase)
+	authHandler.InflateRouter(authRouter)
 
-	authUseCase := authusecase.GetUsecase()
-	authUseCase.SetRepo(authrepo.GetMock())
+	mailRouter := router.PathPrefix("/mail").Subrouter()
+	mailRouter.Use(middleware.AuthentificationMiddleware(&authUseCase))
+	handlers.NewMailHandler(mailRouter, &mailboxusecase.MailBoxUsecase{})
 
-
-	private.Use(middleware.AuthentificationMiddleware(&authUseCase))
 	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("test")
 	})

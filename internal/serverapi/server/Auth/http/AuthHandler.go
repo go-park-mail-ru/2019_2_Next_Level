@@ -8,6 +8,8 @@ import (
 	"2019_2_Next_Level/pkg/HttpTools"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 const (
@@ -22,7 +24,15 @@ type AuthHandler struct {
 
 func NewAuthHandler(uc auth.Usecase) AuthHandler {
 	resp := (&HttpTools.Response{}).SetError(hr.DefaultResponse)
-	return AuthHandler{usecase: uc, resp: resp}
+	handler := AuthHandler{usecase: uc, resp: resp}
+	return handler
+}
+
+func (a *AuthHandler) InflateRouter(router *mux.Router) {
+	router.HandleFunc("/isAuthorized", a.CheckAuthorization)
+	router.HandleFunc("/signIn", a.SignIn).Methods("POST")
+	router.HandleFunc("/signUp", a.SignUp).Methods("POST")
+	router.HandleFunc("/signOut", a.SignOut)
 }
 
 func (a *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +57,6 @@ func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	userInput := model.User{}
 	err := HttpTools.StructFromBody(*r, &userInput)
 	if err != nil {
-		// a.resp.SetStatus(hr.BadParam)
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
@@ -87,7 +96,6 @@ func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		default:
 			break
 		}
-		// a.resp.SetStatus(status)
 		resp.SetError(hr.GetError(status))
 		return
 	}
@@ -101,7 +109,6 @@ func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		default:
 			break // в будущем, возможно, появятся другие обработчики
 		}
-		// a.resp.SetStatus(status)
 		resp.SetError(hr.GetError(status))
 		return
 	}

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"2019_2_Next_Level/internal/model"
+	e "2019_2_Next_Level/internal/serverapi/server/error"
 	"fmt"
 )
 
@@ -10,9 +11,11 @@ type MockRepository struct {
 	usersList   map[string]model.User
 }
 
-func GetMock() *MockRepository {
+func GetMock() MockRepository {
 	r := MockRepository{}
-	return &r
+	r.sessionBook = make(map[string]string)
+	r.usersList = make(map[string]model.User)
+	return r
 }
 
 func (r *MockRepository) AddNewSession(login, uuid string) error {
@@ -23,35 +26,36 @@ func (r *MockRepository) AddNewSession(login, uuid string) error {
 	return nil
 }
 
-
-func (r *MockRepository) CheckSession(id string) error {
-	if _, ok := r.sessionBook[id]; !ok {
-		return fmt.Errorf("Wrong")
+func (r *MockRepository) GetLoginBySession(uuid string) (string, error) {
+	login, ok := r.sessionBook[uuid]
+	if !ok {
+		return "", e.Error{}.SetCode(e.NoPermission)
 	}
-	return nil
+	return login, nil
 }
-func (r *MockRepository) DiscardSession(id string) error {
+
+func (r *MockRepository) DeleteSession(id string) error {
 	if _, ok := r.sessionBook[id]; !ok {
-		return fmt.Errorf("Wrong")
+		return e.Error{}.SetCode(e.NotExists)
 	}
 	delete(r.sessionBook, id)
 	return nil
 }
 
-func (r *MockRepository) Registrate(user *model.User) error {
-	if _, ok := r.usersList[user.Email]; !ok {
-		return fmt.Errorf("User exists")
+func (r *MockRepository) AddNewUser(user *model.User) error {
+	if _, ok := r.usersList[user.Email]; ok {
+		return e.Error{}.SetCode(e.AlreadyExists)
 	}
 	r.usersList[user.Email] = *user
 	return nil
 }
 
-func (r *MockRepository) GetUserCredentials(login string) (string, string, error) {
+func (r *MockRepository) GetUserCredentials(login string) ([]string, error) {
 	user, ok := r.usersList[login]
 	if !ok {
-		return "", "", fmt.Errorf("User exists")
+		return []string{}, e.Error{}.SetCode(e.NotExists)
 	}
-	return user.Email, user.Password, nil
+	return []string{user.Password, ""}, nil
 }
 
 func (r *MockRepository) checkUserExist(login string) error {
