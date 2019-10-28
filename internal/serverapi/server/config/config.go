@@ -1,4 +1,4 @@
-package server
+package config
 
 import (
 	"2019_2_Next_Level/pkg/config"

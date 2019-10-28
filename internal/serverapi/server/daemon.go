@@ -6,6 +6,7 @@ import (
 	authusecase "2019_2_Next_Level/internal/serverapi/server/Auth/usecase"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/handlers"
 	mailboxusecase "2019_2_Next_Level/internal/serverapi/server/MailBox/usecase"
+	"2019_2_Next_Level/internal/serverapi/server/config"
 	"2019_2_Next_Level/internal/serverapi/server/middleware"
 	"fmt"
 	"net/http"
@@ -21,23 +22,23 @@ func Run(externwg *sync.WaitGroup) error {
 	// 	// create personal connction to db
 	// }
 	defer externwg.Done()
-	fmt.Println("Starting daemon on port ", Conf.Port)
+	fmt.Println("Starting daemon on port ", config.Conf.Port)
 
 	// authUseCase := authusecase.NewAuthUsecase()
 
 	db.Init()
-
-	router := mux.NewRouter().PathPrefix("/api").Subrouter()
+	mainRouter := mux.NewRouter()
+	router := mainRouter.PathPrefix("/api").Subrouter()
 
 	InflateRouter(router)
 
-	err := http.ListenAndServe(Conf.Port, router)
+	err := http.ListenAndServe(config.Conf.Port, router)
 	return err
 }
 
 func InflateRouter(router *mux.Router) {
+	router.Use(middleware.CorsMethodMiddleware()) // CORS for all requests
 	router.Use(middleware.AccessLogMiddleware())
-	router.Use(mux.CORSMethodMiddleware(router)) // CORS for all requests
 
 	authRouter := router.PathPrefix("/auth").Subrouter()
 	authRepo := authrepo.GetMock()

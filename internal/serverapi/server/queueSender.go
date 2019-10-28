@@ -3,6 +3,7 @@ package server
 import (
 	"2019_2_Next_Level/internal/post"
 	pb "2019_2_Next_Level/internal/post/messagequeue/service"
+	"2019_2_Next_Level/internal/serverapi/server/config"
 	"context"
 	"fmt"
 
@@ -16,7 +17,7 @@ type QueueClient struct {
 
 func (q *QueueClient) Init() {
 	var err error
-	q.Connection, err = grpc.Dial(Conf.PostServiceHost+Conf.PostServiceSendPort, grpc.WithInsecure())
+	q.Connection, err = grpc.Dial(config.Conf.PostServiceHost+config.Conf.PostServiceSendPort, grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("Cannot connect to service")
 		return
