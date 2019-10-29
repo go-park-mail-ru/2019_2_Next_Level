@@ -1,4 +1,4 @@
-package daemon
+package user
 
 import (
 	"back/config"

@@ -13,6 +13,7 @@ const (
 	WrongPassword
 	WrongLogin
 	NoPermission
+	Wrong
 )
 
 var Ok = Error{Code: OK}
@@ -32,7 +33,8 @@ func (e Error) SetCode(code int) Error {
 	return e
 }
 func (e Error) SetError(value error) Error {
-	return e.SetString(value.Error())
+	e.Sub = value
+	return e
 }
 func (e Error) SetString(value string) Error {
 	e.Value = value
