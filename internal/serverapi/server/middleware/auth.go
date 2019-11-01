@@ -25,7 +25,7 @@ func AuthentificationMiddleware(authCase auth.Usecase) mux.MiddlewareFunc {
 				fmt.Println("No permission")
 				return
 			}
-			r.Header.Set("login", login)
+			r.Header.Set("X-Login", login)
 			next.ServeHTTP(w, r)
 		})
 

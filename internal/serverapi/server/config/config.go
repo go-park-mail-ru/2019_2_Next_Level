@@ -1,11 +1,7 @@
 package config
 
-import (
-	"2019_2_Next_Level/pkg/config"
-)
-
 type HTTPConfig struct {
-	config.Config
+	//config.Config
 	Whitelist           map[string]bool
 	StaticDir           string
 	Port                string
@@ -18,7 +14,7 @@ type HTTPConfig struct {
 	PostServiceSendPort string
 }
 
-func (c *HTTPConfig) Init() {
+func (c *HTTPConfig) Init(args ...interface{}) {
 	c.Port = ":" + c.Port
 	c.PostServiceSendPort = ":" + c.PostServiceSendPort
 }

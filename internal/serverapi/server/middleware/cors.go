@@ -14,23 +14,23 @@ func CorsMethodMiddleware() mux.MiddlewareFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			headers := w.Header()
 			origin := r.Header.Get("Origin")
-			if origin == "" {
-				log.Println("No Origin header")
-				return
+			if origin != "" {
+				log.Println("origin: ", origin)
+				dd := config.Conf.HttpConfig.Whitelist
+				fmt.Println(dd)
+				if !config.Conf.HttpConfig.Whitelist[origin] {
+					log.Println("Not in whitelist: ", origin)
+					http.Error(w, "Not in whitelist", http.StatusForbidden)
+					return
+				}
+				log.Println("In whitelist")
+				headers.Add("Access-Control-Allow-Origin", origin)
+				headers.Add("Access-Control-Allow-Credentials", "true")
+				headers.Add("Access-Control-Allow-Headers", "Content-Type")
+				headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			} else {
+				log.Println("No origin header")
 			}
-			log.Println("origin: ", origin)
-			dd := config.Conf.HttpConfig.Whitelist
-			fmt.Println(dd)
-			if !config.Conf.HttpConfig.Whitelist[origin] {
-				log.Println("Not in whitelist: ", origin)
-				http.Error(w, "Not in whitelist", http.StatusForbidden)
-				return
-			}
-			log.Println("In whitelist")
-			headers.Add("Access-Control-Allow-Origin", origin)
-			headers.Add("Access-Control-Allow-Credentials", "true")
-			headers.Add("Access-Control-Allow-Headers", "Content-Type")
-			headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
 			next.ServeHTTP(w, r)
 		})

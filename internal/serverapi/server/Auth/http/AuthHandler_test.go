@@ -8,6 +8,7 @@ import (
 	e "2019_2_Next_Level/internal/serverapi/server/error"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -64,7 +65,7 @@ func TestLogout(t *testing.T) {
 	body := bytes.Reader{}
 
 	token, _ := uuid.NewUUID()
-
+	fmt.Println(token.String())
 	tests := []struct {
 		param    string
 		res      error
