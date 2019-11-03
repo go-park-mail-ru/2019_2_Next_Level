@@ -1,7 +1,7 @@
 package main
 
 import (
-	"2019_2_Next_Level/internal/serverapi"
+	serverapiconfig "2019_2_Next_Level/internal/serverapi/config"
 	"2019_2_Next_Level/internal/serverapi/server"
 	"2019_2_Next_Level/pkg/config"
 	"flag"
@@ -29,12 +29,12 @@ func main() {
 
 	// curl -d "to=andrey" http://localhost:3001/mail/send
 
-	incomingMailHandler := incommail.Secretary{}
-	incomingMailHandler.Init()
+	// incomingMailHandler := incommail.Secretary{}
+	// incomingMailHandler.Init()
 	wg := &sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	go server.Run(wg)
-	go incomingMailHandler.Run(wg)
+	// go incomingMailHandler.Run(wg)
 	wg.Wait()
 
 	// if err := daemon.Run(&config.Configuration); err != nil {
@@ -44,7 +44,9 @@ func main() {
 
 func initializeConfig() error {
 	configFilename := flag.String("config", configFilenameDefault, "Path to config file")
+	dbUser := flag.String("dbuser", "", "User for database")
+	dbPassword := flag.String("dbpass", "", "Password for database")
 	flag.Parse()
 
-	return config.Configurator.Inflate(*configFilename, &serverapi.Conf)
+	return config.Inflate(*configFilename, &serverapiconfig.Conf, *dbUser, *dbPassword)
 }

@@ -14,5 +14,10 @@
         "defaultAvatar": "default.png",
         "postServiceHost": "localhost",
         "postServiceSendPort" : "2000"
+    },
+    "Database": {
+        "port": "5432",
+        "host": "localhost",
+        "dbname": "nextlevel"
     }
 }

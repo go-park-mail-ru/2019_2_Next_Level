@@ -64,3 +64,8 @@ func (r *Response) Send() {
 	r.writer.Header().Set("Content-Type", "application/json")
 	r.writer.Write(body)
 }
+
+func (r *Response) String() string {
+	body, _ := json.Marshal(r.Error)
+	return string(body)
+}

@@ -6,14 +6,14 @@ type UUID interface {
 }
 
 type User struct {
-	Name       string
-	Sirname    string
+	Name       string `json:"firstName"`
+	Sirname    string `json:"secondName"`
 	MiddleName string
-	BirthDate  string
-	Sex        string
-	Email      string
-	Password   string
-	Avatar     string
+	BirthDate  string `json:"birthDate"`
+	Sex        string `json:"sex"`
+	Email      string `json:"login"`
+	Password   string `json:"password"`
+	Avatar     string `json:"avatar"`
 }
 
 func (user *User) Init() {

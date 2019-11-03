@@ -11,13 +11,10 @@ const (
 )
 
 type ConfigInterface interface {
-	Init()
+	Init(...interface{})
 }
 
-type Config struct {
-}
-
-func (c *Config) Inflate(filename string, dest ConfigInterface) error {
+func Inflate(filename string, dest ConfigInterface, args ...interface{}) error {
 	jsonFile, err := os.Open(configPath + filename)
 	if err != nil {
 		return err
@@ -25,8 +22,7 @@ func (c *Config) Inflate(filename string, dest ConfigInterface) error {
 	defer jsonFile.Close()
 	output, err := ioutil.ReadAll(jsonFile)
 	json.Unmarshal([]byte(output), &dest)
-	(dest).Init()
+	(dest).Init(args...)
 	return err
 }
 
-var Configurator Config

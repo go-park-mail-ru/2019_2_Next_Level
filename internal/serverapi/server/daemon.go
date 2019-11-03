@@ -43,38 +43,17 @@ func Run(externwg *sync.WaitGroup) error {
 func InflateRouter(router *mux.Router) {
 	router.Use(middleware.CorsMethodMiddleware()) // CORS for all requests
 	router.Use(middleware.AccessLogMiddleware())
-	//router.HandleFunc("/", nil).Methods("OPTIONS")
-	router.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Sub")
-	})
+	router.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
 	authRouter := router.PathPrefix("/auth").Subrouter()
 	authUseCase := InitHttpAuth(authRouter)
-	// authRouter := router.PathPrefix("/auth").Subrouter()
-	// // authRepo := authrepo.GetMock()
-	// authRepo, err := authrepo.GetPostgres()
-	// if err != nil {
-	// 	fmt.Println("Error during init Postgres", err)
-	// 	return
-	// }
-	// authUseCase := authusecase.NewAuthUsecase(&authRepo)
-	// authHandler := authhandler.NewAuthHandler(&authUseCase)
-	// authHandler.InflateRouter(authRouter)
 
 	userRouter := router.PathPrefix("/profile").Subrouter()
 	userRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
 	InitHttpUser(userRouter)
-	// userRepo, err := userrepo.GetPostgres()
-	// if err != nil {
-	// 	fmt.Println("Error during init Postgres", err)
-	// 	return
-	// }
-	// userUsecase := userusecase.NewUserUsecase(&userRepo)
-	// userHandler := userhandler.NewUserHandler(&userUsecase)
-	// userHandler.InflateRouter(userRouter)
 
 	mailRouter := router.PathPrefix("/mail").Subrouter()
 	mailRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
-	// handlers.NewMailHandler(mailRouter, &mailboxusecase.MailBoxUsecase{})
 
 	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("test")
@@ -82,8 +61,6 @@ func InflateRouter(router *mux.Router) {
 }
 
 func InitHttpAuth(router *mux.Router) auth.Usecase {
-	// authRouter := router.PathPrefix("/auth").Subrouter()
-	// authRepo := authrepo.GetMock()
 	authRepo, err := authrepo.GetPostgres()
 	if err != nil {
 		fmt.Println("Error during init Postgres", err)

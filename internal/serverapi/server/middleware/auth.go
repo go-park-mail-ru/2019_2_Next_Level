@@ -13,7 +13,6 @@ import (
 func AuthentificationMiddleware(authCase auth.Usecase) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// cookie := http.Cookie{}
 			cookie, err := r.Cookie("session-id")
 			if err != nil {
 				(&HttpTools.Response{}).SetWriter(w).SetError(hr.GetError(hr.BadSession)).Send()
