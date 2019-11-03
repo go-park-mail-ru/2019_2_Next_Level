@@ -70,5 +70,5 @@ func initializeConfig() error {
 	configFilename := flag.String("config", configFilenameDefault, "Path to config file")
 	flag.Parse()
 
-	return config.Configurator.Inflate(*configFilename, &post.Conf)
+	return config.Inflate(*configFilename, &post.Conf)
 }

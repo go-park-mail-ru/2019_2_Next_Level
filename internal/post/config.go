@@ -7,7 +7,7 @@ type PostServiceConfig struct {
 	ChannelCapasity int
 }
 
-func (c *PostServiceConfig) Init() {
+func (c *PostServiceConfig) Init(args ...interface{}) {
 
 }
 

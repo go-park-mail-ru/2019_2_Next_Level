@@ -1,12 +1,14 @@
 package mailpicker
 
 import (
-	"2019_2_Next_Level/internal/MailPicker/repository"
+	"2019_2_Next_Level/internal/MailPicker/config"
+	"2019_2_Next_Level/internal/MailPicker/workers"
 	"2019_2_Next_Level/internal/model"
 	postinterface "2019_2_Next_Level/internal/postInterface"
+	e "2019_2_Next_Level/pkg/error"
+	"context"
 	"fmt"
 	"sync"
-	"time"
 )
 
 type Secretary struct {
@@ -15,68 +17,72 @@ type Secretary struct {
 	repo                  Repository
 	queueConnectionStatus bool
 	quitChan              chan interface{}
+	errorChan chan error
 }
 
-func NewInstanceDefault(dbConnection *model.Connection) Secretary {
-	s := Secretary{}
-	repo := repository.NewRepository(dbConnection)
-	qInterface := postinterface.QueueClient{
-		RemoteHost: Conf.RemoteHost,
-		RemotePort: Conf.RemotePort,
-	}
-	s.Init(
-		&repo,
-		&qInterface,
-	)
-	return s
-}
-func (s *Secretary) DefaultInit(dbConnection *model.Connection) {
-	repo := repository.NewRepository(dbConnection)
-	qInterface := postinterface.QueueClient{
-		RemoteHost: Conf.RemoteHost,
-		RemotePort: Conf.RemotePort,
-	}
-	s.Init(
-		&repo,
-		&qInterface,
-	)
+func NewSecretary(postRes postinterface.IPostInterface, repo Repository, quitChan chan interface{}) *Secretary {
+	return &Secretary{postRes: postRes, repo: repo, quitChan: quitChan}
 }
 
-func (s *Secretary) Init(repo Repository, qInterface postinterface.IPostInterface) error {
-	// s.postRes = postinterface.QueueClient{RemoteHost: Conf.RemoteHost, RemotePort: Conf.RemotePort}
-	s.postRes = qInterface
+// Init : initializes the module
+func (s *Secretary) Init() *Secretary {
 	s.postRes.Init()
 	s.queueConnectionStatus = true
+	s.errorChan = make(chan error, 3)
 
-	s.repo = repo
 	fmt.Println("Init MailPicker")
-	return nil
+	return s
 }
+
 func (s *Secretary) Run(externwg *sync.WaitGroup) {
 	defer externwg.Done()
-	s.MailPicker()
-}
+	wg := sync.WaitGroup{}
 
-func (s *Secretary) MailPicker() {
-	for {
-		email, err := s.postRes.Get()
-		if err != nil {
-			if s.queueConnectionStatus == true {
-				s.queueConnectionStatus = false
-				fmt.Println(err)
-			}
-			time.Sleep(time.Duration(Conf.RemoteCheckTimeout) * time.Millisecond)
-			continue
-		}
-		if !s.queueConnectionStatus {
-			fmt.Println("Connection emerged!")
-			s.queueConnectionStatus = !s.queueConnectionStatus
-		}
-
-		if !s.repo.UserExists(email.To) {
-			fmt.Println("User not exists")
-			continue
-		}
-		s.repo.AddEmail(model.Email(email))
+	ctx1, finish1 := context.WithCancel(context.Background())
+	ctx2, finish2 := context.WithCancel(context.Background())
+	ctx3, finish3 := context.WithCancel(context.Background())
+	chan1 := make(chan interface{}, 10)
+	picker := workers.NewMailPicker(s.errorChan, s.postRes, s.repo.UserExists)
+	for i:=0; i<config.Conf.PickerWorkerCount; i++ {
+		wg.Add(1)
+		go picker.Run(&wg, ctx1,chan1)
 	}
+
+	cleaner := workers.NewMailCleanup(s.errorChan)
+	chan2 := make(chan model.Email, 10)
+	for i:=0; i<config.Conf.CleanerWorkerCount; i++ {
+		wg.Add(1)
+		go cleaner.Run(&wg, ctx2, chan1, chan2)
+	}
+
+	saver := workers.NewMailSaver(s.errorChan, s.repo.AddEmail)
+	for i:=0; i<config.Conf.SaverWorkerCount; i++ {
+		wg.Add(1)
+		go saver.Run(&wg, ctx3, chan2)
+	}
+	waitWgChan := make(chan interface{})
+	go func(){
+		wg.Wait()
+		waitWgChan<-struct{}{}
+	}()
+	for {
+		select {
+		case err := <-s.errorChan:
+			_, ok := err.(e.Error)
+			if !ok{
+				fmt.Println("Daemon stopping: ", err)
+				finish1()
+				finish2()
+				finish3()
+				return
+			}
+			continue
+			break;
+		case <-waitWgChan:
+			return
+		}
+			return
+	}
+	//wg.Wait()
 }
+

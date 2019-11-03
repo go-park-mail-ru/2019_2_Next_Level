@@ -65,7 +65,7 @@ func (s *Server) Run(externwg *sync.WaitGroup) {
 	go s.RunSmtpServer()
 	go s.GetIncomingMessages()
 	// go s.GenAndSendMailTest()
-	go s.PrintAndForward()
+	// go s.PrintAndForward()
 	select {
 	case <-s.quitChan:
 		return
@@ -74,9 +74,19 @@ func (s *Server) Run(externwg *sync.WaitGroup) {
 
 func (s *Server) GenAndSendMailTest() {
 	for {
-		email := post.Email{"ivan", "ian", "body"}
+		email := post.Email{"ivan", "ian", `Received: from mxback18o.mail.yandex.net (mxback18o.mail.yandex.net [IPv6:2a02:6b8:0:1a2d::69])
+			by forward102o.mail.yandex.net (Yandex) with ESMTP id 1237E6680F6C
+			From: Andrey K. <andreykochnov@yandex.ru>
+			To: aaa <aaa@nlmail.ddns.net>
+			Subject: Test
+			MIME-Version: 1.0
+			Date: Sun, 03 Nov 2019 20:54:17 +0300
+			Content-Transfer-Encoding: 7bit
+			Content-Type: text/html
+			
+			<div>Hellp</div>`}
 		s.incomingQueueChan.In <- email
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 	}
 }
 
@@ -97,7 +107,6 @@ func (s *Server) GetIncomingMessages() {
 		fmt.Println("Got message")
 		fmt.Println(data.Email.Stringify())
 		s.incomingQueueChan.In <- data.Email
-
 	}
 }
 

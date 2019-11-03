@@ -22,13 +22,8 @@ import (
 )
 
 func Run(externwg *sync.WaitGroup) error {
-	// if conn == nil {
-	// 	// create personal connction to db
-	// }
 	defer externwg.Done()
 	fmt.Println("Starting daemon on port ", config.Conf.Port)
-
-	// authUseCase := authusecase.NewAuthUsecase()
 
 	db.Init()
 	mainRouter := mux.NewRouter()

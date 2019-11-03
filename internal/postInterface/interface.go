@@ -16,6 +16,10 @@ type QueueClient struct {
 	RemotePort string
 }
 
+func NewQueueClient(remoteHost string, remotePort string) *QueueClient {
+	return &QueueClient{RemoteHost: remoteHost, RemotePort: remotePort}
+}
+
 func (q *QueueClient) Init() {
 	var err error
 	q.Connection, err = grpc.Dial(q.RemoteHost+q.RemotePort, grpc.WithInsecure())
