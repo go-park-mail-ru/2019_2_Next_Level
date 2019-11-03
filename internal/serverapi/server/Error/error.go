@@ -26,7 +26,7 @@ type Error struct {
 }
 
 func (e Error) Error() string {
-	return fmt.Sprintf("Error[%s] in %s: %s", e.Code, e.Place, e.Value)
+	return fmt.Sprintf("Error[%d] in %s: %s", e.Code, e.Place, e.Value)
 }
 func (e Error) SetCode(code int) Error {
 	e.Code = code

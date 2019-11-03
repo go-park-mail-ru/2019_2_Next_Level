@@ -3,7 +3,7 @@ package usecase
 import (
 	"2019_2_Next_Level/internal/model"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	e "2019_2_Next_Level/internal/serverapi/server/error"
+	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	"fmt"
 
 	"github.com/google/uuid"
