@@ -30,8 +30,8 @@ func NewAuthHandler(uc auth.Usecase) AuthHandler {
 
 func (a *AuthHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/isAuthorized", a.CheckAuthorization)
-	router.HandleFunc("/signIn", a.SignIn).Methods("POST", "OPTIONS")
-	router.HandleFunc("/signUp", a.SignUp).Methods("POST", "OPTIONS")
+	router.HandleFunc("/signIn", a.SignIn).Methods("POST")
+	router.HandleFunc("/signUp", a.SignUp).Methods("POST")
 	router.HandleFunc("/signOut", a.SignOut)
 }
 

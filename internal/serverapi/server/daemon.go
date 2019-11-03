@@ -1,6 +1,7 @@
 package server
 
 import (
+	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	authhandler "2019_2_Next_Level/internal/serverapi/server/Auth/http"
 	authrepo "2019_2_Next_Level/internal/serverapi/server/Auth/repository"
 	authusecase "2019_2_Next_Level/internal/serverapi/server/Auth/usecase"
@@ -42,20 +43,59 @@ func Run(externwg *sync.WaitGroup) error {
 func InflateRouter(router *mux.Router) {
 	router.Use(middleware.CorsMethodMiddleware()) // CORS for all requests
 	router.Use(middleware.AccessLogMiddleware())
-
+	//router.HandleFunc("/", nil).Methods("OPTIONS")
+	router.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Sub")
+	})
 	authRouter := router.PathPrefix("/auth").Subrouter()
+	authUseCase := InitHttpAuth(authRouter)
+	// authRouter := router.PathPrefix("/auth").Subrouter()
+	// // authRepo := authrepo.GetMock()
+	// authRepo, err := authrepo.GetPostgres()
+	// if err != nil {
+	// 	fmt.Println("Error during init Postgres", err)
+	// 	return
+	// }
+	// authUseCase := authusecase.NewAuthUsecase(&authRepo)
+	// authHandler := authhandler.NewAuthHandler(&authUseCase)
+	// authHandler.InflateRouter(authRouter)
+
+	userRouter := router.PathPrefix("/profile").Subrouter()
+	userRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
+	InitHttpUser(userRouter)
+	// userRepo, err := userrepo.GetPostgres()
+	// if err != nil {
+	// 	fmt.Println("Error during init Postgres", err)
+	// 	return
+	// }
+	// userUsecase := userusecase.NewUserUsecase(&userRepo)
+	// userHandler := userhandler.NewUserHandler(&userUsecase)
+	// userHandler.InflateRouter(userRouter)
+
+	mailRouter := router.PathPrefix("/mail").Subrouter()
+	mailRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
+	// handlers.NewMailHandler(mailRouter, &mailboxusecase.MailBoxUsecase{})
+
+	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("test")
+	})
+}
+
+func InitHttpAuth(router *mux.Router) auth.Usecase {
+	// authRouter := router.PathPrefix("/auth").Subrouter()
 	// authRepo := authrepo.GetMock()
 	authRepo, err := authrepo.GetPostgres()
 	if err != nil {
 		fmt.Println("Error during init Postgres", err)
-		return
+		return nil
 	}
 	authUseCase := authusecase.NewAuthUsecase(&authRepo)
 	authHandler := authhandler.NewAuthHandler(&authUseCase)
-	authHandler.InflateRouter(authRouter)
+	authHandler.InflateRouter(router)
+	return &authUseCase
+}
 
-	userRouter := router.PathPrefix("/profile").Subrouter()
-	userRouter.Use(middleware.AuthentificationMiddleware(&authUseCase))
+func InitHttpUser(router *mux.Router) {
 	userRepo, err := userrepo.GetPostgres()
 	if err != nil {
 		fmt.Println("Error during init Postgres", err)
@@ -63,13 +103,10 @@ func InflateRouter(router *mux.Router) {
 	}
 	userUsecase := userusecase.NewUserUsecase(&userRepo)
 	userHandler := userhandler.NewUserHandler(&userUsecase)
-	userHandler.InflateRouter(userRouter)
+	userHandler.InflateRouter(router)
+}
 
-	mailRouter := router.PathPrefix("/mail").Subrouter()
-	mailRouter.Use(middleware.AuthentificationMiddleware(&authUseCase))
-	handlers.NewMailHandler(mailRouter, &mailboxusecase.MailBoxUsecase{})
-
-	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("test")
-	})
+func InitHTTPMail(router *mux.Router) {
+	mailUsecase := mailboxusecase.MailBoxUsecase{}
+	handlers.NewMailHandler(router, &mailUsecase)
 }

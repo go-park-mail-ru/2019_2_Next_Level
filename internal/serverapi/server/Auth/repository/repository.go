@@ -57,10 +57,22 @@ func (r *PostgresRepository) AddNewSession(login, uuid string) error {
 	if ok := r.checkUserExist(login); !ok {
 		return e.Error{}.SetCode(e.NotExists)
 	}
+	checkExistQuery := "DELETE FROM session WHERE login=$1"
 	query := fmt.Sprintf("INSERT INTO %s (login, token) VALUES ($1, $2);", "session")
-	_, err := r.DB.Exec(query, login, uuid)
+	_, err := r.DB.Exec(checkExistQuery, login)
+
+	_, err = r.DB.Exec(query, login, uuid)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepository) DeleteSession(id string) error {
+	query := fmt.Sprintf("DELETE FROM %s WHERE token=$1", "session")
+	_, err := r.DB.Exec(query, id)
+	if err != nil {
+		return e.Error{}.SetCode(e.NotExists).SetError(err)
 	}
 	return nil
 }
@@ -77,19 +89,6 @@ func (r *PostgresRepository) GetLoginBySession(uuid string) (string, error) {
 		return "", e.Error{}.SetCode(e.NotExists)
 	}
 	return login, nil
-}
-
-func (r *PostgresRepository) DeleteSession(id string) error {
-	// if _, ok := r.sessionBook[id]; !ok {
-	// 	return e.Error{}.SetCode(e.NotExists)
-	// }
-	// delete(r.sessionBook, id)
-	query := fmt.Sprintf("DELETE FROM %s WHERE token=$1", "session")
-	_, err := r.DB.Exec(query, id)
-	if err != nil {
-		return e.Error{}.SetCode(e.NotExists).SetError(err)
-	}
-	return nil
 }
 
 func (r *PostgresRepository) AddNewUser(user *model.User) error {

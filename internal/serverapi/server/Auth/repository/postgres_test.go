@@ -4,6 +4,7 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
 	e "2019_2_Next_Level/internal/serverapi/server/error"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -139,6 +140,7 @@ func TestAddNewSession(t *testing.T) {
 	}
 	query1 := `SELECT COUNT\(login\)>0 FROM users WHERE login=\$1`
 	query2 := `INSERT INTO session \(login\, token\) VALUES \(\$1\, \$2\)`
+	query3 := `DELETE FROM session WHERE login=\$1`
 
 	setDB := []func(sqlmock.Sqlmock) (string, string){
 		func(mock sqlmock.Sqlmock) (string, string) {
@@ -146,6 +148,7 @@ func TestAddNewSession(t *testing.T) {
 			token, _ := uuid.NewUUID()
 			rows := sqlmock.NewRows([]string{"count"}).AddRow("1")
 			mock.ExpectQuery(query1).WithArgs(login).WillReturnRows(rows)
+			mock.ExpectExec(query3).WithArgs(login).WillReturnError(fmt.Errorf("Not exist"))
 			mock.ExpectExec(query2).WithArgs(login, token.String()).WillReturnResult(sqlmock.NewResult(0, 1))
 			return login, token.String()
 		},
@@ -161,6 +164,7 @@ func TestAddNewSession(t *testing.T) {
 			token, _ := uuid.NewUUID()
 			rows := sqlmock.NewRows([]string{"count"}).AddRow("0")
 			mock.ExpectQuery(query1).WithArgs(login).WillReturnRows(rows)
+			mock.ExpectExec(query3).WithArgs(login).WillReturnError(nil)
 			mock.ExpectExec(query2).WithArgs(login, token.String()).WillReturnResult(sqlmock.NewResult(0, 1)).WillReturnError(e.Error{})
 			return login, token.String()
 		},
@@ -329,33 +333,3 @@ func TestCreateUser(t *testing.T) {
 		}
 	}
 }
-
-// func TestInit(t *testing.T) {
-// 	repo, err := GetPostgres()
-// 	if err != nil {
-// 		t.Errorf("Error during getPostgres(): %s", err)
-// 		return
-// 	}
-
-// 	db, mock, err := sqlmock.New()
-// 	if err != nil {
-// 		t.Errorf("Error doring init sqlmock")
-// 		return
-// 	}
-// 	defer db.Close()
-// 	repo.DB = db
-// 	login := "ivan"
-
-// 	rows := sqlmock.NewRows([]string{"col"}).AddRow("true")
-// 	mock.ExpectBegin()
-// 	mock.ExpectQuery("SELECT COUNT(login)>0 FROM users WHERE").WithArgs(login).
-// 		WillReturnRows(rows)
-
-// 	// mock.ExpectExec("SELECT COUNT(login)>0 FROM users WHERE login=$1;").WithArgs(login).WillReturnResult(sqlmock.NewResult(true))
-// 	mock.ExpectRollback()
-
-// 	ok := repo.checkUserExist("admin")
-// 	if !ok {
-// 		t.Errorf("Wrong return value")
-// 	}
-// }
