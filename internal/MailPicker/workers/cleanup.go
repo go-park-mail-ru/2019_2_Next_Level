@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	gomail "github.com/veqryn/go-email/email"
-//gomail "net/mail"
+	//gomail "net/mail"
 	"strings"
 	"sync"
 	"time"
@@ -36,6 +36,14 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 			email.From = emailTemp.From
 			email.To = emailTemp.To
 			email.Body += "\n\n" // preventing the EOF error of bloody the parser
+
+			//file, err := os.Create("email.txt")
+			//if err != nil {
+			//	panic("Cnnot create file")
+			//}
+			//defer file.Close()
+			//file.WriteString(emailTemp.Body)
+
 			reader := strings.NewReader(email.Body)
 			msg, err := gomail.ParseMessage(reader)
 			if err != nil {
@@ -66,12 +74,34 @@ func (w *MailCleanup) Repack(from *gomail.Message) (model.Email) {
 	to := model.Email{}
 	to.Header.From = from.Header.From()
 	to.Header.Subject = from.Header.Subject()
-	//to.Header.WhenReceived, _ = from.Header.Date()
+	to.Header.WhenReceived, _ = from.Header.Date()
 	to.Header.To = from.Header.To()
-	if len(from.Parts)>0 {
-		to.Body = string(from.Parts[0].Body)
-	}else{
-		to.Body = string(from.Body)
+	for i, label := range to.Header.To {
+		to.Header.To[i] = label[strings.Index(label, "<")+1 : strings.Index(label, ">")]
 	}
+	to.Body = string(w.SelectBody(from))
 	return to
+}
+
+func (w *MailCleanup) SelectBody(mail *gomail.Message) []byte {
+	if len(mail.Parts) == 0{
+		return mail.Body
+	}
+	body := make([]byte, 0)
+	for _, part := range mail.MessagesAll() {
+		mediaType, _, _ := part.Header.ContentType()
+		switch mediaType {
+		case "text/plain":
+			if len(body) == 0 {
+				body = part.Body
+			}
+			break
+		case "text/html":
+			body = part.Body
+			break
+		default:
+			break
+		}
+	}
+	return body
 }

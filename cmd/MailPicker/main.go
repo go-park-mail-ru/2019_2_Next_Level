@@ -7,6 +7,7 @@ import (
 	postinterface "2019_2_Next_Level/internal/postInterface"
 	"2019_2_Next_Level/pkg/config"
 	"flag"
+	"fmt"
 	"log"
 	"sync"
 )
@@ -23,6 +24,10 @@ func main() {
 	}
 
 	postgresRepo := repository.NewPostgresRepository()
+	if postgresRepo == nil {
+		fmt.Println("Error during init repo")
+		return
+	}
 	smtpInterface := postinterface.NewQueueClient(localconfig.Conf.RemoteHost, localconfig.Conf.RemotePort)
 	quitChan := make(chan interface{}, 1)
 
