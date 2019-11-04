@@ -3,6 +3,7 @@ package repository
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
 	"2019_2_Next_Level/internal/model"
+	"2019_2_Next_Level/pkg/sqlTools"
 	"database/sql"
 	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
@@ -44,6 +45,7 @@ func (r *PostgresRepository) init() error {
 	return nil
 }
 
+// UserExists : checks if the user exists
 func (r *PostgresRepository) UserExists(login string) bool {
 	query := `SELECT COUNT(login)>0 FROM users WHERE login=$1`
 	row := r.DB.QueryRow(query, login)
@@ -58,41 +60,34 @@ func (r *PostgresRepository) UserExists(login string) bool {
 	return isExist
 }
 
+// AddEmail : Inserts the new email to database
 func (r *PostgresRepository) AddEmail(email *model.Email) error {
-	tx, err := r.DB.Begin()
-	if err != nil {
-		return err
-	}
-	err = func() error {
+	task := func() error {
 		saveMessage, err := r.DB.Prepare(`INSERT INTO Message (sender, time, body) VALUES ($1, $2, $3) RETURNING id;`)
 		if err != nil {
 			return err
 		}
+
 		var id int
-		whenReceived := email.Header.WhenReceived.Format("2006-01-02 15:04:05")
-		err = tx.Stmt(saveMessage).QueryRow(email.From, whenReceived, email.Body).Scan(&id)
+		whenReceived := sqlTools.FormatDate(sqlTools.BDPostgres, email.Header.WhenReceived)
+		err = saveMessage.QueryRow(email.From, whenReceived, email.Body).Scan(&id)
 		if err != nil {
 			return err
 		}
+
+		recQuery := sqlTools.CreatePacketQuery(`INSERT INTO Receiver (mailId, email) VALUES`, 2, len(email.Header.To))
 		params := make([]interface{}, 0, 2*len(email.Header.To))
-		recQuery := `INSERT INTO Receiver (mailId, email) VALUES `
-		for i, addr := range email.Header.To {
+		for _, addr := range email.Header.To {
 			params = append(params, id, addr)
-			recQuery = recQuery + fmt.Sprintf("($%d, $%d),", 2*i+1, 2*i+2)
 		}
-		recQuery = recQuery[:len(recQuery)-1] + ";"
+
 		saveReceivers, err := r.DB.Prepare(recQuery)
 		if err != nil {
 			return err
 		}
-		_, err = tx.Stmt(saveReceivers).Exec(params...)
-		return err
-	}()
-
-	if err != nil {
-		tx.Rollback()
+		_, err = saveReceivers.Exec(params...)
 		return err
 	}
-	err = tx.Commit()
-	return err
+
+	return sqlTools.WithTransaction(r.DB, task)
 }
