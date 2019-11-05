@@ -6,7 +6,8 @@ import (
 	authhandler "2019_2_Next_Level/internal/serverapi/server/Auth/http"
 	authrepo "2019_2_Next_Level/internal/serverapi/server/Auth/repository"
 	authusecase "2019_2_Next_Level/internal/serverapi/server/Auth/usecase"
-	"2019_2_Next_Level/internal/serverapi/server/MailBox/handlers"
+	mailhandler "2019_2_Next_Level/internal/serverapi/server/MailBox/handlers"
+	mailrepo "2019_2_Next_Level/internal/serverapi/server/MailBox/repository"
 	mailboxusecase "2019_2_Next_Level/internal/serverapi/server/MailBox/usecase"
 	userhandler "2019_2_Next_Level/internal/serverapi/server/User/http"
 	userrepo "2019_2_Next_Level/internal/serverapi/server/User/repository"
@@ -54,6 +55,7 @@ func InflateRouter(router *mux.Router) {
 
 	mailRouter := router.PathPrefix("/mail").Subrouter()
 	mailRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
+	InitHTTPMail(mailRouter)
 
 	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("test")
@@ -85,6 +87,12 @@ func InitHttpUser(router *mux.Router) {
 }
 
 func InitHTTPMail(router *mux.Router) {
-	mailUsecase := mailboxusecase.MailBoxUsecase{}
-	handlers.NewMailHandler(router, &mailUsecase)
+	repo, err := mailrepo.GetPostgres()
+	if err != nil {
+		log.Log().E("Error during init Postgres", err)
+		return
+	}
+	mailUsecase := mailboxusecase.NewMailBoxUsecase(&repo)
+	 mailhandler.NewMailHandler(router, mailUsecase)
+	//handlers.NewMailHandler(router, &mailUsecase)
 }

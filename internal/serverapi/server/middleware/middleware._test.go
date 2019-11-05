@@ -11,6 +11,21 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
+func TestStaticMiddleware(t *testing.T) {
+	t.Parallel()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockHttpHandler := mock.NewMockHandler(mockCtrl)
+
+	body := bytes.Reader{}
+	r := httptest.NewRequest("GET", "/", &body)
+	w := httptest.NewRecorder()
+	expectedRequest := r
+	expectedRequest.URL.Path += "index.html"
+	mockHttpHandler.EXPECT().ServeHTTP(w, expectedRequest)
+	StaticMiddleware()(mockHttpHandler).ServeHTTP(w,r)
+}
+
 func TestAuth(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)

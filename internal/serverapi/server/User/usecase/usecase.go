@@ -58,16 +58,9 @@ func (u *UserUsecase) EditPassword(login string, oldPass string, newPass string)
 		return err
 	}
 
-
 	if !authusecase.CheckPassword([]byte(oldPass), []byte(currPass), []byte(sault)) {
 		return e.Error{}.SetCode(e.Wrong)
 	}
-	// generate pass
-	//if currPass != oldPass {
-	//	return e.Error{}.SetCode(e.Wrong)
-	//}
-
-	//newSault := "sault"
 	newPassHash := authusecase.PasswordPBKDF2([]byte(newPass), []byte(sault))
 
 	err = u.repo.UpdateUserPassword(login, string(newPassHash), sault)
