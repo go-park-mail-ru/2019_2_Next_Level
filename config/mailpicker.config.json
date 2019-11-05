@@ -7,7 +7,7 @@
     "saverWorkerCount": 1,
     "Database": {
         "port": "5432",
-        "host": "localhost",
+        "host": "127.0.0.1",
         "dbname": "nextlevel"
     }
 }
