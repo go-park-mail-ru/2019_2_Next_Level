@@ -5,7 +5,7 @@ import (
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	hr "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
-	e "2019_2_Next_Level/internal/serverapi/server/error"
+	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	"2019_2_Next_Level/pkg/HttpTools"
 	"net/http"
 

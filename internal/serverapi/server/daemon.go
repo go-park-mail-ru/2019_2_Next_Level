@@ -1,6 +1,7 @@
 package server
 
 import (
+	"2019_2_Next_Level/internal/post/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	authhandler "2019_2_Next_Level/internal/serverapi/server/Auth/http"
 	authrepo "2019_2_Next_Level/internal/serverapi/server/Auth/repository"
@@ -22,13 +23,8 @@ import (
 )
 
 func Run(externwg *sync.WaitGroup) error {
-	// if conn == nil {
-	// 	// create personal connction to db
-	// }
 	defer externwg.Done()
-	fmt.Println("Starting daemon on port ", config.Conf.Port)
-
-	// authUseCase := authusecase.NewAuthUsecase()
+	log.Log().L("Starting daemon on port ", config.Conf.Port)
 
 	db.Init()
 	mainRouter := mux.NewRouter()
@@ -63,7 +59,7 @@ func InflateRouter(router *mux.Router) {
 func InitHttpAuth(router *mux.Router) auth.Usecase {
 	authRepo, err := authrepo.GetPostgres()
 	if err != nil {
-		fmt.Println("Error during init Postgres", err)
+		log.Log().E("Error during init Postgres", err)
 		return nil
 	}
 	authUseCase := authusecase.NewAuthUsecase(&authRepo)
@@ -75,7 +71,7 @@ func InitHttpAuth(router *mux.Router) auth.Usecase {
 func InitHttpUser(router *mux.Router) {
 	userRepo, err := userrepo.GetPostgres()
 	if err != nil {
-		fmt.Println("Error during init Postgres", err)
+		log.Log().E("Error during init Postgres", err)
 		return
 	}
 	userUsecase := userusecase.NewUserUsecase(&userRepo)

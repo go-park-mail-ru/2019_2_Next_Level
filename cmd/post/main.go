@@ -1,12 +1,13 @@
 package main
 
 import (
-	"2019_2_Next_Level/internal/logger"
 	"2019_2_Next_Level/internal/post"
 	mailsender "2019_2_Next_Level/internal/post/MailSender"
-	"2019_2_Next_Level/internal/post/messagequeue"
+	"2019_2_Next_Level/internal/post/MessageQueue"
+	"2019_2_Next_Level/internal/post/log"
 	"2019_2_Next_Level/internal/post/smtpd"
 	"2019_2_Next_Level/pkg/config"
+	"2019_2_Next_Level/pkg/logger"
 	"flag"
 	"sync"
 )
@@ -20,8 +21,6 @@ type daemon interface {
 	Run(*sync.WaitGroup)
 }
 
-var log logger.Log
-
 func main() {
 	// Должны быть компоненты:
 	// 	* Очередь исходящих
@@ -30,10 +29,12 @@ func main() {
 	// 	* SMTP-сервер
 
 	// 	outcomingQueue <------> mailsender <--------> smtpd <--------> incomingQueue
-	log.SetPrefix("PostServerMain")
+	log.SetLogger(logger.NewLog())
+	log.Log().SetPrefix("PostService")
+
 	err := initializeConfig()
 	if err != nil {
-		log.Println(err)
+		log.Log().E(err)
 		return
 	}
 
@@ -56,7 +57,7 @@ func Execute(daemons ...daemon) {
 		next := post.ChanPair{}.Init(post.Conf.ChannelCapasity)
 		err := daemon.Init(previous, next)
 		if err != nil {
-			log.Println("Error during initializing a daemon: ", err)
+			log.Log().E("Error during initializing a daemon: ", err)
 			return
 		}
 		previous = next
@@ -70,5 +71,5 @@ func initializeConfig() error {
 	configFilename := flag.String("config", configFilenameDefault, "Path to config file")
 	flag.Parse()
 
-	return config.Configurator.Inflate(*configFilename, &post.Conf)
+	return config.Inflate(*configFilename, &post.Conf)
 }

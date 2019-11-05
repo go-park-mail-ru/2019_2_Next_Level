@@ -3,9 +3,7 @@ package usecase
 import (
 	"2019_2_Next_Level/internal/model"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	e "2019_2_Next_Level/internal/serverapi/server/error"
-	"fmt"
-
+	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	"github.com/google/uuid"
 )
 
@@ -71,7 +69,6 @@ func (u *AuthUsecase) SignIn(login, password string) (string, error) {
 		return "", e.Error{}.SetCode(e.NotExists)
 	}
 	if len(credentials) < 2 {
-		fmt.Println("Got credentials of len=", len(credentials))
 		return "", e.Error{}.SetCode(e.InvalidParams)
 	}
 	rPass := credentials[0]

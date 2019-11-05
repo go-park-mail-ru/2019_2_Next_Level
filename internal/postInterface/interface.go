@@ -2,7 +2,7 @@ package postinterface
 
 import (
 	"2019_2_Next_Level/internal/post"
-	pb "2019_2_Next_Level/internal/post/messagequeue/service"
+	pb "2019_2_Next_Level/internal/post/MessageQueue/service"
 	"context"
 	"fmt"
 
@@ -14,6 +14,10 @@ type QueueClient struct {
 	Connection *grpc.ClientConn
 	RemoteHost string
 	RemotePort string
+}
+
+func NewQueueClient(remoteHost string, remotePort string) *QueueClient {
+	return &QueueClient{RemoteHost: remoteHost, RemotePort: remotePort}
 }
 
 func (q *QueueClient) Init() {

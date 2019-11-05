@@ -3,12 +3,20 @@ package model
 import (
 	"2019_2_Next_Level/internal/post"
 	"fmt"
+	"time"
 )
 
 type Email struct {
 	From string
 	To   string
 	Body string
+	Header struct {
+		From string
+		To   []string
+		Subject string
+		ReplyTo []string
+		WhenReceived time.Time
+	}
 }
 
 func (e *Email) Stringify() string {

@@ -2,8 +2,6 @@ package worker
 
 import (
 	"2019_2_Next_Level/internal/post"
-	"fmt"
-
 	"github.com/emersion/go-smtp"
 )
 
@@ -31,7 +29,6 @@ func (w *Worker) Login(state *smtp.ConnectionState, username, password string) (
 
 // AnonymousLogin requires clients to authenticate using SMTP AUTH before sending emails
 func (w *Worker) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
-	fmt.Println("AnonimousLogin")
 	w.session = Session{atEnd: w.ObtainResult}.Init()
 	return &w.session, nil
 }

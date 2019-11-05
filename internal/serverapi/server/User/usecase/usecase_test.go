@@ -3,7 +3,7 @@ package usecase
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/mock"
-	e "2019_2_Next_Level/internal/serverapi/server/error"
+	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"

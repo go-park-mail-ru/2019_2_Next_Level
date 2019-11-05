@@ -2,11 +2,9 @@ package server
 
 import (
 	"2019_2_Next_Level/internal/post"
-	pb "2019_2_Next_Level/internal/post/messagequeue/service"
+	pb "2019_2_Next_Level/internal/post/MessageQueue/service"
 	"2019_2_Next_Level/internal/serverapi/server/config"
 	"context"
-	"fmt"
-
 	"google.golang.org/grpc"
 )
 
@@ -19,7 +17,6 @@ func (q *QueueClient) Init() {
 	var err error
 	q.Connection, err = grpc.Dial(config.Conf.PostServiceHost+config.Conf.PostServiceSendPort, grpc.WithInsecure())
 	if err != nil {
-		fmt.Println("Cannot connect to service")
 		return
 	}
 
@@ -42,7 +39,6 @@ func (q *QueueClient) Put(email post.Email) error {
 func (q *QueueClient) Get() (post.Email, error) {
 	data, err := q.queue.Dequeue(context.Background(), &pb.Empty{})
 	if err != nil {
-		fmt.Println("Nil value")
 		return post.Email{}, err
 	}
 

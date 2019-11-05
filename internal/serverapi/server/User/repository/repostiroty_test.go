@@ -3,7 +3,7 @@ package repository
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
-	e "2019_2_Next_Level/internal/serverapi/server/error"
+	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	"testing"
 	"time"
 

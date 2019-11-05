@@ -2,10 +2,13 @@ package main
 
 import (
 	mailpicker "2019_2_Next_Level/internal/MailPicker"
-	"2019_2_Next_Level/internal/model"
+	localconfig "2019_2_Next_Level/internal/MailPicker/config"
+	log "2019_2_Next_Level/internal/MailPicker/logger"
+	"2019_2_Next_Level/internal/MailPicker/repository"
+	postinterface "2019_2_Next_Level/internal/postInterface"
 	"2019_2_Next_Level/pkg/config"
+	"2019_2_Next_Level/pkg/logger"
 	"flag"
-	"log"
 	"sync"
 )
 
@@ -14,31 +17,37 @@ const (
 )
 
 func main() {
+	log.SetLogger(logger.NewLog())
+	log.Log().SetPrefix("MailPicker")
+
 	err := initializeConfig()
 	if err != nil {
-		log.Println(err)
+		log.Log().E(err)
 		return
 	}
 
-	dbConnection := model.Connection{}
-	// repo := repository.NewRepository(&dbConnection)
-	// qInterface := postinterface.QueueClient{
-	// 	RemoteHost: mailpicker.Conf.RemoteHost,
-	// 	RemotePort: mailpicker.Conf.RemotePort,
-	// }
-	// task := mailpicker.Secretary{}
-	// task.Init(&repo, &qInterface)
-	// task.DefaultInit(&dbConnection)
-	task := mailpicker.NewInstanceDefault(&dbConnection)
+
+	postgresRepo := repository.NewPostgresRepository()
+	if postgresRepo == nil {
+		log.Log().E("Error during init repo")
+		return
+	}
+	smtpInterface := postinterface.NewQueueClient(localconfig.Conf.RemoteHost, localconfig.Conf.RemotePort)
+	quitChan := make(chan interface{}, 1)
+
+	module := mailpicker.NewSecretary(smtpInterface, postgresRepo, quitChan).Init()
+
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	go task.Run(wg)
+	go module.Run(wg)
 	wg.Wait()
 }
 
 func initializeConfig() error {
 	configFilename := flag.String("config", configFilenameDefault, "Path to config file")
+	dbUser := flag.String("dbuser", "", "User for database")
+	dbPassword := flag.String("dbpass", "", "Password for database")
 	flag.Parse()
 
-	return config.Configurator.Inflate(*configFilename, &mailpicker.Conf)
+	return config.Inflate(*configFilename, &localconfig.Conf, *dbUser, *dbPassword)
 }

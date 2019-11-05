@@ -1,5 +1,13 @@
 {
     "remotePort": "2001",
     "remoteHost": "localhost",
-    "remoteCheckTimeout": 500 
+    "remoteCheckTimeout": 500 ,
+    "pickerWorkerCount": 1,
+    "cleanerWorkerCount": 1,
+    "saverWorkerCount": 1,
+    "Database": {
+        "port": "5432",
+        "host": "localhost",
+        "dbname": "nextlevel"
+    }
 }

@@ -1,8 +1,8 @@
 package mailsender
 
 import (
-	"2019_2_Next_Level/internal/logger"
 	"2019_2_Next_Level/internal/post"
+	"2019_2_Next_Level/internal/post/log"
 	"sync"
 )
 
@@ -11,14 +11,13 @@ import (
 type MailSender struct {
 	queueChan post.ChanPair
 	smtpChan  post.ChanPair
-	log       logger.Log
 }
 
 // Init : gets channel packs
 func (s *MailSender) Init(pre, next post.ChanPair, _ ...interface{}) error {
 	s.queueChan = pre
 	s.smtpChan = next
-	s.log.SetPrefix("MailSender")
+	log.Log().L("Init mailsender")
 	return nil
 
 }
@@ -35,11 +34,7 @@ func (s *MailSender) ProcessEmail() {
 	i := 0
 	for pack := range s.queueChan.Out {
 		email := pack.(post.Email)
-		// log.Println(email.Body)
-		// log.Debug(email.Body)
-		// s.log.Println(email.Body)
 		s.smtpChan.Out <- email
 		i++
-
 	}
 }

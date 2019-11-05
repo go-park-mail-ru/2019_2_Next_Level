@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"2019_2_Next_Level/internal/serverapi/config"
 	"2019_2_Next_Level/internal/serverapi/mock"
 	"bytes"
 	"net/http"
@@ -49,4 +50,28 @@ func TestAuth(t *testing.T) {
 
 	}
 
+}
+
+func TestCors(t *testing.T) {
+	t.Parallel()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockHttpHandler := mock.NewMockHandler(mockCtrl)
+	r := httptest.NewRequest("POST", "/profile/get", nil)
+	w := httptest.NewRecorder()
+	mockHttpHandler.EXPECT().ServeHTTP(w, r).Return().Times(1)
+	hostName := "test"
+	config.Conf.HttpConfig.Whitelist = make(map[string]bool)
+	config.Conf.HttpConfig.Whitelist[hostName] = true
+
+	r.Header.Add("Origin", hostName)
+	(CorsMethodMiddleware()(mockHttpHandler)).ServeHTTP(w, r)
+
+	headers := w.Header()
+	if headers.Get("Access-Control-Allow-Origin") != hostName ||
+		headers.Get("Access-Control-Allow-Credentials") != "true" ||
+		headers.Get("Access-Control-Allow-Headers") != "Content-Type" ||
+		headers.Get("Access-Control-Allow-Methods") != "GET, POST, OPTIONS" {
+		t.Error("Wrong headers got")
+	}
 }

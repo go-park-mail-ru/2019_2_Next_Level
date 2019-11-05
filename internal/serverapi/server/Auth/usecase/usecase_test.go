@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	e "2019_2_Next_Level/internal/serverapi/server/error"
+	e "2019_2_Next_Level/internal/serverapi/server/Error"
 
 	"github.com/golang/mock/gomock"
 )
