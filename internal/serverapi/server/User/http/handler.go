@@ -29,9 +29,9 @@ func NewUserHandler(uc user.UserUsecase) UserHandler {
 }
 
 func (h *UserHandler) InflateRouter(router *mux.Router) {
-	router.HandleFunc("/get", h.GetProfile).Methods("GET", "OPTIONS")
-	router.HandleFunc("/editUserInfo", h.EditUserInfo).Methods("POST", "OPTIONS")
-	router.HandleFunc("/editPassword", h.EditUserPassword).Methods("POST", "OPTIONS")
+	router.HandleFunc("/get", h.GetProfile).Methods("GET")
+	router.HandleFunc("/editUserInfo", h.EditUserInfo).Methods("POST")
+	router.HandleFunc("/editPassword", h.EditUserPassword).Methods("POST")
 }
 
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {

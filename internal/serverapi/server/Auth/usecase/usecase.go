@@ -42,6 +42,9 @@ func (u *AuthUsecase) Logout(uuid string) error {
 
 func (u *AuthUsecase) SignUp(user model.User) error {
 	// validation
+	sault := GenSault(user.Email)
+	user.Password = string(PasswordPBKDF2([]byte(user.Password), sault))
+	user.Sault = string(sault)
 	err := u.repo.AddNewUser(&user)
 	if err != nil {
 		switch err.(type) {
@@ -72,11 +75,15 @@ func (u *AuthUsecase) SignIn(login, password string) (string, error) {
 		return "", e.Error{}.SetCode(e.InvalidParams)
 	}
 	rPass := credentials[0]
-	// salt := credentials[1]
+	salt := credentials[1]
 
-	if rPass != password {
+	if !CheckPassword([]byte(password), []byte(rPass), []byte(salt)) {
 		return "", e.Error{}.SetCode(e.InvalidParams)
 	}
+
+	//if rPass != password {
+	//	return "", e.Error{}.SetCode(e.InvalidParams)
+	//}
 
 	uuid, _ := uuid.NewUUID()
 

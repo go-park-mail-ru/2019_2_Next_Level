@@ -14,6 +14,7 @@ type User struct {
 	Email      string `json:"login"`
 	Password   string `json:"password"`
 	Avatar     string `json:"avatar"`
+	Sault string `json:-`
 }
 
 func (user *User) Init() {

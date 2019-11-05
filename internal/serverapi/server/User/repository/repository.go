@@ -4,6 +4,7 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	"2019_2_Next_Level/pkg/sqlTools"
 	"database/sql"
 	"fmt"
 	"time"
@@ -69,10 +70,21 @@ func (r *PostgresRepository) GetUser(login string) (model.User, error) {
 	return user, nil
 }
 func (r *PostgresRepository) UpdateUserData(user *model.User) error {
+	query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3, sex=$4, birthdate=$5 WHERE login=$6;`
+	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)
+	if err0 != nil {
+		return e.Error{}.SetCode(e.InvalidParams).SetError(err0)
+	}
+	_, err := r.DB.Exec(query, user.Avatar, user.Name, user.Sirname, user.Sex, sqlTools.FormatDate(sqlTools.BDPostgres, parsedDate), user.Email)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 func (r *PostgresRepository) UpdateUserPassword(login string, newPassword string, sault string) error {
-	return nil
+	query := `UPDATE users SET password=$1, sault=$2 WHERE login=$3`
+	_, err := r.DB.Exec(query, []byte(newPassword), []byte(sault), login)
+	return err
 }
 
 func (r *PostgresRepository) GetUserCredentials(login string) (string, string, error) {

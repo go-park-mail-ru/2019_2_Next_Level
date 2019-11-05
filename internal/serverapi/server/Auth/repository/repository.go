@@ -100,7 +100,7 @@ func (r *PostgresRepository) AddNewUser(user *model.User) error {
 		return e.Error{}.SetCode(e.InvalidParams).SetError(err0)
 	}
 	user.BirthDate = parsedDate.Format("2006/01/02")
-	_, err := r.DB.Exec(query, user.Email, user.Password, "", user.Name, user.Sirname, user.Sex, user.BirthDate, user.Avatar)
+	_, err := r.DB.Exec(query, user.Email, []byte(user.Password), []byte(user.Sault), user.Name, user.Sirname, user.Sex, user.BirthDate, user.Avatar)
 	if err != nil {
 		return e.Error{}.SetCode(e.AlreadyExists).SetError(err)
 	}

@@ -32,7 +32,11 @@ func Run(externwg *sync.WaitGroup) error {
 
 	InflateRouter(router)
 
-	err := http.ListenAndServe(config.Conf.Port, router)
+	//mainRouter.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(config.Conf.StaticDir))))
+	staticHandler := http.StripPrefix("/", http.FileServer(http.Dir(config.Conf.StaticDir)))
+	mainRouter.PathPrefix("/").Handler(middleware.StaticMiddleware()(staticHandler))
+
+	err := http.ListenAndServe(config.Conf.Port, mainRouter)
 	return err
 }
 
@@ -54,6 +58,7 @@ func InflateRouter(router *mux.Router) {
 	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("test")
 	})
+
 }
 
 func InitHttpAuth(router *mux.Router) auth.Usecase {
