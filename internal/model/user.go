@@ -1,7 +1,5 @@
 package model
 
-import "back/config"
-
 type UUID interface {
 }
 
@@ -19,7 +17,7 @@ type User struct {
 
 func (user *User) Init() {
 	if user.Avatar == "" {
-		user.Avatar = config.Configuration.DefaultAvatar
+		user.Avatar = "default.png"
 	}
 }
 func (user *User) Inflate(name, sirname, birth, sex, login, password string) {
