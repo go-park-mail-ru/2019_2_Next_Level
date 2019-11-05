@@ -16,7 +16,7 @@ const (
 
 func main() {
 	log.SetLogger(logger.NewLog())
-	log.Log().SetPrefix("PostService")
+	log.Log().SetPrefix("HttpService")
 	log.Log().I("API Server started. Hello!")
 
 	if err := initializeConfig(); err != nil {

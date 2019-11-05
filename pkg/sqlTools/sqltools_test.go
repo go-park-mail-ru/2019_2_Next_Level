@@ -1,10 +1,14 @@
 package sqlTools
 
 import (
+	"fmt"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/go-cmp/cmp"
 	"testing"
 	"time"
 )
+
+
 
 func TestCreatePacketQuery(t *testing.T) {
 	input := []struct{
@@ -39,5 +43,37 @@ func TestFormatDate(t *testing.T) {
 	if got := FormatDate(BDPostgres, input); got != expected {
 		t.Errorf("Wrong result: %s instead %s", got, expected)
 	}
+
+}
+
+func TestWithTransaction(t *testing.T) {
+	func(){
+		db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Errorf("Error doring init sqlmock")
+		return
+	}
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectCommit()
+
+	WithTransaction(db, func() error {
+		return nil
+	})}()
+	func(){
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Errorf("Error doring init sqlmock")
+			return
+		}
+		defer db.Close()
+
+		mock.ExpectBegin()
+		mock.ExpectRollback()
+
+		WithTransaction(db, func() error {
+			return fmt.Errorf("")
+	})}()
 
 }

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"2019_2_Next_Level/internal/post/log"
+	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	authhandler "2019_2_Next_Level/internal/serverapi/server/Auth/http"
 	authrepo "2019_2_Next_Level/internal/serverapi/server/Auth/repository"

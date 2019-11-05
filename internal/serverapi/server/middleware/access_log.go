@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"2019_2_Next_Level/internal/post/log"
+	"2019_2_Next_Level/internal/serverapi/log"
 	"fmt"
 	"net/http"
 	"time"
