@@ -20,14 +20,12 @@ import (
 
 	"github.com/gorilla/mux"
 
-	db "back/database"
 )
 
 func Run(externwg *sync.WaitGroup) error {
 	defer externwg.Done()
 	log.Log().L("Starting daemon on port ", config.Conf.Port)
 
-	db.Init()
 	mainRouter := mux.NewRouter()
 	router := mainRouter.PathPrefix("/api").Subrouter()
 
