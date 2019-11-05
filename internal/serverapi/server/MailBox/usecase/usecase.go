@@ -1,11 +1,13 @@
 package usecase
 
-import "fmt"
+import (
+	"2019_2_Next_Level/internal/post/log"
+)
 
 type MailBoxUsecase struct {
 }
 
 func (u *MailBoxUsecase) SendMail(from, to, body string) error {
-	fmt.Printf("Send mail:\n From: %s\n To: %s\nBody: %s\n", from, to, body)
+	log.Log().I("Send mail:\n From: %s\n To: %s\nBody: %s\n", from, to, body)
 	return nil
 }

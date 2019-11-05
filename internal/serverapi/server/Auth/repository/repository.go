@@ -94,11 +94,7 @@ func (r *PostgresRepository) GetLoginBySession(uuid string) (string, error) {
 func (r *PostgresRepository) AddNewUser(user *model.User) error {
 	query := `INSERT INTO users (login, password, sault, firstname, secondname, sex, birthdate, avatar)
 				VALUES($1, $2, $3, $4, $5, $6, $7, $8);`
-	// birthDateSeparated := strings.Split(user.BirthDate, ".")
-	// if len(birthDateSeparated) == 3 {
-	// 	user.BirthDate = fmt.Sprintf("%s/%s/%s", birthDateSeparated[2], birthDateSeparated[1], birthDateSeparated[0])
-	// 	user.BirthDate = birthDateSeparated[2] + "/" + birthDateSeparated[1] + "/" + birthDateSeparated[0]
-	// }
+
 	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)
 	if err0 != nil {
 		return e.Error{}.SetCode(e.InvalidParams).SetError(err0)
@@ -128,7 +124,6 @@ func (r *PostgresRepository) checkUserExist(login string) bool {
 	var isExist bool
 	err := row.Scan(&isExist)
 	if err != nil {
-		fmt.Println(err)
 		isExist = false
 	}
 	return isExist

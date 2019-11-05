@@ -3,9 +3,9 @@ package messagequeue
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/post"
-	pb "2019_2_Next_Level/internal/post/messagequeue/service"
+	pb "2019_2_Next_Level/internal/post/MessageQueue/service"
+	"2019_2_Next_Level/internal/post/log"
 	"context"
-	"fmt"
 )
 
 const (
@@ -39,7 +39,7 @@ func (q *MessageQueueCore) EnqueueLocal(email *post.Email) error {
 // Dequeue : get a grpc Email from the queue
 func (q *MessageQueueCore) Dequeue(ctx context.Context, e *pb.Empty) (*pb.Email, error) {
 	email := <-q.queue
-	fmt.Println("dequeued")
+	log.Log().L("dequeued")
 	return &email, nil
 }
 

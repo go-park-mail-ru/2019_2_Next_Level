@@ -2,12 +2,9 @@ package worker
 
 import (
 	"2019_2_Next_Level/internal/post"
-	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"io/ioutil"
-	"log"
-
-	"github.com/google/uuid"
 )
 
 // A Session is returned after successful login.
@@ -27,14 +24,12 @@ func (s Session) Init() Session {
 
 // Mail : callback triggered when extern server sends command "MAIL FROM:"
 func (s *Session) Mail(from string) error {
-	log.Println("Mail from:", from)
 	s.email.From = from
 	return nil
 }
 
 // Rcpt : callback triggered when extern server sends command "rcpt to:"
 func (s *Session) Rcpt(to string) error {
-	log.Println("Rcpt to:", to)
 	s.email.To = to
 	return nil
 }
@@ -54,13 +49,11 @@ func (s *Session) Data(r io.Reader) error {
 
 // Reset : discard currently processed message
 func (s *Session) Reset() {
-	fmt.Println("Reset")
 	s.SendResults()
 }
 
 // Logout : callback triggered when extern server closes the connection
 func (s *Session) Logout() error {
-	fmt.Println("Logout")
 	s.SendResults()
 	return nil
 }

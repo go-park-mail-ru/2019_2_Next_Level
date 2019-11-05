@@ -2,7 +2,7 @@ package workers
 
 import (
 	"2019_2_Next_Level/internal/model"
-	e "2019_2_Next_Level/pkg/error"
+	e "2019_2_Next_Level/pkg/Error"
 	"context"
 	"sync"
 	"time"
@@ -29,7 +29,6 @@ func (w *MailSaver) Run(externwg *sync.WaitGroup, ctx context.Context, in chan m
 }
 
 func (w *MailSaver) ProcessEmail(email *model.Email) error {
-	//err := w.repository.AddEmail(&email)
 	err := w.saveMailFunc(email)
 	if err != nil {
 		w.errorChan <- e.Error{}.SetCode(e.ProcessError).SetError(err).SetPlace("MailSaver");

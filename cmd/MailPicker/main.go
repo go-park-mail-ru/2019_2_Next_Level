@@ -3,12 +3,12 @@ package main
 import (
 	mailpicker "2019_2_Next_Level/internal/MailPicker"
 	localconfig "2019_2_Next_Level/internal/MailPicker/config"
+	log "2019_2_Next_Level/internal/MailPicker/logger"
 	"2019_2_Next_Level/internal/MailPicker/repository"
 	postinterface "2019_2_Next_Level/internal/postInterface"
 	"2019_2_Next_Level/pkg/config"
+	"2019_2_Next_Level/pkg/logger"
 	"flag"
-	"fmt"
-	"log"
 	"sync"
 )
 
@@ -17,15 +17,19 @@ const (
 )
 
 func main() {
+	log.SetLogger(logger.NewLog())
+	log.Log().SetPrefix("MailPicker")
+
 	err := initializeConfig()
 	if err != nil {
-		log.Println(err)
+		log.Log().E(err)
 		return
 	}
 
+
 	postgresRepo := repository.NewPostgresRepository()
 	if postgresRepo == nil {
-		fmt.Println("Error during init repo")
+		log.Log().E("Error during init repo")
 		return
 	}
 	smtpInterface := postinterface.NewQueueClient(localconfig.Conf.RemoteHost, localconfig.Conf.RemotePort)

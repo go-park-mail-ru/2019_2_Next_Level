@@ -2,12 +2,12 @@ package mailpicker
 
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
+	"2019_2_Next_Level/internal/MailPicker/logger"
 	"2019_2_Next_Level/internal/MailPicker/workers"
 	"2019_2_Next_Level/internal/model"
 	postinterface "2019_2_Next_Level/internal/postInterface"
-	e "2019_2_Next_Level/pkg/error"
+	e "2019_2_Next_Level/pkg/Error"
 	"context"
-	"fmt"
 	"sync"
 )
 
@@ -30,7 +30,7 @@ func (s *Secretary) Init() *Secretary {
 	s.queueConnectionStatus = true
 	s.errorChan = make(chan error, 3)
 
-	fmt.Println("Init MailPicker")
+	logger.Log().L("Init MailPicker")
 	return s
 }
 
@@ -70,7 +70,7 @@ func (s *Secretary) Run(externwg *sync.WaitGroup) {
 		case err := <-s.errorChan:
 			_, ok := err.(e.Error)
 			if !ok{
-				fmt.Println("Daemon stopping: ", err)
+				logger.Log().E("Daemon stopping due to error: ", err)
 				finish1()
 				finish2()
 				finish3()

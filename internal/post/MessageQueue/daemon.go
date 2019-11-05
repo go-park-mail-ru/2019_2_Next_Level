@@ -1,10 +1,11 @@
 package messagequeue
 
 import (
-	"2019_2_Next_Level/internal/logger"
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/post"
-	pb "2019_2_Next_Level/internal/post/messagequeue/service"
+	pb "2019_2_Next_Level/internal/post/MessageQueue/service"
+	log "2019_2_Next_Level/internal/post/log"
+	"2019_2_Next_Level/pkg/logger"
 	"2019_2_Next_Level/pkg/wormhole"
 	"context"
 	"fmt"
@@ -45,7 +46,6 @@ func (q *QueueDemon) Init(chanA, chanB post.ChanPair, _ ...interface{}) error {
 		t = 10
 		break
 	default:
-		q.log.Println("Unknown queue name")
 		return fmt.Errorf("unknown name was given: %s\n", q.Name)
 	}
 	q.queue = MessageQueueCore{Test: t}
@@ -64,7 +64,7 @@ func (q *QueueDemon) Run(externWg *sync.WaitGroup) {
 		pb.RegisterMessageQueueServer(server, &q.queue)
 	})
 	if err != nil {
-		fmt.Println("Error after wormhole.runserver()", err)
+		log.Log().E("Error after wormhole.runserver()", err)
 	}
 
 }
@@ -75,7 +75,7 @@ func (q *QueueDemon) Dequeue() {
 	for {
 		email, err := q.queue.DequeueLocal()
 		if err != nil {
-			fmt.Println("Error: ", err)
+			log.Log().E(err)
 		} else {
 			q.chans.Out <- email
 			q.log.Println(email.Body)
@@ -93,9 +93,9 @@ func (q *QueueDemon) Enqueue() {
 
 		data := (&model.ParcelAdapter{}).FromEmail(&email)
 		_, err := q.queue.Enqueue(context.Background(), &data)
-		fmt.Println("Enqueued")
+		log.Log().L("Enqueued")
 		if err != nil {
-			q.log.Println("Cannot enqueue")
+			log.Log().E("Cannot enqueue message")
 		}
 		i++
 	}

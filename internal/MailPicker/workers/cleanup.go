@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	gomail "github.com/veqryn/go-email/email"
-	//gomail "net/mail"
 	"strings"
 	"sync"
 	"time"
@@ -25,7 +24,6 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 
 	go func() {
 		for mail := range in {
-			fmt.Println("Picker")
 			emailTemp, ok := mail.(post.Email)
 			if !ok {
 				w.errorChan <- fmt.Errorf("Cannot convert input to email")
@@ -37,25 +35,16 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 			email.To = emailTemp.To
 			email.Body += "\n\n" // preventing the EOF error of bloody the parser
 
-			//file, err := os.Create("email.txt")
-			//if err != nil {
-			//	panic("Cnnot create file")
-			//}
-			//defer file.Close()
-			//file.WriteString(emailTemp.Body)
-
 			reader := strings.NewReader(email.Body)
 			msg, err := gomail.ParseMessage(reader)
 			if err != nil {
 				w.errorChan <- err
 				return
 			}
-
 			if err := w.HandleMail(msg); err != nil {
 				w.errorChan <- err
 				return
 			}
-
 			res := w.Repack(msg)
 			res.From = emailTemp.From
 			res.To = emailTemp.To

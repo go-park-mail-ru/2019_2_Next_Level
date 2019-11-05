@@ -17,7 +17,7 @@ func Test(t *testing.T) {
 	ctx1, finish1 := context.WithCancel(context.Background())
 	ctx2, finish2 := context.WithCancel(context.Background())
 	ctx3, finish3 := context.WithCancel(context.Background())
-	errorChan := make(chan error, 1)
+	errorChan := make(chan error, 3)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	chan1 := make(chan interface{}, 1)
@@ -59,12 +59,11 @@ Content-Transfer-Encoding: 7bit
 Content-Type: text/html
 
 <div>Hellp</div>`}
-	//email1 := model.Email{From:returned.From, To: returned.To, Body:`<div>Hellp</div> {Andrey K. <andreykochnov@yandex.ru> [aaa <aaa@nlmail.ddns.net>] Test [] 0001-01-01 00:00:00 +0000 UTC}`}
-	mockIncoming.EXPECT().Get().Return(returned, nil).Times(1)
-	mockRepo.EXPECT().UserExists("tester").Return(true).Times(1)
+	mockIncoming.EXPECT().Get().Return(returned, nil).Times(2)
+	mockRepo.EXPECT().UserExists("tester").Return(true).Times(2)
 	mockRepo.EXPECT().AddEmail(gomock.Any()).Return(nil).Times(1)
 
-	timer := time.NewTimer(1 * time.Millisecond)
+	timer := time.NewTimer(100 * time.Millisecond)
 	go picker.Run(&wg, ctx1, chan1)
 	select {
 	case res := <-chan1:
@@ -77,7 +76,7 @@ Content-Type: text/html
 	}
 	//return
 	go cleaner.Run(&wg, ctx2, chan1, chan2)
-	timer = time.NewTimer(1 * time.Millisecond)
+	timer = time.NewTimer(100 * time.Millisecond)
 	select {
 	case res := <-chan2:
 		finish2()

@@ -3,8 +3,8 @@ package workers
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
 	postinterface "2019_2_Next_Level/internal/postInterface"
+	log "2019_2_Next_Level/internal/MailPicker/logger"
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -26,21 +26,20 @@ func (w *MailPicker) Run(externwg *sync.WaitGroup, ctx context.Context, out chan
 	w.inputStatus = true
 	go func() {
 		for {
-			time.Sleep(100 * time.Millisecond)
 			email, err := w.input.Get()
 			if err != nil {
 				if w.inputStatus == true {
 					w.inputStatus = false
-					fmt.Println(err)
+					log.Log().E(err)
 				}
 				time.Sleep(time.Duration(config.Conf.RemoteCheckTimeout) * time.Millisecond)
 				continue
 			}
 			if !w.inputStatus {
-				fmt.Println("Connection emerged!")
+				log.Log().E("Connection emerged")
 				w.inputStatus = !w.inputStatus
 			}
-			fmt.Println("Messsage got")
+			log.Log().L("Message got")
 			if w.checkUserExist(strings.Split(email.To, "@")[0]) {
 				out <- email
 				time.Sleep(20*time.Millisecond) // for tests

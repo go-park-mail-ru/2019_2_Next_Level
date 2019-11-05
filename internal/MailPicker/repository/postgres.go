@@ -2,6 +2,7 @@ package repository
 
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
+	log "2019_2_Next_Level/internal/MailPicker/logger"
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/pkg/sqlTools"
 	"database/sql"
@@ -17,7 +18,7 @@ func NewPostgresRepository() *PostgresRepository {
 	repo := PostgresRepository{}
 	err := repo.init()
 	if err != nil {
-		fmt.Println(err)
+		log.Log().E(err)
 		return nil
 	}
 	return &repo
