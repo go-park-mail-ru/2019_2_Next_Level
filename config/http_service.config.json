@@ -13,12 +13,12 @@
         "privateDir": "private",
         "selfURL": "http://84.201.143.48/",
         "defaultAvatar": "default.png",
-        "postServiceHost": "localhost",
+        "postServiceHost": "0.0.0.0",
         "postServiceSendPort" : "2000",
     },
     "Database": {
         "port": "5432",
-        "host": "localhost",
+        "host": "0.0.0.0",
         "dbname": "nextlevel"
     }
 }
