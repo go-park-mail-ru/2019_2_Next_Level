@@ -8,9 +8,10 @@
 Деплой <br />
 <a href="https://next-level-mail.kerimovdev.now.sh">Фронтенд</a>
 <br>
-<a href="https://gentle-castle-33760.herokuapp.com/">Бекенд</a>
+<a href="http://nextlevel.hldns.ru/">Бекенд</a>
 <br />
 <a href="https://next-level-mail.ivanovvanya111.now.sh">Тестовый фронтенд</a>
+Почта: nlmail.ddns.net
 
 ## Команда разработчиков
 Ментор — [Липко Дмитрий](https://github.com/dlipko)
