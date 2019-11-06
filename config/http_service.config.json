@@ -3,6 +3,7 @@
         "whitelist": {
             "https://next-level-mail.kerimovdev.now.sh/": true,
             "https://next-level-mail.ivanovvanya111.now.sh": true,
+            "https://nextlevelmail-qjyh50dq4.now.sh/": true,
             "http://localhost:3000": true,
             "http://89.178.23.76:3000": true
         },
