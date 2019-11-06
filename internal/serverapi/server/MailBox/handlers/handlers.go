@@ -44,7 +44,7 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 	resp := h.resp.SetWriter(w).Copy()
 	defer resp.Send()
-	login := r.Header.Get("X-Login")
+	//login := r.Header.Get("X-Login")
 	type Request struct {
 		Sort string
 		Since int
@@ -58,7 +58,7 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 
-
+	login := "aaa@nlmail.ddns.net"
 	list, err := h.usecase.GetMailList(login, req.Folder, req.Sort, req.Since, req.Count)
 	if err != nil {
 		resp.SetError(hr.BadParam)
