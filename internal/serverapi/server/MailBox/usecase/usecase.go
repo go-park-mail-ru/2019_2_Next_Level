@@ -2,21 +2,31 @@ package usecase
 
 import (
 	"2019_2_Next_Level/internal/model"
+	"2019_2_Next_Level/internal/post"
 	"2019_2_Next_Level/internal/post/log"
+	postinterface "2019_2_Next_Level/internal/postInterface"
+	"2019_2_Next_Level/internal/serverapi/config"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 )
 
 type MailBoxUsecase struct {
 	repo mailbox.MailRepository
+	smtpPort postinterface.IPostInterface
 }
 
 func NewMailBoxUsecase(repo mailbox.MailRepository) *MailBoxUsecase {
-	return &MailBoxUsecase{repo: repo}
+	usecase := MailBoxUsecase{repo: repo}
+	usecase.smtpPort = postinterface.NewQueueClient(config.Conf.HttpConfig.PostServiceHost, config.Conf.HttpConfig.PostServiceSendPort)
+	usecase.smtpPort.Init()
+	return &usecase
 }
 
 func (u *MailBoxUsecase) SendMail(from, to, body string) error {
+	email := post.Email{From: from, To: to, Body: body}
+	err := u.smtpPort.Put(email)
 	log.Log().I("Send mail:\n From: %s\n To: %s\nBody: %s\n", from, to, body)
+	log.Log().I(err)
 	return nil
 }
 

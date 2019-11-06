@@ -10,5 +10,9 @@
     "SmtpServer": {
         "ChannelCapasity": 100
     },
-    "ChannelCapasity": 100
+    "ChannelCapasity": 100,
+    "Login": "elnivelproximo@gmail.com",
+    "Password": "nEDZbs3YXy$DsLx1b5aKAvS",
+    "Host": "smtp.gmail.com",
+    "Port": "587"
 }

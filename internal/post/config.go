@@ -5,6 +5,10 @@ type PostServiceConfig struct {
 	IncomingQueue   MessageQueueConfig
 	Smtp            SMTPConfig
 	ChannelCapasity int
+	Login string
+	Password string
+	Host string
+	Port string
 }
 
 func (c *PostServiceConfig) Init(args ...interface{}) {

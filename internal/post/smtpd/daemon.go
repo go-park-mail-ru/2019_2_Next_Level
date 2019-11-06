@@ -5,8 +5,6 @@ import (
 	"2019_2_Next_Level/internal/post/log"
 	"2019_2_Next_Level/internal/post/smtpd/worker"
 	"2019_2_Next_Level/pkg/logger"
-	"time"
-
 	"fmt"
 	"sync"
 
@@ -65,7 +63,7 @@ func (s *Server) Run(externwg *sync.WaitGroup) {
 	go s.RunSmtpServer()
 	go s.GetIncomingMessages()
 	// go s.GenAndSendMailTest()
-	// go s.PrintAndForward()
+	go s.Send()
 	select {
 	case <-s.quitChan:
 		return
@@ -91,28 +89,17 @@ func (s *Server) GetIncomingMessages() {
 }
 
 // PrintAndForward : gets message from MailSender, prints it and resends to IncomingQueue
-func (s *Server) PrintAndForward() {
-	i := 0
+func (s *Server) Send() {
 	for pack := range s.mailSenderChan.Out {
 		email := pack.(post.Email)
-		s.incomingQueueChan.In <- email
-		i++
+		//s.incomingQueueChan.In <- email
+		sender := NewSMTPSender(post.Conf.Login, post.Conf.Password, post.Conf.Host, post.Conf.Port)
+		err := sender.Send(email.From, []string{email.To}, []byte(email.Body))
+		if err != nil {
+			log.Log().E("Cannot send email: ", err)
+		}
+		log.Log().L("Email sent")
 	}
-}
-
-type SMTPIncoming struct {
-	*smtp.Server
-}
-
-func (s *SMTPIncoming) Init(port, host string) error {
-	s.Addr = ":" + port
-	s.Domain = host
-	s.ReadTimeout = 60 * time.Second
-	s.WriteTimeout = 60 * time.Second
-	s.MaxMessageBytes = 1024 * 1024
-	s.MaxRecipients = 50
-	s.AllowInsecureAuth = true
-	return nil
 }
 
 func (s *Server) GenAndSendMailTest() {

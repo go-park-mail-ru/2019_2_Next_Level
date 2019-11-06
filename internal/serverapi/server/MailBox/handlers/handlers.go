@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"2019_2_Next_Level/internal/model"
+	"2019_2_Next_Level/internal/serverapi/log"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	hr "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
 	"2019_2_Next_Level/pkg/HttpTools"
@@ -27,7 +29,16 @@ func NewMailHandler(router *mux.Router, usecase mailbox.MailBoxUseCase) {
 }
 
 func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
-	//h.mailusecase.SendMail("aa@mail.ru", "ivan@yandex.ru", "Hello")
+	email := model.Email{}
+	err := HttpTools.StructFromBody(*r, &email)
+	if err !=nil {
+		log.Log().E(err)
+		return
+	}
+	err = h.usecase.SendMail(email.From, email.To, email.Body)
+	if err != nil {
+		log.Log().E("Cannot send email")
+	}
 }
 
 func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
