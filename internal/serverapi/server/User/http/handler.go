@@ -36,7 +36,6 @@ func (h *UserHandler) InflateRouter(router *mux.Router) {
 
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	type Answer struct {
-		Status    string `json:"status"`
 		Name      string `json:"firstName"`
 		Sirname   string `json:"secondName"`
 		BirthDate string `json:"birthDate"`
@@ -53,7 +52,12 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Password = ""
-	ans := Answer{"ok", user.Name, user.Sirname, user.BirthDate, user.Sex, user.Email, user.Avatar}
+	ans := struct{
+		Status string `json:"status"`
+		Answer Answer `json:"userInfo"`
+	}{"ok",
+		Answer{user.Name, user.Sirname, user.BirthDate, user.Sex, user.Email, user.Avatar},
+	}
 	err = HttpTools.BodyFromStruct(w, &ans)
 	if err != nil {
 		resp.SetError(hr.GetError(hr.UnknownError)).Send()

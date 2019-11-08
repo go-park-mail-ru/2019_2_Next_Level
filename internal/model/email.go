@@ -17,6 +17,7 @@ type Email struct {
 		ReplyTo []string
 		WhenReceived time.Time
 	}
+	Id int
 }
 
 func (e *Email) SetFrom(from string) {

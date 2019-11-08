@@ -38,7 +38,8 @@ func (m MailToGet) FromMain(from *model.Email) MailToGet {
 	m.Subject = from.Header.Subject
 	m.Content = from.Body
 	m.Replies = []MailID{}
-
+	m.Id = MailID(from.Id)
+	return m
 }
 
 type Sender struct {

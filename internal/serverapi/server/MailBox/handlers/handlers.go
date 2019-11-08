@@ -87,7 +87,7 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 		PagesCount:count,
 		Page:page,
 		Messages: func()[]models.MailToGet{
-			localList := make([]models.MailToGet, len(list))
+			localList := make([]models.MailToGet, 0, len(list))
 			for _, i := range list {
 				localList = append(localList, models.MailToGet{}.FromMain(&i))
 			}
@@ -107,6 +107,7 @@ func (h *MailHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 	count, err := h.usecase.GetUnreadCount(login)
 	if err != nil {
 		resp.SetError(hr.GetError(hr.UnknownError))
+		log.Log().E(err)
 		return
 	}
 	resp.SetAnswer(struct{
@@ -133,7 +134,7 @@ func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 	}
 	mail, err := h.usecase.GetMail(login, id.Id)
 	if err != nil {
-		resp.SetError(hr.GetError(hr.AccessForbidden))
+		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
 

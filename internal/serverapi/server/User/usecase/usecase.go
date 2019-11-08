@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"2019_2_Next_Level/internal/model"
-	"2019_2_Next_Level/internal/serverapi/config"
 	authusecase "2019_2_Next_Level/internal/serverapi/server/Auth/usecase"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
@@ -34,7 +33,8 @@ func (u *UserUsecase) GetUser(login string) (model.User, error) {
 	user.Sex = sanitizer.Sanitize(user.Sex)
 	user.Name = sanitizer.Sanitize(user.Name)
 	user.Sirname = sanitizer.Sanitize(user.Sirname)
-	user.Avatar = config.Conf.HttpConfig.SelfURL + "avatar/"+user.Avatar
+	//user.Avatar = config.Conf.HttpConfig.SelfURL + "avatar/"+user.Avatar
+	user.Avatar = "/images/icons/no-avatar.svg"
 	return user, nil
 }
 func (u *UserUsecase) EditUser(user *model.User) error {

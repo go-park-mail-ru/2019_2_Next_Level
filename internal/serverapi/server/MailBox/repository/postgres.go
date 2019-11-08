@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
+	"strconv"
 	"time"
 )
 
@@ -52,14 +53,24 @@ func (r *PostgresRepository) Init() error {
 }
 
 func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) (model.Email, error) {
-	return model.Email{}, nil
+	query := `SELECT sender, email AS "receivers", time, body from Message JOIN Receiver ON Message.id=Receiver.mailId
+				WHERE Message.id=$1`
+	mail := model.Email{}
+	var when string
+	id, _ := strconv.ParseInt(code.(string), 10, 8)
+	err := r.DB.QueryRow(query, id).Scan(&mail.From, &mail.To, &when, &mail.Body)
+	if err != nil {
+		return mail, e.Error{}.SetError(err)
+	}
+	mail.Header.WhenReceived, _ = time.Parse("2006/01/02 15:04:05", when)
+	return mail, nil
 }
 
 func (r *PostgresRepository) GetEmailList(login string, folder string, sort interface{}, firstNumber int, count int) ([]model.Email, error) {
-	query := `SELECT sender, email AS "receivers", time, body from Message JOIN Receiver ON Message.id=Receiver.mailId
+	query := `SELECT Message.id, sender, email AS "receivers", time, body from Message JOIN Receiver ON Message.id=Receiver.mailId
 				WHERE Receiver.email=$1 ORDER BY time LIMIT $2 OFFSET $3;`
 
-	row, err := r.DB.Query(query, login, `100`, `1`)
+	row, err := r.DB.Query(query, login, count, firstNumber)
 	list := make([]model.Email, 0)
 	if err != nil {
 		return list, e.Error{}.SetCode(e.NotExists)
@@ -67,7 +78,7 @@ func (r *PostgresRepository) GetEmailList(login string, folder string, sort inte
 	for row.Next() {
 		mail := model.Email{}
 		var when string
-		err := row.Scan(&mail.From, &mail.To, &when, &mail.Body)
+		err := row.Scan(&mail.Id, &mail.From, &mail.To, &when, &mail.Body)
 		if err != nil {
 			return list, e.Error{}.SetError(err)
 		}
@@ -78,7 +89,7 @@ func (r *PostgresRepository) GetEmailList(login string, folder string, sort inte
 }
 
 func (r *PostgresRepository) GetMessagesCount(login string, folder string, flag interface{}) (int, error) {
-	query := `SELECT COUNT(id) from Message JOIN Receiver ON Message.id=Receiver.mailId
+	query := `SELECT COUNT(Message.id) from Message JOIN Receiver ON Message.id=Receiver.mailId
 				WHERE Receiver.email=$1`
 	var count int
 	err := r.DB.QueryRow(query, login).Scan(&count)

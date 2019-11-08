@@ -53,12 +53,12 @@ func (u *MailBoxUsecase) GetMailListPlain(login string, page int) (int, int, []m
 	if err != nil {
 		return 0, 0, []model.Email{}, err
 	}
-	from := mailsPerPage*(page-1)
+	from := mailsPerPage*(page-1)+1
 	list, err := u.repo.GetEmailList(login, models.InboxFolder, "", from, mailsPerPage)
 	if err != nil {
 		return 0, 0, list, e.Error{}.SetError(err).SetCode(e.ProcessError)
 	}
-	return count, page, list, nil
+	return count/mailsPerPage+1, page, list, nil
 }
 
 func (u *MailBoxUsecase) GetMail(login string, mailID models.MailID) (model.Email, error) {
