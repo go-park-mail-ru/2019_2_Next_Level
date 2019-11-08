@@ -47,6 +47,10 @@ func (r *Response) SetError(err interface{}) *Response {
 	r.Error = err
 	return r
 }
+func (r *Response) SetAnswer(ans interface{}) *Response {
+	r.Error = ans
+	return r
+}
 
 func (r *Response) Copy() Response {
 	return *r

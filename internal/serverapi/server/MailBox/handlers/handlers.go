@@ -5,6 +5,7 @@ import (
 	"2019_2_Next_Level/internal/serverapi/log"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	hr "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
+	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
 	"2019_2_Next_Level/pkg/HttpTools"
 	"encoding/json"
 	"net/http"
@@ -29,46 +30,68 @@ func NewMailHandler(router *mux.Router, usecase mailbox.MailBoxUseCase) {
 }
 
 func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
-	email := model.Email{}
-	err := HttpTools.StructFromBody(*r, &email)
-	if err !=nil {
-		log.Log().E(err)
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	login := h.getLogin(r)
+	if login=="" {
+		resp.SetError(hr.GetError(hr.BadSession))
 		return
 	}
-	err = h.usecase.SendMail(email.From, email.To, email.Body)
+	mail := models.MailToSend{}
+	err := HttpTools.StructFromBody(*r, &mail)
+	if err !=nil {
+		log.Log().E(err)
+		resp.SetError(hr.GetError(hr.BadParam))
+		return
+	}
+	email := mail.ToMain()
+	email.SetFrom(login)
+	err = h.usecase.SendMail(&email)
 	if err != nil {
 		log.Log().E("Cannot send email")
+		resp.SetError(hr.GetError(hr.UnknownError))
 	}
 }
 
 func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 	resp := h.resp.SetWriter(w).Copy()
 	defer resp.Send()
-	//login := r.Header.Get("X-Login")
-	type Request struct {
-		Sort string
-		Since int
-		Count int
-		Folder string
+	login := h.getLogin(r)
+	if login=="" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
 	}
-	req := Request{"time-fresh-first", 1, 100, "incoming"}
-	//err := HttpTools.StructFromBody(*r, &req)
-	//if err != nil {
-	//	resp.SetError(hr.BadParam)
-	//	return
-	//}
+	req :=  struct {
+		Page int
+	}{}
+	err := HttpTools.StructFromBody(*r, &req)
+	if err != nil {
+		resp.SetError(hr.BadParam)
+		return
+	}
 
-	login := "aaa@nlmail.ddns.net"
-	list, err := h.usecase.GetMailList(login, req.Folder, req.Sort, req.Since, req.Count)
+	count, page, list, err := h.usecase.GetMailListPlain(login, req.Page)
 	if err != nil {
 		resp.SetError(hr.BadParam)
 		return
 	}
-	err = HttpTools.BodyFromStruct(w, list)
-	if err != nil {
-		resp.SetError(hr.BadParam)
-		return
-	}
+	resp.SetAnswer(struct{
+		Status string
+		PagesCount int
+		Page int
+		Messages []models.MailToGet
+	}{
+		Status:"ok",
+		PagesCount:count,
+		Page:page,
+		Messages: func()[]models.MailToGet{
+			localList := make([]models.MailToGet, len(list))
+			for _, i := range list {
+				localList = append(localList, models.MailToGet{}.FromMain(&i))
+			}
+			return localList
+		}(),
+	})
 }
 
 func (h *MailHandler) GetMail(w http.ResponseWriter, r *http.Request) {
@@ -88,4 +111,105 @@ func (h *MailHandler) GetMail(w http.ResponseWriter, r *http.Request) {
 	}
 	data, _ := json.Marshal(mail)
 	w.Write(data)
+}
+
+func (h *MailHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	login := h.getLogin(r)
+	if login=="" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+	count, err := h.usecase.GetUnreadCount(login)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.UnknownError))
+		return
+	}
+	resp.SetAnswer(struct{
+		Status string
+		Count int
+	}{Status:"ok", Count:count})
+}
+
+func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	login := h.getLogin(r)
+	if login=="" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+	id := struct{
+		Id models.MailID
+	}{}
+	err := HttpTools.StructFromBody(*r, &id)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+	mail, err := h.usecase.GetMail(login, id.Id)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.AccessForbidden))
+		return
+	}
+
+	answer := struct {
+		Status string
+		Message models.MailToGet
+	}{
+		Status: "ok",
+		Message:models.MailToGet{
+			Id: id.Id,
+			From: models.Sender{
+				Name:  "",
+				Email: mail.From,
+			},
+			Subject:mail.Header.Subject,
+			Content:mail.Body,
+			Replies:[]models.MailID{},
+		},
+	}
+
+	resp.SetAnswer(answer)
+}
+
+func (h *MailHandler) MarkMailRead(w http.ResponseWriter, r *http.Request) {
+	h.markMail(w, r, models.MarkMessageRead)
+}
+
+func (h *MailHandler) MarkMailUnRead(w http.ResponseWriter, r *http.Request) {
+	h.markMail(w, r, models.MarkMessageUnread)
+}
+
+func (h *MailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
+	h.markMail(w, r, models.MarkMessageDeleted)
+}
+
+func (h *MailHandler) markMail(w http.ResponseWriter, r *http.Request, mark int) {
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	login := h.getLogin(r)
+	if login=="" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+
+	req := struct {
+		Messages []models.MailID
+	}{}
+	err := HttpTools.StructFromBody(*r, &req)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+	err = h.usecase.MarkMail(login, req.Messages, mark)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.UnknownError))
+		return
+	}
+}
+
+func (h *MailHandler) getLogin(r *http.Request) string {
+	return r.Header.Get("X-Login")
 }
