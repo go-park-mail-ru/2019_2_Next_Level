@@ -102,7 +102,7 @@ func TestSignUp(t *testing.T) {
 	mockUsecase := mock.NewMockUsecase(mockCtrl)
 	h := NewAuthHandler(mockUsecase)
 
-	testUser := model.User{"Ivan", "Ivanov", "", "01.01.1900", "male", "ivan", "12345", ""}
+	testUser := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
 
 	type F func()
 	funcs := []F{

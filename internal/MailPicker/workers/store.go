@@ -22,7 +22,7 @@ func (w *MailSaver) Run(externwg *sync.WaitGroup, ctx context.Context, in chan m
 	go func() {
 			for email := range in {
 			w.ProcessEmail(&email)
-			time.Sleep(20*time.Millisecond) // for tests
+			time.Sleep(200*time.Millisecond) // for tests
 		}
 	}()
 	<-ctx.Done()

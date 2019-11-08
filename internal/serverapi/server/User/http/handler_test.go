@@ -32,7 +32,7 @@ func TestGet(t *testing.T) {
 		Email     string `json:"login"`
 		Avatar    string `json:"avatar"`
 	}
-	user := model.User{"Ivan", "Ivanov", "", "01.01.1900", "male", "ivan", "12345", ""}
+	user := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
 	userResponse, err := json.Marshal(Answer{
 		"ok", "Ivan", "Ivanov", "01.01.1900", "male", "ivan", "",
 	})
@@ -71,7 +71,7 @@ func TestEditUser(t *testing.T) {
 	mockUsecase := mock.NewMockUserUsecase(mockCtrl)
 	h := NewUserHandler(mockUsecase)
 
-	user := model.User{"Ivan", "Ivanov", "", "01.01.1900", "male", "ivan", "12345", ""}
+	user := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
 	// type Data struct {
 	// 	Name      string `json:"firstName"`
 	// 	Sirname   string `json:"secondName"`

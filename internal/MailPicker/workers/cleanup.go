@@ -49,7 +49,7 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 			res.From = emailTemp.From
 			res.To = emailTemp.To
 			out <- res
-			time.Sleep(20*time.Millisecond) // for tests
+			time.Sleep(200*time.Millisecond) // for tests
 		}
 	}()
 	<-ctx.Done()

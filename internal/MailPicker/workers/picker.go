@@ -42,7 +42,7 @@ func (w *MailPicker) Run(externwg *sync.WaitGroup, ctx context.Context, out chan
 			log.Log().L("Message got")
 			if w.checkUserExist(strings.Split(email.To, "@")[0]) {
 				out <- email
-				time.Sleep(20*time.Millisecond) // for tests
+				time.Sleep(200*time.Millisecond) // for tests
 			}
 		}
 	}()
