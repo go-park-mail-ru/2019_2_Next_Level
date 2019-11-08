@@ -3,12 +3,13 @@ package usecase
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/post"
-	"2019_2_Next_Level/internal/post/log"
 	postinterface "2019_2_Next_Level/internal/postInterface"
 	"2019_2_Next_Level/internal/serverapi/config"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
+	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
 	"github.com/microcosm-cc/bluemonday"
+	"strconv"
 )
 
 type MailBoxUsecase struct {
@@ -24,17 +25,13 @@ func NewMailBoxUsecase(repo mailbox.MailRepository) *MailBoxUsecase {
 	usecase.smtpPort.Init()
 	return &usecase
 }
-
-func (u *MailBoxUsecase) SendMail(from, to, body string) error {
-	email := post.Email{
-		From: sanitizer.Sanitize(from),
-		To: sanitizer.Sanitize(to),
-		Body: sanitizer.Sanitize(body),
+func (u *MailBoxUsecase) SendMail(email *model.Email) error 	{
+	postEmail := post.Email{
+		From: email.From,
+		To:   email.To,
+		Body: email.Body,
 	}
-	err := u.smtpPort.Put(email)
-	log.Log().I("Send mail:\n From: %s\n To: %s\nBody: %s\n", from, to, body)
-	log.Log().I(err)
-	return nil
+	return u.smtpPort.Put(postEmail)
 }
 
 func (u *MailBoxUsecase) GetMailList(login string, folder string, sort string, from int, count int) ([]model.Email, error) {
@@ -49,6 +46,31 @@ func (u *MailBoxUsecase) GetMailList(login string, folder string, sort string, f
 	}
 	return list, nil
 }
-func (u *MailBoxUsecase) GetMail(login string, mailID string) (model.Email, error) {
-	return model.Email{}, nil
+
+func (u *MailBoxUsecase) GetMailListPlain(login string, page int) (int, int, []model.Email, error) {
+	mailsPerPage := 25
+	count, err := u.repo.GetMessagesCount(login, models.InboxFolder, models.FlagMessageTotal)
+	if err != nil {
+		return 0, 0, []model.Email{}, err
+	}
+	from := mailsPerPage*(page-1)
+	list, err := u.repo.GetEmailList(login, models.InboxFolder, "", from, mailsPerPage)
+	if err != nil {
+		return 0, 0, list, e.Error{}.SetError(err).SetCode(e.ProcessError)
+	}
+	return count, page, list, nil
+}
+
+func (u *MailBoxUsecase) GetMail(login string, mailID models.MailID) (model.Email, error) {
+	id := strconv.Itoa(int(mailID))
+	email, err := u.repo.GetEmailByCode(login, id)
+	return email, err
+}
+
+func (u *MailBoxUsecase) GetUnreadCount(login string) (int, error) {
+	return u.repo.GetMessagesCount(login, models.InboxFolder, models.FlagMessageTotal)
+}
+
+func (u *MailBoxUsecase) MarkMail(login string, ids []models.MailID, mark int) error {
+	return u.repo.MarkMessages(login, ids, mark)
 }

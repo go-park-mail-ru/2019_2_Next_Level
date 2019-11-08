@@ -51,7 +51,7 @@ func InflateRouter(router *mux.Router) {
 	userRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
 	InitHttpUser(userRouter)
 
-	mailRouter := router.PathPrefix("/mail").Subrouter()
+	mailRouter := router.PathPrefix("/messages").Subrouter()
 	//mailRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
 	InitHTTPMail(mailRouter)
 

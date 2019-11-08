@@ -4,6 +4,7 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
 	"database/sql"
 	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
@@ -50,12 +51,11 @@ func (r *PostgresRepository) Init() error {
 	return nil
 }
 
-func (r *PostgresRepository) GetEmailByCode(code string) (model.Email, error) {
+func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) (model.Email, error) {
 	return model.Email{}, nil
 }
-func (r *PostgresRepository) GetEmailList(login string, folder string, sort string, firstNumber int, count int) ([]model.Email, error) {
-	//query := `SELECT sender, email AS "receivers", time, body from Message JOIN Receiver ON Message.id=Receiver.mailId
-	//			WHERE Receiver.email=$1 ORDER BY time LIMIT $2 OFFSET $3;`
+
+func (r *PostgresRepository) GetEmailList(login string, folder string, sort interface{}, firstNumber int, count int) ([]model.Email, error) {
 	query := `SELECT sender, email AS "receivers", time, body from Message JOIN Receiver ON Message.id=Receiver.mailId
 				WHERE Receiver.email=$1 ORDER BY time LIMIT $2 OFFSET $3;`
 
@@ -75,4 +75,16 @@ func (r *PostgresRepository) GetEmailList(login string, folder string, sort stri
 		list = append(list, mail)
 	}
 	return list, nil
+}
+
+func (r *PostgresRepository) GetMessagesCount(login string, folder string, flag interface{}) (int, error) {
+	query := `SELECT COUNT(id) from Message JOIN Receiver ON Message.id=Receiver.mailId
+				WHERE Receiver.email=$1`
+	var count int
+	err := r.DB.QueryRow(query, login).Scan(&count)
+	return count, err
+}
+
+func (r *PostgresRepository) MarkMessages(login string, messagesID []models.MailID, mark interface{}) error {
+	return nil
 }

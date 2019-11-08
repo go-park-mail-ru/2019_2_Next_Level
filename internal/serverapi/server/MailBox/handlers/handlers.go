@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/log"
-	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	hr "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
+	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
 	"2019_2_Next_Level/pkg/HttpTools"
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -24,8 +22,12 @@ func NewMailHandler(router *mux.Router, usecase mailbox.MailBoxUseCase) {
 	handler.resp = (&HttpTools.Response{}).SetError(hr.DefaultResponse)
 
 	router.HandleFunc("/send", handler.SendMail).Methods("POST")
-	router.HandleFunc("/list", handler.GetMailList).Methods("GET")
-	router.HandleFunc("/mail/{id}", handler.GetMail).Methods("GET")
+	router.HandleFunc("/getByPage", handler.GetMailList).Methods("POST")
+	router.HandleFunc("/get", handler.GetEmail).Methods("POST")
+	router.HandleFunc("/getUnreadCount", handler.GetUnreadCount).Methods("GET")
+	router.HandleFunc("/read", handler.MarkMailRead).Methods("POST")
+	router.HandleFunc("/unread", handler.MarkMailUnRead).Methods("POST")
+	router.HandleFunc("/remove", handler.DeleteEmail).Methods("POST")
 
 }
 
@@ -92,25 +94,6 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 			return localList
 		}(),
 	})
-}
-
-func (h *MailHandler) GetMail(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
-	defer resp.Send()
-	login := r.Header.Get("X-Login")
-	vars := mux.Vars(r)
-	id, ok := vars["id"]
-	if !ok {
-		resp.SetError(hr.BadParam)
-		return
-	}
-	mail, err := h.usecase.GetMail(login, id)
-	if err != nil {
-		resp.SetError(hr.BadParam)
-		return
-	}
-	data, _ := json.Marshal(mail)
-	w.Write(data)
 }
 
 func (h *MailHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
