@@ -37,7 +37,7 @@ func (s *Server) Init(pre, next post.ChanPair, args ...interface{}) error {
 			return fmt.Errorf("Wrong smtpServer got")
 		}
 	} else {
-		s.smtpServer = s.NewDefaultSMTP("1025", "0.0.0.0")
+		s.smtpServer = s.NewDefaultSMTP(post.Conf.ListenPort, "0.0.0.0")
 	}
 	s.resultChannel = make(chan worker.EmailNil, 100)
 	s.quitChan = make(chan interface{}, 5)

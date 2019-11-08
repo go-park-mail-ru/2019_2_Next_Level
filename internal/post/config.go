@@ -9,6 +9,7 @@ type PostServiceConfig struct {
 	Password string
 	Host string
 	Port string
+	ListenPort string
 }
 
 func (c *PostServiceConfig) Init(args ...interface{}) {
