@@ -70,7 +70,7 @@ func (r *PostgresRepository) GetEmailList(login string, folder string, sort inte
 	query := `SELECT Message.id, sender, email AS "receivers", time, body from Message JOIN Receiver ON Message.id=Receiver.mailId
 				WHERE Receiver.email=$1 ORDER BY time LIMIT $2 OFFSET $3;`
 
-	row, err := r.DB.Query(query, login, count, firstNumber)
+	row, err := r.DB.Query(query, login, count, firstNumber-1)
 	list := make([]model.Email, 0)
 	if err != nil {
 		return list, e.Error{}.SetCode(e.NotExists)

@@ -7,6 +7,7 @@ import (
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
 	"2019_2_Next_Level/pkg/HttpTools"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -22,8 +23,8 @@ func NewMailHandler(router *mux.Router, usecase mailbox.MailBoxUseCase) {
 	handler.resp = (&HttpTools.Response{}).SetError(hr.DefaultResponse)
 
 	router.HandleFunc("/send", handler.SendMail).Methods("POST")
-	router.HandleFunc("/getByPage", handler.GetMailList).Methods("POST")
-	router.HandleFunc("/get", handler.GetEmail).Methods("POST")
+	router.HandleFunc("/getByPage", handler.GetMailList).Methods("GET")
+	router.HandleFunc("/get", handler.GetEmail).Methods("GET")
 	router.HandleFunc("/getUnreadCount", handler.GetUnreadCount).Methods("GET")
 	router.HandleFunc("/read", handler.MarkMailRead).Methods("POST")
 	router.HandleFunc("/unread", handler.MarkMailUnRead).Methods("POST")
@@ -40,7 +41,11 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mail := models.MailToSend{}
-	err := HttpTools.StructFromBody(*r, &mail)
+	req := struct{
+		Message models.MailToSend `json:"message"`
+	}{mail}
+	err := HttpTools.StructFromBody(*r, &req)
+	mail = req.Message
 	if err !=nil {
 		log.Log().E(err)
 		resp.SetError(hr.GetError(hr.BadParam))
@@ -63,25 +68,23 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadSession))
 		return
 	}
-	req :=  struct {
-		Page int
-	}{}
-	err := HttpTools.StructFromBody(*r, &req)
+	pageTemp := r.FormValue("page")
+	pg, err := strconv.ParseInt(pageTemp, 10, 8)
 	if err != nil {
-		resp.SetError(hr.BadParam)
+		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
 
-	count, page, list, err := h.usecase.GetMailListPlain(login, req.Page)
+	count, page, list, err := h.usecase.GetMailListPlain(login, int(pg))
 	if err != nil {
 		resp.SetError(hr.BadParam)
 		return
 	}
 	resp.SetAnswer(struct{
-		Status string
-		PagesCount int
-		Page int
-		Messages []models.MailToGet
+		Status string `json:"status"`
+		PagesCount int `json:"pagesCount"`
+		Page int `json:"page"`
+		Messages []models.MailToGet `json:"messages"`
 	}{
 		Status:"ok",
 		PagesCount:count,
@@ -124,27 +127,33 @@ func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadSession))
 		return
 	}
-	id := struct{
-		Id models.MailID
-	}{}
-	err := HttpTools.StructFromBody(*r, &id)
+	idTemp := r.FormValue("message")
+	id, err := strconv.ParseInt(idTemp, 10, 8)
 	if err != nil {
-		resp.SetError(hr.GetError(hr.BadSession))
+		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	mail, err := h.usecase.GetMail(login, id.Id)
+	//id := struct{
+	//	Id models.MailID
+	//}{}
+	//err := HttpTools.StructFromBody(*r, &id)
+	//if err != nil {
+	//	resp.SetError(hr.GetError(hr.BadSession))
+	//	return
+	//}
+	mail, err := h.usecase.GetMail(login, models.MailID(id))
 	if err != nil {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
 
 	answer := struct {
-		Status string
-		Message models.MailToGet
+		Status string `json:"status"`
+		Message models.MailToGet `json:"message"`
 	}{
 		Status: "ok",
 		Message:models.MailToGet{
-			Id: id.Id,
+			Id: models.MailID(id),
 			From: models.Sender{
 				Name:  "",
 				Email: mail.From,

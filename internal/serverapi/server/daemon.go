@@ -48,7 +48,7 @@ func InflateRouter(router *mux.Router) {
 	authUseCase := InitHttpAuth(authRouter)
 
 	userRouter := router.PathPrefix("/profile").Subrouter()
-	//userRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
+	userRouter.Use(middleware.AuthentificationMiddleware(authUseCase))
 	InitHttpUser(userRouter)
 
 	mailRouter := router.PathPrefix("/messages").Subrouter()

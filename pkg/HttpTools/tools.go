@@ -14,6 +14,7 @@ func StructFromBody(r http.Request, s interface{}) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(string(body))
 	return json.Unmarshal(body, s)
 }
 

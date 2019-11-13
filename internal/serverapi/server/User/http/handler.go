@@ -68,12 +68,17 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 	resp := h.resp.SetWriter(w).Copy()
 	defer resp.Send()
-	user := model.User{}
-	err := HttpTools.StructFromBody(*r, &user)
+	var user model.User
+	var req struct{
+		UserInfo model.User `json:"userInfo"`
+	}
+
+	err := HttpTools.StructFromBody(*r, &req)
 	if err != nil {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
+	user = req.UserInfo
 	login := r.Header.Get("X-Login")
 	user.Email = login
 	err = h.usecase.EditUser(&user)
