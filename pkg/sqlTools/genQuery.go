@@ -12,7 +12,7 @@ func CreatePacketQuery(prefix string, batchSize int, batchCount int, postfix ...
 
 	for i := 0; i < batchCount; i++ {
 		for j := 1; j <= batchSize; j++ {
-			batch = append(batch, "$"+strconv.Itoa(2*i + j))
+			batch = append(batch, "$"+strconv.Itoa(batchSize*i + j))
 		}
 		pack = append(pack, "(" + strings.Join(batch, ", ") + ")" )
 		batch = batch[:0]
