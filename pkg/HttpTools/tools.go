@@ -22,8 +22,8 @@ func BodyFromStruct(w http.ResponseWriter, s interface{}) error {
 	if err != nil {
 		return err
 	}
-	w.Write(js)
 	w.Header().Add("Content-Type", "application/json")
+	w.Write(js)	//sets inchangeble status 200 if not set already
 	return nil
 }
 
