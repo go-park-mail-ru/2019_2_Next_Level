@@ -38,7 +38,7 @@ const (
 )
 
 type Response struct {
-	Body  interface{}
+	body  interface{}
 	status int
 	writer http.ResponseWriter
 }
@@ -58,12 +58,12 @@ func (r *Response) SetStatus(status int) *Response {
 }
 
 func (r *Response) SetError(err interface{}) *Response {
-	r.Body = err
+	r.body = err
 	return r
 }
 
 func (r *Response) SetContent(c interface{}) *Response {
-	r.Body = c
+	r.body = c
 	return r
 }
 
@@ -72,10 +72,10 @@ func (r *Response) Copy() Response {
 }
 
 func (r *Response) Send() {
-	if r.Body == nil {
+	if r.body == nil {
 		fmt.Println("Nil error")
 	}
-	body, err := json.Marshal(r.Body)
+	body, err := json.Marshal(r.body)
 	if err != nil {
 		fmt.Println("Cannot encode json")
 		return
@@ -89,6 +89,6 @@ func (r *Response) Send() {
 }
 
 func (r *Response) String() string {
-	body, _ := json.Marshal(r.Body)
+	body, _ := json.Marshal(r.body)
 	return string(body)
 }
