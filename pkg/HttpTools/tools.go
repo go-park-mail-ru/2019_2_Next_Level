@@ -62,6 +62,11 @@ func (r *Response) SetError(err interface{}) *Response {
 	return r
 }
 
+func (r *Response) SetContent(c interface{}) *Response {
+	r.Body = c
+	return r
+}
+
 func (r *Response) Copy() Response {
 	return *r
 }
