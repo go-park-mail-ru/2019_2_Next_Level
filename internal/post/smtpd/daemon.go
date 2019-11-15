@@ -46,7 +46,8 @@ func (s *Server) Init(pre, next post.ChanPair, args ...interface{}) error {
 	s.mailSenderChan = pre
 	s.incomingQueueChan = next
 
-	log.Log().I("SMTPd started. Hello!")
+	notification := "SMTPd started. Port to listen: %s"
+	log.Log().I(fmt.Sprintf(notification, post.Conf.ListenPort))
 
 	return nil
 }
@@ -60,12 +61,14 @@ func (s *Server) NewDefaultSMTP(port, host string) IncomingSmtpInerface {
 // Run : start daemon's work
 func (s *Server) Run(externwg *sync.WaitGroup) {
 	defer externwg.Done()
+	log.Log().L("Run SMTP...")
 	go s.RunSmtpServer()
 	go s.GetIncomingMessages()
 	// go s.GenAndSendMailTest()
 	go s.Send()
 	select {
 	case <-s.quitChan:
+		log.Log().L("Data in quitChan. SMTP daemon stopping...")
 		return
 	}
 }
@@ -94,7 +97,7 @@ func (s *Server) Send() {
 		email := pack.(post.Email)
 		//s.incomingQueueChan.In <- email
 		sender := NewSMTPSender(post.Conf.Login, post.Conf.Password, post.Conf.Host, post.Conf.Port)
-		err := sender.Send(email.From, []string{email.To}, []byte(email.Body))
+		err := sender.Send(email.From, []string{email.To}, email.Subject, []byte(email.Body))
 		if err != nil {
 			log.Log().E("Cannot send email: ", err)
 		}

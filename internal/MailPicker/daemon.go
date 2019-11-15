@@ -8,6 +8,7 @@ import (
 	postinterface "2019_2_Next_Level/internal/postInterface"
 	e "2019_2_Next_Level/pkg/Error"
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -30,7 +31,7 @@ func (s *Secretary) Init() *Secretary {
 	s.queueConnectionStatus = true
 	s.errorChan = make(chan error, 3)
 
-	logger.Log().L("Init MailPicker")
+	logger.Log().L(fmt.Sprintf("Init MailPicker listening remote %s%s", config.Conf.RemoteHost, config.Conf.RemotePort))
 	return s
 }
 

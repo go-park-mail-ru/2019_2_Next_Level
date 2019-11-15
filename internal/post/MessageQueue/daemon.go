@@ -51,6 +51,8 @@ func (q *QueueDemon) Init(chanA, chanB post.ChanPair, _ ...interface{}) error {
 	q.queue = MessageQueueCore{Test: t}
 	q.queue.Init()
 	q.log.SetPrefix(q.Name)
+	notification := fmt.Sprintf("Started MessageQueue of type \"%s\" on port %s", q.Name, q.Port)
+	log.Log().I(notification)
 	return nil
 }
 

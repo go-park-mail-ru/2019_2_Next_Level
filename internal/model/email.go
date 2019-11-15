@@ -3,6 +3,7 @@ package model
 import (
 	"2019_2_Next_Level/internal/post"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -43,4 +44,14 @@ func (e *Email) ToPostEmail() post.Email {
 		Body: e.Body,
 	}
 	return email
+}
+
+func (e *Email) Split(src string) (string, string) {
+	splitter := strings.Index(src, "@")
+	if splitter==-1{
+		return src, ""
+	}
+	login := src[:splitter]
+	host := src[splitter+1:]
+	return login, host
 }

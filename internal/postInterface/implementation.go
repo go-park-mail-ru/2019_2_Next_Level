@@ -37,8 +37,6 @@ func (q *QueueClient) Destroy() {
 
 func (q *QueueClient) Put(email post.Email) error {
 	p := (&ParcelAdapter{}).FromEmail(&email)
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	// defer cancel()
 	ctx := context.Background()
 	_, err := q.queue.Enqueue(ctx, &p)
 	return err
@@ -51,19 +49,4 @@ func (q *QueueClient) Get() (post.Email, error) {
 	}
 
 	return (&ParcelAdapter{}).ToEmail(data), nil
-}
-
-type ParcelAdapter struct {
-}
-
-func (a *ParcelAdapter) ToEmail(from *pb.Email) post.Email {
-	return post.Email{from.From, from.To, from.Body}
-}
-
-func (a *ParcelAdapter) FromEmail(from *post.Email) pb.Email {
-	return pb.Email{
-		From: from.From,
-		To:   from.To,
-		Body: from.Body,
-	}
 }

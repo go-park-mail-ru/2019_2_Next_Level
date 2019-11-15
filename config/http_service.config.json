@@ -15,7 +15,8 @@
         "selfURL": "http://84.201.143.48/",
         "defaultAvatar": "default.png",
         "postServiceHost": "0.0.0.0",
-        "postServiceSendPort" : "2000"
+        "postServiceSendPort" : "2000",
+        "hostname": "nlmail.hldns.ru"
     },
     "Database": {
         "port": "5432",

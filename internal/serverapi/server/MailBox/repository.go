@@ -10,4 +10,5 @@ type MailRepository interface {
 	GetEmailList(login string, folder string, sort interface{}, firstNumber int, count int) ([]model.Email, error)
 	GetMessagesCount(login string, folder string, flag interface{}) (int, error)
 	MarkMessages(login string, messagesID []models.MailID, mark interface{}) error
+	PutSentMessage(email model.Email) error
 }

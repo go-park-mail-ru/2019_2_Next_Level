@@ -26,12 +26,21 @@ func NewMailBoxUsecase(repo mailbox.MailRepository) *MailBoxUsecase {
 	return &usecase
 }
 func (u *MailBoxUsecase) SendMail(email *model.Email) error 	{
+	email.From = email.From+"@"+config.Conf.HttpConfig.HostName
+	login, host := email.Split(email.To)
+	if host==""{
+		email.To = login + "@"+config.Conf.HttpConfig.HostName
+	}
 	postEmail := post.Email{
 		From: email.From,
 		To:   email.To,
 		Body: email.Body,
+		Subject:email.Header.Subject,
 	}
-	return u.smtpPort.Put(postEmail)
+	if err := u.smtpPort.Put(postEmail); err!=nil{
+		return err
+	}
+	return u.repo.PutSentMessage(*email)
 }
 
 func (u *MailBoxUsecase) GetMailList(login string, folder string, sort string, from int, count int) ([]model.Email, error) {

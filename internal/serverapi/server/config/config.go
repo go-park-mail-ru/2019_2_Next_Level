@@ -12,6 +12,7 @@ type HTTPConfig struct {
 	DefaultAvatar       string
 	PostServiceHost     string
 	PostServiceSendPort string
+	HostName string `json:"hostname"`
 }
 
 func (c *HTTPConfig) Init(args ...interface{}) {

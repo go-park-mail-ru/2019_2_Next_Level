@@ -36,5 +36,5 @@ func (l *Log) W(a ...interface{}) {
 }
 
 func (l *Log) Println(a ...interface{}) {
-	fmt.Println(l.prefix + ": " + fmt.Sprintln(a...))
+	fmt.Print(l.prefix + ": " + fmt.Sprintln(a...))
 }

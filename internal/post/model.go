@@ -8,6 +8,7 @@ type Email struct {
 	From string
 	To   string
 	Body string
+	Subject string
 }
 
 func (e *Email) Stringify() string {

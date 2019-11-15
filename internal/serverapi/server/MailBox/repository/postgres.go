@@ -5,6 +5,7 @@ import (
 	"2019_2_Next_Level/internal/serverapi/config"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
+	"2019_2_Next_Level/pkg/sqlTools"
 	"database/sql"
 	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
@@ -53,8 +54,8 @@ func (r *PostgresRepository) Init() error {
 }
 
 func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) (model.Email, error) {
-	query := `SELECT sender, email AS "receivers", time, body from Message JOIN Receiver ON Message.id=Receiver.mailId
-				WHERE Message.id=$1`
+	query := queryGetEmailByCode
+
 	mail := model.Email{}
 	var when string
 	id, _ := strconv.ParseInt(code.(string), 10, 8)
@@ -67,58 +68,58 @@ func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) (mod
 }
 
 func (r *PostgresRepository) GetEmailList(login string, folder string, sort interface{}, firstNumber int, count int) ([]model.Email, error) {
-	var query string
+	query := queryGetEmailList
+	var placeholder string
+
 	if folder=="sent" || folder=="proceed"{
-		query = `SELECT Message.id, sender, email AS "receivers", time, body, isread from Message JOIN Receiver ON Message.id=Receiver.mailId
-				WHERE Message.sender=$1 ORDER BY time LIMIT $2 OFFSET $3;`
+		placeholder = "Message.sender"
 	}else{
-		query = `SELECT Message.id, sender, email AS "receivers", time, body, isread from Message JOIN Receiver ON Message.id=Receiver.mailId
-				WHERE Receiver.email=$1 ORDER BY time LIMIT $2 OFFSET $3;`
+		placeholder = "Receiver.email"
 	}
+	query = fmt.Sprintf(query, placeholder)
 
 	row, err := r.DB.Query(query, login, count, firstNumber-1)
 	list := make([]model.Email, 0)
 	if err != nil {
 		return list, e.Error{}.SetCode(e.NotExists)
 	}
+
 	for row.Next() {
 		mail := model.Email{}
 		var when string
-		err := row.Scan(&mail.Id, &mail.From, &mail.To, &when, &mail.Body, &mail.IsRead)
-		if err != nil {
+
+		if err := row.Scan(&mail.Id, &mail.From, &mail.To, &when, &mail.Body, &mail.IsRead); err != nil {
 			return list, e.Error{}.SetError(err)
 		}
-		mail.Header.WhenReceived, _ = time.Parse("2006/01/02 15:04:05", when)
+
+		mail.Header.WhenReceived, _= time.Parse(time.RFC3339, when)
 		list = append(list, mail)
 	}
 	return list, nil
 }
 
 func (r *PostgresRepository) GetMessagesCount(login string, folder string, flag interface{}) (int, error) {
-	query := `SELECT COUNT(Message.id) from Message JOIN Receiver ON Message.id=Receiver.mailId
-				WHERE Receiver.email=$1`
+	query := queryGetMessagesCount
 	var count int
 	err := r.DB.QueryRow(query, login).Scan(&count)
 	return count, err
 }
 
 func (r *PostgresRepository) MarkMessages(login string, messagesID []models.MailID, mark interface{}) error {
-	query := `UPDATE Message SET %s WHERE id=$1`
+	query := queryMarkMessage
 	var placeholder string
 	switch mark.(int) {
 	case models.MarkMessageRead:
 		placeholder = `isread=true`
-		break
 	case models.MarkMessageUnread:
 		placeholder = `isread=false`
-		break
 	case models.MarkMessageDeleted:
 		placeholder = `folder='trash'`
-		break
 	default:
 		return fmt.Errorf("Unknown mark")
 	}
 	query = fmt.Sprintf(query, placeholder)
+
 	for _, id := range messagesID {
 		_, err := r.DB.Exec(query, id)
 		if err != nil {
@@ -126,4 +127,35 @@ func (r *PostgresRepository) MarkMessages(login string, messagesID []models.Mail
 		}
 	}
 	return nil
+}
+
+func (r *PostgresRepository) PutSentMessage(email model.Email) error {
+	task := func() error {
+		saveMessage, err := r.DB.Prepare(queryWriteMessage)
+		if err != nil {
+			return err
+		}
+
+		var id int
+		from, _ := email.Split(email.From)
+		err = saveMessage.QueryRow(from, email.Header.Subject, email.Body, "out", "sent").Scan(&id)
+		if err != nil {
+			return err
+		}
+
+		recQuery := sqlTools.CreatePacketQuery(queryInflateReceivers, 2, len(email.Header.To))
+		saveReceivers, err := r.DB.Prepare(recQuery)
+		if err != nil {
+			return err
+		}
+
+		params := make([]interface{}, 0, 2*len(email.Header.To))
+		for _, addr := range email.Header.To {
+			params = append(params, id, addr)
+		}
+		_, err = saveReceivers.Exec(params...)
+		return err
+	}
+
+	return sqlTools.WithTransaction(r.DB, task)
 }
