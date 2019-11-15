@@ -17,14 +17,17 @@ func StructFromBody(r http.Request, s interface{}) error {
 	return json.Unmarshal(body, s)
 }
 
+// Inflatr body with struct content
 func BodyFromStruct(w http.ResponseWriter, s interface{}) error {
 	js, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
-	w.Write(js)
+	w.Write(js)	//sets inchangeble status 200 if not set already
 	return nil
 }
+
+
 
 type Answer interface {
 	SetStatus(string)
@@ -35,7 +38,8 @@ const (
 )
 
 type Response struct {
-	Error  interface{}
+	Body  interface{}
+	status int
 	writer http.ResponseWriter
 }
 
@@ -43,8 +47,14 @@ func (r *Response) SetWriter(writer http.ResponseWriter) *Response {
 	r.writer = writer
 	return r
 }
+
+func (r *Response) SetStatus(status int) *Response {
+	r.status = status
+	return r
+}
+
 func (r *Response) SetError(err interface{}) *Response {
-	r.Error = err
+	r.Body = err
 	return r
 }
 
@@ -53,19 +63,23 @@ func (r *Response) Copy() Response {
 }
 
 func (r *Response) Send() {
-	if r.Error == nil {
+	if r.Body == nil {
 		fmt.Println("Nil error")
 	}
-	body, err := json.Marshal(r.Error)
+	body, err := json.Marshal(r.Body)
 	if err != nil {
 		fmt.Println("Cannot encode json")
 		return
 	}
 	r.writer.Header().Set("Content-Type", "application/json")
+	if r.status == 0 {
+		r.status = http.StatusOK
+	}
+	r.writer.WriteHeader(r.status)
 	r.writer.Write(body)
 }
 
 func (r *Response) String() string {
-	body, _ := json.Marshal(r.Error)
+	body, _ := json.Marshal(r.Body)
 	return string(body)
 }
