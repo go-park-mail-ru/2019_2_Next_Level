@@ -23,6 +23,7 @@ func BodyFromStruct(w http.ResponseWriter, s interface{}) error {
 		return err
 	}
 	w.Write(js)
+	w.Header().Add("Content-Type", "application/json")
 	return nil
 }
 
