@@ -43,6 +43,10 @@ type Response struct {
 	writer http.ResponseWriter
 }
 
+func NewResponse(writer http.ResponseWriter) *Response {
+	return &Response{writer: writer}
+}
+
 func (r *Response) SetWriter(writer http.ResponseWriter) *Response {
 	r.writer = writer
 	return r
