@@ -69,13 +69,21 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pageTemp := r.FormValue("page")
-	pg, err := strconv.ParseInt(pageTemp, 10, 8)
+	page, err := strconv.ParseInt(pageTemp, 10, 8)
 	if err != nil {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
+	perPage, err := strconv.ParseInt(r.FormValue("perPage"), 10, 8)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.BadParam))
+		return
+	}
+	folder := r.FormValue("folder")
 
-	count, page, list, err := h.usecase.GetMailListPlain(login, int(pg))
+	//count, page, list, err := h.usecase.GetMailListPlain(login, int(pg))
+	startLetter := perPage*(page-1)+1
+	list, err := h.usecase.GetMailList(login, folder, "", int(startLetter), int(perPage))
 	if err != nil {
 		resp.SetError(hr.BadParam)
 		return
@@ -87,8 +95,8 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 		Messages []models.MailToGet `json:"messages"`
 	}{
 		Status:"ok",
-		PagesCount:count,
-		Page:page,
+		PagesCount:10,
+		Page: int(page),
 		Messages: func()[]models.MailToGet{
 			localList := make([]models.MailToGet, 0, len(list))
 			for _, i := range list {

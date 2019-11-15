@@ -18,6 +18,7 @@ type Email struct {
 		WhenReceived time.Time
 	}
 	Id int
+	IsRead bool
 }
 
 func (e *Email) SetFrom(from string) {

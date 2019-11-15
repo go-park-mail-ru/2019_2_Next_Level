@@ -42,6 +42,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		Sex       string `json:"sex"`
 		Email     string `json:"login"`
 		Avatar    string `json:"avatar"`
+		Login string `json:"nickName"`
 	}
 	resp := h.resp.SetWriter(w).Copy()
 	// defer resp.Send()
@@ -56,7 +57,8 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		Status string `json:"status"`
 		Answer Answer `json:"userInfo"`
 	}{"ok",
-		Answer{user.Name, user.Sirname, user.BirthDate, user.Sex, user.Email, user.Avatar},
+		Answer{Name:user.Name, Sirname:user.Sirname, BirthDate:user.BirthDate,
+			Sex:user.Sex, Email:user.Email, Avatar:user.Avatar, Login:user.Login},
 	}
 	err = HttpTools.BodyFromStruct(w, &ans)
 	if err != nil {

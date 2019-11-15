@@ -1,6 +1,9 @@
 package models
 
-import "2019_2_Next_Level/internal/model"
+import (
+	"2019_2_Next_Level/internal/model"
+	"time"
+)
 
 type MailID int64
 
@@ -31,6 +34,9 @@ type MailToGet struct {
 	Subject string `json:"subject"`
 	Content string `json:"content"`
 	Replies []MailID`json:"replies,omitempty"`
+	Read bool `json:"read"`
+	Folder string `json:"folder"`
+	Date string `json:"date"`
 }
 func (m MailToGet) FromMain(from *model.Email) MailToGet {
 	m.Id = MailID(0)
@@ -39,6 +45,8 @@ func (m MailToGet) FromMain(from *model.Email) MailToGet {
 	m.Content = from.Body
 	m.Replies = []MailID{}
 	m.Id = MailID(from.Id)
+	m.Read = from.IsRead
+	m.Date = from.Header.WhenReceived.Format(time.RFC3339)
 	return m
 }
 

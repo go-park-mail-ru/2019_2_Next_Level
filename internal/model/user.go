@@ -8,6 +8,7 @@ type User struct {
 	Sirname    string `json:"secondName"`
 	MiddleName string
 	BirthDate  string `json:"birthDate"`
+	Login string 	  `json:"nickname"`
 	Sex        string `json:"sex"`
 	Email      string `json:"login"`
 	Password   string `json:"password"`

@@ -67,8 +67,14 @@ func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) (mod
 }
 
 func (r *PostgresRepository) GetEmailList(login string, folder string, sort interface{}, firstNumber int, count int) ([]model.Email, error) {
-	query := `SELECT Message.id, sender, email AS "receivers", time, body from Message JOIN Receiver ON Message.id=Receiver.mailId
+	var query string
+	if folder=="sent" || folder=="proceed"{
+		query = `SELECT Message.id, sender, email AS "receivers", time, body, isread from Message JOIN Receiver ON Message.id=Receiver.mailId
+				WHERE Message.sender=$1 ORDER BY time LIMIT $2 OFFSET $3;`
+	}else{
+		query = `SELECT Message.id, sender, email AS "receivers", time, body, isread from Message JOIN Receiver ON Message.id=Receiver.mailId
 				WHERE Receiver.email=$1 ORDER BY time LIMIT $2 OFFSET $3;`
+	}
 
 	row, err := r.DB.Query(query, login, count, firstNumber-1)
 	list := make([]model.Email, 0)
@@ -78,7 +84,7 @@ func (r *PostgresRepository) GetEmailList(login string, folder string, sort inte
 	for row.Next() {
 		mail := model.Email{}
 		var when string
-		err := row.Scan(&mail.Id, &mail.From, &mail.To, &when, &mail.Body)
+		err := row.Scan(&mail.Id, &mail.From, &mail.To, &when, &mail.Body, &mail.IsRead)
 		if err != nil {
 			return list, e.Error{}.SetError(err)
 		}
@@ -97,5 +103,27 @@ func (r *PostgresRepository) GetMessagesCount(login string, folder string, flag 
 }
 
 func (r *PostgresRepository) MarkMessages(login string, messagesID []models.MailID, mark interface{}) error {
+	query := `UPDATE Message SET %s WHERE id=$1`
+	var placeholder string
+	switch mark.(int) {
+	case models.MarkMessageRead:
+		placeholder = `isread=true`
+		break
+	case models.MarkMessageUnread:
+		placeholder = `isread=false`
+		break
+	case models.MarkMessageDeleted:
+		placeholder = `folder='trash'`
+		break
+	default:
+		return fmt.Errorf("Unknown mark")
+	}
+	query = fmt.Sprintf(query, placeholder)
+	for _, id := range messagesID {
+		_, err := r.DB.Exec(query, id)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
