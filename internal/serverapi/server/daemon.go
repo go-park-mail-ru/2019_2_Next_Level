@@ -32,8 +32,15 @@ func Run(externwg *sync.WaitGroup) error {
 	InflateRouter(router)
 
 	//mainRouter.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(config.Conf.StaticDir))))
-	staticHandler := http.StripPrefix("/", http.FileServer(http.Dir(config.Conf.StaticDir)))
+	//staticHandler := http.StripPrefix("/", http.FileServer(http.Dir(config.Conf.StaticDir)))
+	//mainRouter.PathPrefix("/").Handler(middleware.StaticMiddleware()(staticHandler))
+
+	staticHandler := http.Handler(http.FileServer(http.Dir(config.Conf.StaticDir)))
+	//mainRouter.PathPrefix("/").Handler(http.FileServer(http.Dir(config.Conf.StaticDir)))
 	mainRouter.PathPrefix("/").Handler(middleware.StaticMiddleware()(staticHandler))
+	//mainRouter.PathPrefix("/").
+	//	Subrouter().
+	//	Handle("/", middleware.StaticMiddleware()(http.FileServer(http.Dir(config.Conf.StaticDir))))
 
 	err := http.ListenAndServe(config.Conf.Port, mainRouter)
 	return err
