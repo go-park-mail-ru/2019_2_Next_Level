@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+// protoc --go_out=plugins=grpc:. *.proto
+
+package service;
+
+message Email {
+    string From = 1;
+    string To = 2;
+    string Subject = 3;
+    string Body = 4;
+}
+message Empty {
+    bool s = 1;
+}
+
+message StringResult {
+    string Result = 1;
+    int32 Code = 2;
+}
+
+message StatusResult {
+    int32 Code = 1;
+}
+
+message String {
+    string Data = 1;
+}
+
+message ChangePasswordMessage {
+    string Login = 1;
+    string OldPass = 2;
+    string NewPass = 3;
+}
+
+message CredentialsMessage {
+    string Login = 1;
+    string Password = 2;
+}
+
+
+service Auth {
+    rpc LoginBySession(String) returns (StringResult) {}
+    rpc StartSession(String) returns (StringResult) {}
+    rpc DestroySession(String) returns (StatusResult) {}
+    rpc DestroyUserSessions(String) returns (StatusResult) {}
+    rpc ChangePassword(ChangePasswordMessage) returns (StatusResult) {}
+    rpc CheckCredentials(CredentialsMessage) returns (StatusResult) {}
+}
