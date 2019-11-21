@@ -1,8 +1,8 @@
 package usecase
 
 import (
+	"2019_2_Next_Level/internal/Auth"
 	"2019_2_Next_Level/internal/model"
-	authusecase "2019_2_Next_Level/internal/serverapi/server/Auth/usecase"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
 	"github.com/microcosm-cc/bluemonday"
@@ -10,11 +10,15 @@ import (
 
 func NewUserUsecase(repo user.UserRepository) UserUsecase {
 	sanitizer = bluemonday.UGCPolicy()
-	return UserUsecase{repo: repo}
+	usecase := UserUsecase{repo:repo}
+	usecase.auth = &Auth.AuthClient{}
+	usecase.auth.Init("0.0.0.0", ":6000")
+	return usecase
 }
 
 type UserUsecase struct {
 	repo user.UserRepository
+	auth Auth.IAuthClient
 }
 var sanitizer *bluemonday.Policy
 func (u *UserUsecase) GetUser(login string) (model.User, error) {
@@ -55,16 +59,17 @@ func (u *UserUsecase) EditUser(user *model.User) error {
 	return nil
 }
 func (u *UserUsecase) EditPassword(login string, oldPass string, newPass string) error {
-	currPass, sault, err := u.repo.GetUserCredentials(login)
-	if err != nil {
-		return err
-	}
 
-	if !authusecase.CheckPassword([]byte(oldPass), []byte(currPass), []byte(sault)) {
-		return e.Error{}.SetCode(e.Wrong)
-	}
-	newPassHash := authusecase.PasswordPBKDF2([]byte(newPass), []byte(sault))
-
-	err = u.repo.UpdateUserPassword(login, string(newPassHash), sault)
-	return err
+	//currPass, sault, err := u.repo.GetUserCredentials(login)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if !authusecase.CheckPassword([]byte(oldPass), []byte(currPass), []byte(sault)) {
+	//	return e.Error{}.SetCode(e.Wrong)
+	//}
+	//newPassHash := authusecase.PasswordPBKDF2([]byte(newPass), []byte(sault))
+	//
+	//err = u.repo.UpdateUserPassword(login, string(newPassHash), sault)
+	return u.auth.GetError(u.auth.ChangePassword(login, oldPass, newPass))
 }
