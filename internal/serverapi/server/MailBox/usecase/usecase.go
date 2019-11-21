@@ -49,9 +49,7 @@ func (u *MailBoxUsecase) GetMailList(login string, folder string, sort string, f
 		return list, e.Error{}.SetError(err).SetCode(e.ProcessError)
 	}
 	for i := range list {
-		list[i].From = sanitizer.Sanitize(list[i].From)
-		list[i].To = sanitizer.Sanitize(list[i].To)
-		list[i].Body = sanitizer.Sanitize(list[i].Body)
+		list[i].Sanitize()
 	}
 	return list, nil
 }
@@ -64,6 +62,9 @@ func (u *MailBoxUsecase) GetMailListPlain(login string, page int) (int, int, []m
 	}
 	from := mailsPerPage*(page-1)+1
 	list, err := u.repo.GetEmailList(login, models.InboxFolder, "", from, mailsPerPage)
+	for i, _ := range list {
+		list[i].Sanitize()
+	}
 	if err != nil {
 		return 0, 0, list, e.Error{}.SetError(err).SetCode(e.ProcessError)
 	}
@@ -73,6 +74,7 @@ func (u *MailBoxUsecase) GetMailListPlain(login string, page int) (int, int, []m
 func (u *MailBoxUsecase) GetMail(login string, mailID models.MailID) (model.Email, error) {
 	id := strconv.Itoa(int(mailID))
 	email, err := u.repo.GetEmailByCode(login, id)
+	email.Sanitize()
 	return email, err
 }
 

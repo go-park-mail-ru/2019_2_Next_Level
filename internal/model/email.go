@@ -2,6 +2,7 @@ package model
 
 import (
 	"2019_2_Next_Level/internal/post"
+	"2019_2_Next_Level/pkg/HttpTools"
 	"fmt"
 	"strings"
 	"time"
@@ -54,4 +55,14 @@ func (e *Email) Split(src string) (string, string) {
 	login := src[:splitter]
 	host := src[splitter+1:]
 	return login, host
+}
+
+func (e *Email) Sanitize() {
+	HttpTools.Sanitizer([]*string{
+		&e.From,
+		&e.To,
+		&e.Body,
+		&e.Header.From,
+		&e.Header.Subject,
+	})
 }

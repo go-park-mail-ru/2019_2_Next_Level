@@ -20,7 +20,6 @@ type UserUsecase struct {
 	repo user.UserRepository
 	auth Auth.IAuthClient
 }
-var sanitizer *bluemonday.Policy
 func (u *UserUsecase) GetUser(login string) (model.User, error) {
 	user, err := u.repo.GetUser(login)
 	if err != nil {
@@ -33,14 +32,9 @@ func (u *UserUsecase) GetUser(login string) (model.User, error) {
 		return user, e.Error{}.SetCode(e.ProcessError)
 	}
 	user.Login = user.Email
-	user.Login = sanitizer.Sanitize(user.Login)
-	user.Email = sanitizer.Sanitize(user.Email)
-	user.BirthDate = sanitizer.Sanitize(user.BirthDate)
-	user.Sex = sanitizer.Sanitize(user.Sex)
-	user.Name = sanitizer.Sanitize(user.Name)
-	user.Sirname = sanitizer.Sanitize(user.Sirname)
 	//user.Avatar = config.Conf.HttpConfig.SelfURL + "avatar/"+user.Avatar
 	user.Avatar = "/static/images/icon/no-avatar.svg"
+	user.Sanitize()
 	return user, nil
 }
 func (u *UserUsecase) EditUser(user *model.User) error {
