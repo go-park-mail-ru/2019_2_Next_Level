@@ -59,17 +59,5 @@ func (u *UserUsecase) EditUser(user *model.User) error {
 	return nil
 }
 func (u *UserUsecase) EditPassword(login string, oldPass string, newPass string) error {
-
-	//currPass, sault, err := u.repo.GetUserCredentials(login)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if !authusecase.CheckPassword([]byte(oldPass), []byte(currPass), []byte(sault)) {
-	//	return e.Error{}.SetCode(e.Wrong)
-	//}
-	//newPassHash := authusecase.PasswordPBKDF2([]byte(newPass), []byte(sault))
-	//
-	//err = u.repo.UpdateUserPassword(login, string(newPassHash), sault)
 	return u.auth.GetError(u.auth.ChangePassword(login, oldPass, newPass))
 }

@@ -36,4 +36,5 @@ service Auth {
     rpc DestroyUserSessions(String) returns (StatusResult) {}
     rpc ChangePassword(ChangePasswordMessage) returns (StatusResult) {}
     rpc CheckCredentials(CredentialsMessage) returns (StatusResult) {}
+    rpc RegisterUser(CredentialsMessage) returns (StatusResult) {}
 }

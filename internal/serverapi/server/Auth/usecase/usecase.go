@@ -42,10 +42,6 @@ func (u *AuthUsecase) Logout(uuid string) error {
 }
 
 func (u *AuthUsecase) SignUp(user model.User) error {
-	// validation
-	sault := GenSault(user.Email)
-	user.Password = string(PasswordPBKDF2([]byte(user.Password), sault))
-	user.Sault = string(sault)
 	err := u.repo.AddNewUser(&user)
 	if err != nil {
 		switch err.(type) {
@@ -64,35 +60,15 @@ func (u *AuthUsecase) SignUp(user model.User) error {
 			return e.Error{}.SetCode(e.InvalidParams)
 		}
 	}
+	_ = u.authService.RegisterUser(user.Email, user.Password)
 	return nil
 }
 
 func (u *AuthUsecase) SignIn(login, password string) (string, error) {
 	err := u.authService.GetError(u.authService.CheckCredentials(login, password))
-	//credentials, err := u.repo.GetUserCredentials(login)
 	if err != nil {
 		return "", e.Error{}.SetCode(e.InvalidParams)
 	}
-	//if len(credentials) < 2 {
-	//	return "", e.Error{}.SetCode(e.InvalidParams)
-	//}
-	//rPass := credentials[0]
-	//salt := credentials[1]
-	//
-	//if !CheckPassword([]byte(password), []byte(rPass), []byte(salt)) {
-	//	return "", e.Error{}.SetCode(e.InvalidParams)
-	//}
-
-	//if rPass != password {
-	//	return "", e.Error{}.SetCode(e.InvalidParams)
-	//}
-
-	//uuid, _ := uuid.NewUUID()
-
-	//err = u.repo.AddNewSession(login, uuid.String())
-	//if err != nil {
-	//	return "", e.Error{}.SetCode(e.NotExists)
-	//}
 	res, status := u.authService.StartSession(login)
 
 	return res, u.authService.GetError(status)

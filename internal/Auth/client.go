@@ -16,6 +16,7 @@ type IAuthClient interface {
 	DestroyUserSessions(string) (int32)
 	ChangePassword(login string, oldPass string, newPass string) (int32)
 	CheckCredentials(login string, password string) (int32)
+	RegisterUser(login string, password string) (int32)
 	GetError(int32) error
 }
 
@@ -71,6 +72,12 @@ func (c *AuthClient) ChangePassword(login string, oldPass string, newPass string
 func (c *AuthClient) CheckCredentials(login string, password string) (int32) {
 	message := &pb.CredentialsMessage{Login:login, Password:password}
 	res, _ := c.client.CheckCredentials(context.Background(), message)
+	return res.Code
+}
+
+func (c *AuthClient) RegisterUser(login string, password string) (int32) {
+	message := &pb.CredentialsMessage{Login:login, Password:password}
+	res, _ := c.client.RegisterUser(context.Background(), message)
 	return res.Code
 }
 

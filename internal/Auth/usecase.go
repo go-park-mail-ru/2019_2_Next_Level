@@ -4,6 +4,7 @@ import (
 	pb "2019_2_Next_Level/internal/Auth/service"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 )
 
@@ -69,6 +70,15 @@ func (s *AuthServer) CheckCredentials(ctx context.Context, data *pb.CredentialsM
 		return &pb.StatusResult{Code:int32(err.(e.Error).Code)}, nil
 	}
 	return &pb.StatusResult{Code: e.OK}, nil
+}
+
+func (s *AuthServer) RegisterUser(ctx context.Context, data *pb.CredentialsMessage) (*pb.StatusResult, error) {
+	sault := s.getSault(data.Login)
+	newPassHash := PasswordPBKDF2([]byte(data.Password), []byte(sault))
+
+	err := s.repo.UpdateUserPassword(data.Login, newPassHash, sault)
+	fmt.Println(err)
+	return &pb.StatusResult{Code:e.OK}, nil
 }
 
 func (s *AuthServer) checkPassword(login string, password string) error {
