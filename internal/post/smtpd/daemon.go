@@ -73,6 +73,7 @@ func (s *Server) Run(externwg *sync.WaitGroup) {
 
 func (s *Server) RunSmtpServer() {
 	if err := s.smtpServer.ListenAndServe(); err != nil {
+		log.Log().E("Error in smtpServer.ListenAndServe: ", err)
 		s.quitChan <- struct{}{}
 	}
 }
