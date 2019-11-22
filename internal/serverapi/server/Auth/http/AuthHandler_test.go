@@ -2,13 +2,14 @@ package http
 
 import (
 	"2019_2_Next_Level/internal/model"
-	"2019_2_Next_Level/internal/serverapi/mock"
+	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	httperror "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
+	mockk "2019_2_Next_Level/tests/mock"
+	"2019_2_Next_Level/tests/mock/mock"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,6 +17,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 )
+
+func init() {
+	log.SetLogger(&mockk.MockLog{})
+}
 
 func TestIsAuth(t *testing.T) {
 	t.Parallel()
@@ -65,7 +70,6 @@ func TestLogout(t *testing.T) {
 	body := bytes.Reader{}
 
 	token, _ := uuid.NewUUID()
-	fmt.Println(token.String())
 	tests := []struct {
 		param    string
 		res      error

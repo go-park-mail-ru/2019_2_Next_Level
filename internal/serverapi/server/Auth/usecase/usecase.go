@@ -3,7 +3,6 @@ package usecase
 import (
 	"2019_2_Next_Level/internal/Auth"
 	"2019_2_Next_Level/internal/model"
-	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 )
@@ -13,13 +12,9 @@ const (
 	sessionCookie = "session_id"
 )
 
-func NewAuthUsecase(repo auth.Repository) AuthUsecase {
+func NewAuthUsecase(repo auth.Repository, authService Auth.IAuthClient) AuthUsecase {
 	usecase := AuthUsecase{repo:repo}
-	usecase.authService = &Auth.AuthClient{}
-	err := usecase.authService.Init("0.0.0.0", ":6000")
-	if err != nil {
-		log.Log().E("Cannot init auth: ", err)
-	}
+	usecase.authService = authService
 	return usecase
 }
 

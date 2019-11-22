@@ -69,6 +69,7 @@ func (r *PostgresRepository) GetUser(login string) (model.User, error) {
 	user.BirthDate = birthDateRaw.Format("02.01.2006")
 	return user, nil
 }
+
 func (r *PostgresRepository) UpdateUserData(user *model.User) error {
 	query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3, sex=$4, birthdate=$5 WHERE login=$6;`
 	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)
@@ -81,6 +82,7 @@ func (r *PostgresRepository) UpdateUserData(user *model.User) error {
 	}
 	return nil
 }
+
 func (r *PostgresRepository) UpdateUserPassword(login string, newPassword string, sault string) error {
 	query := `UPDATE users SET password=$1, sault=$2 WHERE login=$3`
 	_, err := r.DB.Exec(query, []byte(newPassword), []byte(sault), login)

@@ -4,6 +4,8 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	"2019_2_Next_Level/pkg/TestTools"
+	"2019_2_Next_Level/pkg/sqlTools"
 	"testing"
 	"time"
 
@@ -118,4 +120,78 @@ func TestGetUser(t *testing.T) {
 			t.Errorf("Wrong error: %v instead %v", err, expected[i].Err)
 		}
 	}
+}
+
+func TestPostgresRepository_UpdateUserData(t *testing.T) {
+	repo, err := GetPostgres()
+	if err != nil {
+		t.Errorf("Error during getPostgres(): %s", err)
+		return
+	}
+	query := `UPDATE users SET avatar=\$1\, firstName=\$2\, secondname=\$3\, sex=\$4\, birthdate=\$5 WHERE login=\$6`
+	user := model.User{Email: "ivanovivan", Name: "Anonim", Sirname: "Noone",
+		Sex: "male", Avatar: "my_ava.png", BirthDate: "01.01.1274"}
+	parsedDate, _ := time.Parse("02.01.2006", user.BirthDate)
+
+	tests := []TestTools.TestStructMap{
+		*TestTools.NewTestStructMap(
+			map[string]TestTools.Params{"login":"login"},
+			map[string]TestTools.Params{"error": nil, "pass": []byte("pass"),"salt": []byte("salt")},
+			map[string]TestTools.Params{
+				"login":"login",
+				"pass": []byte("pass"),
+				"salt": []byte("salt"),
+			}),
+	}
+
+	TestTools.RunTestingMapped(tests, func(map[string]TestTools.Params){}, func(test TestTools.TestStructMap) {
+		//params := test.MockParams
+		db, mock, _ := sqlmock.New()
+		repo.DB = db
+		defer db.Close()
+
+		mock.ExpectExec(query).WithArgs(user.Avatar, user.Name, user.Sirname, user.Sex,
+			sqlTools.FormatDate(sqlTools.BDPostgres, parsedDate), user.Email)
+
+		_ = repo.UpdateUserPassword("login", "password", "sault")
+	})
+}
+
+func TestPostgresRepository_UpdateUserPassword(t *testing.T) {
+	repo, err := GetPostgres()
+	if err != nil {
+		t.Errorf("Error during getPostgres(): %s", err)
+		return
+	}
+	query := `UPDATE users SET password=\$1\, sault=\$2 WHERE login=\$3`
+	user := model.User{Email: "ivanovivan", Name: "Anonim", Sirname: "Noone",
+		Sex: "male", Avatar: "my_ava.png", BirthDate: "01.01.1274"}
+
+	tests := []TestTools.TestStructMap{
+		*TestTools.NewTestStructMap(
+			map[string]TestTools.Params{"login":"login"},
+			map[string]TestTools.Params{"error": nil, "pass": []byte("pass"),"salt": []byte("salt")},
+			map[string]TestTools.Params{
+				"err":nil,
+			}),
+	}
+
+	TestTools.RunTestingMapped(tests, func(map[string]TestTools.Params){}, func(test TestTools.TestStructMap) {
+		params := test.MockParams
+		db, mock, _ := sqlmock.New()
+		repo.DB = db
+		defer db.Close()
+		var err error
+		if params["err"] != nil {
+			err = params["err"].(error)
+		}
+		mock.ExpectExec(query).WithArgs([]byte("login"), []byte("password"), []byte("sault")).
+			WillReturnResult(sqlmock.NewResult(1,1)).
+			WillReturnError(err)
+
+		_ = repo.UpdateUserData(&user)
+
+
+
+	})
 }

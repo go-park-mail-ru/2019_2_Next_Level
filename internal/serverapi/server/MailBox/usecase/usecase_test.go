@@ -3,7 +3,6 @@ package usecase
 import (
 	"2019_2_Next_Level/internal/serverapi/config"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/repository"
-	"fmt"
 	"testing"
 )
 func init() {
@@ -15,9 +14,9 @@ func TestMailBoxUsecase_GetMailList(t *testing.T) {
 	if err != nil {
 		return
 	}
-	list, err := repo.GetEmailList("aaa@nlmail.ddns.net", "incoming", "", 1, 100)
+	_, err = repo.GetEmailList("aaa@nlmail.ddns.net", "incoming", "", 1, 100)
 	if err != nil {
 		return
 	}
-	fmt.Println(list)
 }
+

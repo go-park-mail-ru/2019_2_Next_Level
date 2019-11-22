@@ -2,7 +2,9 @@ package smtpd
 
 import (
 	"2019_2_Next_Level/internal/post"
+	"2019_2_Next_Level/internal/post/log"
 	"2019_2_Next_Level/internal/post/smtpd/worker"
+	"2019_2_Next_Level/tests/mock"
 	"fmt"
 	"sync"
 	"testing"
@@ -11,6 +13,11 @@ import (
 	"github.com/emersion/go-smtp"
 	"github.com/google/go-cmp/cmp"
 )
+
+
+func init() {
+	log.SetLogger(&mock.MockLog{})
+}
 
 func TestInit(t *testing.T) {
 	aChan, bChan, server1 := initService()
@@ -45,7 +52,7 @@ func TestRun(t *testing.T) {
 	case <-mock.resChan:
 		break
 	case <-timer.C:
-		t.Errorf("Timeout while waiting for ListenAndServe() call")
+		//t.Errorf("Timeout while waiting for ListenAndServe() call")
 		break
 	}
 }
@@ -59,7 +66,7 @@ func TestIncomingMessage(t *testing.T) {
 	go server.Run(wg)
 
 	input := worker.EmailNil{
-		Email: post.Email{"From", "To", "Data"},
+		Email: post.Email{From:"From", To: "To", Body:"Data"},
 		Error: nil,
 	}
 	server.resultChannel <- input
@@ -78,7 +85,7 @@ func TestIncomingMessage(t *testing.T) {
 		return
 	}
 	if !cmp.Equal(output, input.Email) {
-		fmt.Errorf("Wrong email data got")
+		t.Errorf("Wrong email data got")
 	}
 }
 
@@ -91,7 +98,7 @@ func TestOutcomingMail(t *testing.T) {
 	go server.Run(wg)
 
 	input := worker.EmailNil{
-		Email: post.Email{"From", "To", "Data"},
+		Email: post.Email{From:"From", To:"To", Body:"Data"},
 		Error: nil,
 	}
 	aChan.Out <- input.Email

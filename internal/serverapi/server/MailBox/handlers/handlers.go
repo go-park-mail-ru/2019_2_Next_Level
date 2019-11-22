@@ -18,18 +18,20 @@ type MailHandler struct {
 }
 
 // NewMailHandler : sets handlers for specified routes (prefix = "/mail")
-func NewMailHandler(router *mux.Router, usecase mailbox.MailBoxUseCase) {
+func NewMailHandler(usecase mailbox.MailBoxUseCase) *MailHandler{
 	handler := MailHandler{usecase: usecase}
 	handler.resp = (&HttpTools.Response{}).SetError(hr.DefaultResponse)
+	return &handler
+}
 
-	router.HandleFunc("/send", handler.SendMail).Methods("POST")
-	router.HandleFunc("/getByPage", handler.GetMailList).Methods("GET")
-	router.HandleFunc("/get", handler.GetEmail).Methods("GET")
-	router.HandleFunc("/getUnreadCount", handler.GetUnreadCount).Methods("GET")
-	router.HandleFunc("/read", handler.MarkMailRead).Methods("POST")
-	router.HandleFunc("/unread", handler.MarkMailUnRead).Methods("POST")
-	router.HandleFunc("/remove", handler.DeleteEmail).Methods("POST")
-
+func (h *MailHandler) InflateRouter(router *mux.Router) {
+	router.HandleFunc("/send", h.SendMail).Methods("POST")
+	router.HandleFunc("/getByPage", h.GetMailList).Methods("GET")
+	router.HandleFunc("/get", h.GetEmail).Methods("GET")
+	router.HandleFunc("/getUnreadCount", h.GetUnreadCount).Methods("GET")
+	router.HandleFunc("/read", h.MarkMailRead).Methods("POST")
+	router.HandleFunc("/unread", h.MarkMailUnRead).Methods("POST")
+	router.HandleFunc("/remove", h.DeleteEmail).Methods("POST")
 }
 
 func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {

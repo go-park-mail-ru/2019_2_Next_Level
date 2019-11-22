@@ -4,7 +4,6 @@ import (
 	"2019_2_Next_Level/internal/post"
 	"2019_2_Next_Level/internal/post/log"
 	"2019_2_Next_Level/internal/post/smtpd/worker"
-	"2019_2_Next_Level/pkg/logger"
 	"fmt"
 	"sync"
 
@@ -20,7 +19,6 @@ type IncomingSmtpInerface interface {
 type Server struct {
 	mailSenderChan    post.ChanPair
 	incomingQueueChan post.ChanPair
-	log               logger.Log
 	worker            worker.Worker
 	smtpServer        IncomingSmtpInerface
 	resultChannel     chan worker.EmailNil
@@ -86,7 +84,7 @@ func (s *Server) GetIncomingMessages() {
 			continue
 		}
 		log.Log().L("Got a message")
-		fmt.Println(data.Email.Stringify())
+		log.Log().L(data.Email.Stringify())
 		s.incomingQueueChan.In <- data.Email
 	}
 }

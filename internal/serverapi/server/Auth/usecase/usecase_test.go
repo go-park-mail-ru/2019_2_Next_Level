@@ -1,8 +1,9 @@
 package usecase
 
 import (
-	"2019_2_Next_Level/internal/serverapi/mock"
-	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
+	"2019_2_Next_Level/internal/model"
+	"2019_2_Next_Level/tests/mock/mock"
+	authclient "2019_2_Next_Level/tests/mock/serverapi/auth"
 	"testing"
 
 	"github.com/google/uuid"
@@ -12,21 +13,25 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
+
 func TestCheckAuth(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockRepo := mock.NewMockRepository(mockCtrl)
-	u := NewAuthUsecase(mockRepo)
+	mockService := authclient.NewMockIAuthClient(mockCtrl)
+	u := NewAuthUsecase(mockRepo, mockService)
 
 	uuidTemp, _ := uuid.NewUUID()
 	uuid := uuidTemp.String()
 	funcs := []func(){
 		func() {
-			mockRepo.EXPECT().GetLoginBySession(uuid).Return("ian", nil).Times(1)
+			mockService.EXPECT().LoginBySession(uuid).Return("ian", int32(e.OK))
+			mockService.EXPECT().GetError(int32(e.OK)).Return(nil)
 		},
 		func() {
-			mockRepo.EXPECT().GetLoginBySession(uuid).Return("", e.Error{}.SetCode(e.NoPermission)).Times(1)
+			mockService.EXPECT().LoginBySession(uuid).Return("", int32(e.NoPermission))
+			mockService.EXPECT().GetError(int32(e.NoPermission)).Return(e.Error{}.SetCode(e.NoPermission))
 		},
 	}
 	expected := []error{
@@ -49,21 +54,24 @@ func TestSignOut(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockRepo := mock.NewMockRepository(mockCtrl)
-	u := NewAuthUsecase(mockRepo)
+	mockService := authclient.NewMockIAuthClient(mockCtrl)
+	u := NewAuthUsecase(mockRepo, mockService)
 
 	uuidTemp, _ := uuid.NewUUID()
 	uuid := uuidTemp.String()
 	funcs := []func(){
 		func() {
-			mockRepo.EXPECT().DeleteSession(uuid).Return(nil).Times(1)
+			mockService.EXPECT().DestroySession(uuid).Return(int32(e.OK))
+			mockService.EXPECT().GetError(int32(e.OK)).Return(nil)
 		},
 		func() {
-			mockRepo.EXPECT().DeleteSession(uuid).Return(e.Error{}.SetCode(e.NotExists)).Times(1)
+			mockService.EXPECT().DestroySession(uuid).Return(int32(e.NotExists))
+			mockService.EXPECT().GetError(int32(e.NotExists)).Return(e.Error{}.SetCode(e.NotExists))
 		},
 	}
 	expected := []error{
 		nil,
-		e.Error{}.SetCode(e.InvalidParams),
+		e.Error{}.SetCode(e.NotExists),
 	}
 
 	for i, test := range expected {
@@ -75,49 +83,52 @@ func TestSignOut(t *testing.T) {
 	}
 }
 
-//func TestSignUp(t *testing.T) {
-//	t.Parallel()
-//	mockCtrl := gomock.NewController(t)
-//	defer mockCtrl.Finish()
-//	mockRepo := mock.NewMockRepository(mockCtrl)
-//	u := NewAuthUsecase(mockRepo)
-//
-//	testUser := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
-//
-//	funcs := []func(){
-//		//func() {
-//		//	mockRepo.EXPECT().AddNewUser(sqlmock.AnyArg()).Return(nil).Times(1)
-//		//},
-//		func() {
-//			mockRepo.EXPECT().AddNewUser(&testUser).Return(e.Error{}.SetCode(e.AlreadyExists)).Times(1)
-//		},
-//		func() {
-//			mockRepo.EXPECT().AddNewUser(&testUser).Return(
-//				e.Error{}.SetCode(auth.ErrorWrongNickName)).
-//				Times(1)
-//		},
-//	}
-//	expected := []error{
-//		//nil,
-//		e.Error{}.SetCode(e.AlreadyExists),
-//		e.Error{}.SetCode(e.InvalidParams).SetError(e.Error{}.SetCode(auth.ErrorWrongNickName)),
-//	}
-//
-//	for i, test := range expected {
-//		funcs[i]()
-//		got := u.SignUp(testUser)
-//		if !e.CompareErrors(got, test, e.CompareByCode) {
-//			t.Errorf("Wrong response: %s\nWanted: %s", got, test)
-//		}
-//	}
-//}
+func TestSignUp(t *testing.T) {
+	t.Parallel()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockRepo := mock.NewMockRepository(mockCtrl)
+	mockService := authclient.NewMockIAuthClient(mockCtrl)
+	u := NewAuthUsecase(mockRepo, mockService)
+
+	testUser := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
+
+	funcs := []func(){
+		func() {
+			mockRepo.EXPECT().AddNewUser(&testUser).Return(nil).Times(1)
+			mockService.EXPECT().RegisterUser(testUser.Email, testUser.Password).Return(int32(e.OK))
+		},
+		func() {
+			mockRepo.EXPECT().AddNewUser(&testUser).Return(e.Error{}.SetCode(e.AlreadyExists)).Times(1)
+		},
+		//func() {
+		//	mockRepo.EXPECT().AddNewUser(&testUser).Return(
+		//		e.Error{}.SetCode(auth.ErrorWrongNickName)).
+		//		Times(1)
+		//},
+	}
+	expected := []error{
+		nil,
+		e.Error{}.SetCode(e.AlreadyExists),
+		//e.Error{}.SetCode(e.InvalidParams).SetError(e.Error{}.SetCode(auth.ErrorWrongNickName)),
+	}
+
+	for i, test := range expected {
+		funcs[i]()
+		got := u.SignUp(testUser)
+		if !e.CompareErrors(got, test, e.CompareByCode) {
+			t.Errorf("Wrong response: %s\nWanted: %s", got, test)
+		}
+	}
+}
 
 func TestSignIn(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockRepo := mock.NewMockRepository(mockCtrl)
-	u := NewAuthUsecase(mockRepo)
+	mockService := authclient.NewMockIAuthClient(mockCtrl)
+	u := NewAuthUsecase(mockRepo, mockService)
 
 	testUser := struct {
 		Login    string `json:"login"`
@@ -126,16 +137,14 @@ func TestSignIn(t *testing.T) {
 
 	funcs := []func(){
 		func() {
-			mockRepo.EXPECT().GetUserCredentials(testUser.Login).Return([]string{testUser.Password, ""}, nil).Times(1)
-			//mockRepo.EXPECT().AddNewSession(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			mockService.EXPECT().CheckCredentials(testUser.Login, testUser.Password).Return(int32(e.OK))
+			mockService.EXPECT().GetError(int32(e.OK)).Return(nil)
+			mockService.EXPECT().StartSession(gomock.Any()).Return("token", int32(e.OK))
+			mockService.EXPECT().GetError(int32(e.OK)).Return(nil)
 		},
 		func() {
-			mockRepo.EXPECT().GetUserCredentials(testUser.Login).
-				Return([]string{testUser.Password, ""}, e.Error{}.SetCode(e.NotExists)).
-				Times(1)
-		},
-		func() {
-			mockRepo.EXPECT().GetUserCredentials(testUser.Login).Return([]string{testUser.Password + "rubbish", ""}, nil).Times(1)
+			mockService.EXPECT().CheckCredentials(testUser.Login, testUser.Password).Return(int32(e.NotExists))
+			mockService.EXPECT().GetError(int32(e.NotExists)).Return(e.Error{}.SetCode(e.NotExists))
 		},
 	}
 	type ReturnParams struct {
@@ -145,7 +154,6 @@ func TestSignIn(t *testing.T) {
 	expected := []ReturnParams{
 		ReturnParams{"uuid", nil},
 		ReturnParams{"", e.Error{}.SetCode(e.NotExists)},
-		ReturnParams{"", e.Error{}.SetCode(e.InvalidParams).SetError(e.Error{}.SetCode(auth.ErrorWrongPassword))},
 	}
 
 	for i, test := range expected {

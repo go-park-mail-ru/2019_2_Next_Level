@@ -1,9 +1,9 @@
 package Auth
 
 import (
-	"2019_2_Next_Level/internal/Auth/repository"
 	pb "2019_2_Next_Level/internal/Auth/service"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	"2019_2_Next_Level/tests/mock/serverapi/auth"
 	"context"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
@@ -20,10 +20,10 @@ type TestStruct struct {
 
 type ExpectedFunc func(params ...Params)
 
-func initTest(t *testing.T) (*repository.MockRepository, *AuthServer) {
+func initTest(t *testing.T) (*auth.MockRepository, *AuthServer) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockRepo := repository.NewMockRepository(mockCtrl)
+	mockRepo := auth.NewMockRepository(mockCtrl)
 	s := NewAuthServer(mockRepo)
 	return mockRepo, s
 }

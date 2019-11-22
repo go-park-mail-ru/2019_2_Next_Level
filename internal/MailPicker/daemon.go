@@ -2,7 +2,7 @@ package mailpicker
 
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
-	"2019_2_Next_Level/internal/MailPicker/logger"
+	"2019_2_Next_Level/internal/MailPicker/log"
 	"2019_2_Next_Level/internal/MailPicker/workers"
 	"2019_2_Next_Level/internal/model"
 	postinterface "2019_2_Next_Level/internal/postInterface"
@@ -31,7 +31,7 @@ func (s *Secretary) Init() *Secretary {
 	s.queueConnectionStatus = true
 	s.errorChan = make(chan error, 3)
 
-	logger.Log().L(fmt.Sprintf("Init MailPicker listening remote %s%s", config.Conf.RemoteHost, config.Conf.RemotePort))
+	log.Log().L(fmt.Sprintf("Init MailPicker listening remote %s%s", config.Conf.RemoteHost, config.Conf.RemotePort))
 	return s
 }
 
@@ -71,7 +71,7 @@ func (s *Secretary) Run(externwg *sync.WaitGroup) {
 		case err := <-s.errorChan:
 			_, ok := err.(e.Error)
 			if !ok{
-				logger.Log().E("Daemon stopping due to error: ", err)
+				log.Log().E("Daemon stopping due to error: ", err)
 				finish1()
 				finish2()
 				finish3()

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"2019_2_Next_Level/internal/Auth"
 	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	authhandler "2019_2_Next_Level/internal/serverapi/server/Auth/http"
@@ -74,7 +75,12 @@ func InitHttpAuth(router *mux.Router) auth.Usecase {
 		log.Log().E("Error during init Postgres", err)
 		return nil
 	}
-	authUseCase := authusecase.NewAuthUsecase(&authRepo)
+	authClient := Auth.AuthClient{}
+	err =authClient.Init("0.0.0.0", ":6000")
+	if err != nil {
+		log.Log().E("Cannot init auth: ", err)
+	}
+	authUseCase := authusecase.NewAuthUsecase(&authRepo, &authClient)
 	authHandler := authhandler.NewAuthHandler(&authUseCase)
 	authHandler.InflateRouter(router)
 	return &authUseCase
@@ -86,7 +92,12 @@ func InitHttpUser(router *mux.Router) {
 		log.Log().E("Error during init Postgres", err)
 		return
 	}
-	userUsecase := userusecase.NewUserUsecase(&userRepo)
+	authClient := Auth.AuthClient{}
+	err =authClient.Init("0.0.0.0", ":6000")
+	if err != nil {
+		log.Log().E("Cannot init auth: ", err)
+	}
+	userUsecase := userusecase.NewUserUsecase(&userRepo, &authClient)
 	userHandler := userhandler.NewUserHandler(&userUsecase)
 	userHandler.InflateRouter(router)
 }
@@ -98,6 +109,7 @@ func InitHTTPMail(router *mux.Router) {
 		return
 	}
 	mailUsecase := mailboxusecase.NewMailBoxUsecase(&repo)
-	 mailhandler.NewMailHandler(router, mailUsecase)
+	handler := mailhandler.NewMailHandler(mailUsecase)
+	handler.InflateRouter(router)
 	//handlers.NewMailHandler(router, &mailUsecase)
 }

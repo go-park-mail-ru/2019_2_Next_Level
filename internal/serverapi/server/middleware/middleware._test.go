@@ -2,7 +2,9 @@ package middleware
 
 import (
 	"2019_2_Next_Level/internal/serverapi/config"
-	"2019_2_Next_Level/internal/serverapi/mock"
+	"2019_2_Next_Level/internal/serverapi/log"
+	mokk "2019_2_Next_Level/tests/mock"
+	"2019_2_Next_Level/tests/mock/mock"
 	"bytes"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +12,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 )
+
+func init() {
+	log.SetLogger(&mokk.MockLog{})
+}
 
 func TestStaticMiddleware(t *testing.T) {
 	t.Parallel()

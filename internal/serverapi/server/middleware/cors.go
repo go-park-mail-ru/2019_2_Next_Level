@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"2019_2_Next_Level/internal/serverapi/config"
-	"fmt"
 	"2019_2_Next_Level/internal/serverapi/log"
 	"net/http"
 
@@ -15,8 +14,6 @@ func CorsMethodMiddleware() mux.MiddlewareFunc {
 			headers := w.Header()
 			origin := r.Header.Get("Origin")
 			log.Log().L("origin: ", origin)
-			dd := config.Conf.HttpConfig.Whitelist
-			fmt.Println(dd)
 			if !config.Conf.HttpConfig.Whitelist[origin] {
 				log.Log().I("Not in whitelist: ", origin)
 				http.Error(w, "Not in whitelist", http.StatusForbidden)

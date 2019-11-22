@@ -2,11 +2,12 @@ package repository
 
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
+	"2019_2_Next_Level/internal/MailPicker/log"
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/pkg/sqlTools"
+	"2019_2_Next_Level/tests/mock"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
-	"regexp"
 	"testing"
 	"time"
 )
@@ -16,6 +17,7 @@ var defaultConf config.Database
 func init() {
 	defaultConf = config.Database{DBName: "nextlevel", Port: "5432", Host: "localhost", User: "postgres", Password: "postgres"}
 	config.Conf.DB = defaultConf
+	log.SetLogger(&mock.MockLog{})
 }
 
 func TestPostgresRepository_UserExists(t *testing.T) {
@@ -64,9 +66,6 @@ func TestPostgresRepository_UserExists(t *testing.T) {
 }
 
 func TestPostgresRepository_AddEmail(t *testing.T) {
-	res, _ := regexp.Match(`INSERT INTO Message \(sender\, time\, body\) VALUES \(\$1\, \$2\, \$3\) RETURNING id`,
-		[]byte(`INSERT INTO Message (sender, time, body) VALUES ($1, $2, $3) RETURNING id;`))
-	fmt.Println(res)
 	repo := NewPostgresRepository()
 	if repo == nil {
 		t.Errorf("Cannot init repository")

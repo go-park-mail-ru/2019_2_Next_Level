@@ -181,7 +181,7 @@ func TestPostgresRepo_AddNewSession(t *testing.T) {
 
 func TestPostgresRepo_DeleteSession(t *testing.T) {
 	repo := NewPostgresRepo()
-	query := `DELETE FROM session WHERE token=\$1`
+	query := `DELETE FROM Session WHERE token=\$1`
 
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
@@ -278,7 +278,7 @@ func TestPostgresRepo_GetUserCredentials(t *testing.T) {
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":"login"},
-			map[string]TestTools.Params{"error":nil, "pass": []byte("pass"),"salt": []byte("salt")},
+			map[string]TestTools.Params{"error": nil, "pass": []byte("pass"),"salt": []byte("salt")},
 			map[string]TestTools.Params{
 				"login":"login",
 				"pass": []byte("pass"),

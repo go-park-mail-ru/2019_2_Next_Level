@@ -3,7 +3,7 @@ package workers
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
 	postinterface "2019_2_Next_Level/internal/postInterface"
-	log "2019_2_Next_Level/internal/MailPicker/logger"
+	log "2019_2_Next_Level/internal/MailPicker/log"
 	"context"
 	"strings"
 	"sync"

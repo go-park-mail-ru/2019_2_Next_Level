@@ -3,7 +3,7 @@ package main
 import (
 	mailpicker "2019_2_Next_Level/internal/MailPicker"
 	localconfig "2019_2_Next_Level/internal/MailPicker/config"
-	log "2019_2_Next_Level/internal/MailPicker/logger"
+	log "2019_2_Next_Level/internal/MailPicker/log"
 	"2019_2_Next_Level/internal/MailPicker/repository"
 	postinterface "2019_2_Next_Level/internal/postInterface"
 	"2019_2_Next_Level/pkg/config"

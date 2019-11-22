@@ -2,11 +2,11 @@ package http
 
 import (
 	"2019_2_Next_Level/internal/model"
-	"2019_2_Next_Level/internal/serverapi/mock"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	hr "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	hr "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
 	"2019_2_Next_Level/pkg/HttpTools"
+	"2019_2_Next_Level/tests/mock/mock"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -24,7 +24,6 @@ func TestGet(t *testing.T) {
 	h := NewUserHandler(mockUsecase)
 	login := "Ian"
 	type Answer struct {
-		Status    string `json:"status"`
 		Name      string `json:"firstName"`
 		Sirname   string `json:"secondName"`
 		BirthDate string `json:"birthDate"`
@@ -33,8 +32,12 @@ func TestGet(t *testing.T) {
 		Avatar    string `json:"avatar"`
 	}
 	user := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
-	userResponse, err := json.Marshal(Answer{
-		"ok", "Ivan", "Ivanov", "01.01.1900", "male", "ivan", "",
+	userResponse, err := json.Marshal(struct{
+		Status string `json:"status"`
+		User Answer `json:"userInfo"`
+	}{
+		Status: "ok",
+		User: Answer{"Ivan", "Ivanov", "01.01.1900", "male", "ivan", "", },
 	})
 	if err != nil {
 		t.Errorf("Cannot get json answer")
@@ -57,8 +60,14 @@ func TestGet(t *testing.T) {
 		r.Header = http.Header{"X-Login": []string{login}}
 		funcs[i]()
 		h.GetProfile(w, r)
-		got := w.Body.String()
-		if got != resp {
+		tt := struct{
+			Status string `json:"status"`
+			User Answer `json:"userInfo"`
+		}{}
+		json.Unmarshal([]byte(w.Body.String()), &tt)
+		got, _ := json.Marshal(tt)
+		g := string(got)
+		if g != resp {
 			t.Errorf("Wrong answer got: %s instead %s\n", got, resp)
 		}
 	}
@@ -72,14 +81,10 @@ func TestEditUser(t *testing.T) {
 	h := NewUserHandler(mockUsecase)
 
 	user := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
-	// type Data struct {
-	// 	Name      string `json:"firstName"`
-	// 	Sirname   string `json:"secondName"`
-	// 	BirthDate string `json:"birthDate"`
-	// 	NickName  string `json:"nickName"`
-	// 	Sex       string `json:"sex"`
-	// 	Avatar    []byte `json:"avatar"`
-	// }
+
+	type Req struct{
+		UserInfo model.User `json:"userInfo"`
+	}
 
 	type F func()
 	funcs := []F{
@@ -96,7 +101,7 @@ func TestEditUser(t *testing.T) {
 		(&HttpTools.Response{}).SetError(hr.GetError(hr.IncorrectPassword)).String(),
 	}
 	for i, resp := range response {
-		js, _ := json.Marshal(user)
+		js, _ := json.Marshal(Req{UserInfo:user})
 		body := bytes.NewReader(js)
 		r := httptest.NewRequest("GET", "/user/get", body)
 		w := httptest.NewRecorder()

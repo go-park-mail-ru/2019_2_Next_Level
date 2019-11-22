@@ -1,17 +1,23 @@
 package mailpicker
 
 import (
-	"2019_2_Next_Level/internal/MailPicker/mock"
+	"2019_2_Next_Level/internal/MailPicker/log"
 	"2019_2_Next_Level/internal/MailPicker/workers"
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/post"
-	postinterface "2019_2_Next_Level/internal/postInterface"
+	"2019_2_Next_Level/tests/mock"
+	"2019_2_Next_Level/tests/mock/MailPicker"
+	"2019_2_Next_Level/tests/mock/postinterface"
 	"context"
 	"github.com/golang/mock/gomock"
 	"sync"
 	"testing"
 	"time"
 )
+
+func init() {
+	log.SetLogger(&mock.MockLog{})
+}
 
 func Test(t *testing.T) {
 	ctx1, finish1 := context.WithCancel(context.Background())
@@ -22,7 +28,7 @@ func Test(t *testing.T) {
 	defer mockCtrl.Finish()
 	chan1 := make(chan interface{}, 1)
 	mockIncoming := postinterface.NewMockIPostInterface(mockCtrl)
-	mockRepo := mock.NewMockRepository(mockCtrl)
+	mockRepo := MailPicker.NewMockRepository(mockCtrl)
 
 	picker := workers.NewMailPicker(errorChan, mockIncoming, mockRepo.UserExists)
 	cleaner := workers.NewMailCleanup(errorChan)

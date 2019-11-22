@@ -2,7 +2,7 @@ package repository
 
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
-	log "2019_2_Next_Level/internal/MailPicker/logger"
+	log "2019_2_Next_Level/internal/MailPicker/log"
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/pkg/sqlTools"
 	"database/sql"

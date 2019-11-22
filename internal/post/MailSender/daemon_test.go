@@ -2,6 +2,8 @@ package mailsender
 
 import (
 	"2019_2_Next_Level/internal/post"
+	"2019_2_Next_Level/internal/post/log"
+	"2019_2_Next_Level/tests/mock"
 	"fmt"
 	"sync"
 	"testing"
@@ -9,6 +11,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 )
+
+func init() {
+	log.SetLogger(&mock.MockLog{})
+}
 
 func TestInit(t *testing.T) {
 	const chanSize = 100

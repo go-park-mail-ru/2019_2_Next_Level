@@ -5,14 +5,11 @@ import (
 	"2019_2_Next_Level/internal/model"
 	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
-	"github.com/microcosm-cc/bluemonday"
 )
 
-func NewUserUsecase(repo user.UserRepository) UserUsecase {
-	sanitizer = bluemonday.UGCPolicy()
+func NewUserUsecase(repo user.UserRepository, auth Auth.IAuthClient) UserUsecase {
 	usecase := UserUsecase{repo:repo}
-	usecase.auth = &Auth.AuthClient{}
-	usecase.auth.Init("0.0.0.0", ":6000")
+	usecase.auth = auth
 	return usecase
 }
 
