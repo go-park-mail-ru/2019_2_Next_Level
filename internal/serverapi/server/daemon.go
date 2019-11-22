@@ -44,6 +44,7 @@ func Run(externwg *sync.WaitGroup) error {
 	//	Handle("/", middleware.StaticMiddleware()(http.FileServer(http.Dir(config.Conf.StaticDir))))
 
 	err := http.ListenAndServe(config.Conf.Port, mainRouter)
+	log.Log().E("Error of http.ListenAndServe(): ", err)
 	return err
 }
 
