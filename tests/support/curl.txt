@@ -1,0 +1,12 @@
+1) Start Chat
+curl -H "Content-Type: application/json" -H "X-Login: aaa" --data @createchat.json  http://localhost:7000/api/support/create
+2) GetChat
+curl  -H "X-Login: aaa"  http://localhost:7000/api/support/chat/1
+3) GetChatList
+curl  -H "X-Login: aaa"  http://localhost:7000/api/support/chat
+4) CloseChat
+curl  -X POST -H "X-Login: aaa"  http://localhost:7000/api/support/chat/1/close
+5) SendMessage
+curl -H "Content-Type: application/json" -H "X-Login: aaa" --data @sendmessage.json  http://localhost:7000/api/support/chat/2/send
+6) GetMessage
+curl  -H "X-Login: aaa"  http://localhost:7000/api/support/chat/2/message/1

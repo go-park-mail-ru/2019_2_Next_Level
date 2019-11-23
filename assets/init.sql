@@ -2,12 +2,16 @@ drop table if exists Session;
 drop table if exists Receiver;
 drop table if exists Folder;
 drop table if exists Message;
+drop table if exists ChatMessage;
+drop table if exists Chat;
 drop table if exists Users;
 
 drop type if exists sex_type;
 drop type if exists mail_direction;
+drop type if exists user_role;
 create type sex_type as ENUM ('male', 'female');
 create type mail_direction as ENUM ('in', 'out');
+create type user_role as ENUM ('common', 'support', 'admin');
 
 CREATE EXTENSION IF NOT EXISTS CITEXT WITH SCHEMA public;
 
@@ -21,7 +25,8 @@ create table if not exists Users
     secondname TEXT NOT NULL DEFAULT '',
     sex sex_type DEFAULT 'male' NOT NULL,
     avatar TEXT default 'default.png' NOT NULL,
-    birthdate date NOT NULL DEFAULT NOW()
+    birthdate date NOT NULL DEFAULT NOW(),
+    role user_role NOT NULL DEFAULT 'common'
 );
 
 create table if not exists Session
@@ -59,6 +64,40 @@ create table if not exists Receiver
     mailid bigint references Message (id) on delete cascade,
     email citext not null
 );
+
+create table if not exists Chat(
+    id bigserial not null primary key,
+    userNick citext REFERENCES Users(login) not null,
+    supportNick citext REFERENCES Users(login) not null,
+    startDate timestamptz NOT NULL DEFAULT now(),
+    isOpen bool NOT NULL DEFAULT true,
+    theme text NOT NULL DEFAULT ''
+);
+
+create table if not exists ChatMessage(
+    id bigserial not null primary key,
+    chatId bigserial References Chat (id) NOT NULL,
+    sent timestamptz not null default now(),
+    wasRead bool NOT NULL DEFAULT false,
+    body text not null DEFAULT '',
+    author citext REFERENCES Users(login) NOT NULL
+
+);
+
+CREATE OR REPLACE FUNCTION get_chat_field(userid_ citext) RETURNS text as $get_chat_id$
+    DECLARE
+        role_ user_role;
+    BEGIN
+        role_ := (SELECT role FROM Users WHERE login=userid_);
+        IF role_='common' then
+            RETURN 'userNick';
+        ELSE
+            RETURN 'supportNick';
+        end if;
+
+    end;
+$get_chat_id$ LANGUAGE plpgsql;
+
 
 -- Триггеры
 
