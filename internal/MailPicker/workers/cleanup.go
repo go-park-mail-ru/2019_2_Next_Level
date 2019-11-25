@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"2019_2_Next_Level/internal/MailPicker/log"
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/post"
 	"context"
@@ -46,6 +47,7 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 				return
 			}
 			res := w.Repack(msg)
+			log.Log().L(res)
 			res.From = emailTemp.From
 			res.To = emailTemp.To
 			out <- res
@@ -66,6 +68,9 @@ func (w *MailCleanup) Repack(from *gomail.Message) (model.Email) {
 	to.Header.WhenReceived, _ = from.Header.Date()
 	to.Header.To = from.Header.To()
 	for i, label := range to.Header.To {
+		if len(label)<3 {
+			continue
+		}
 		to.Header.To[i] = label[strings.Index(label, "<")+1 : strings.Index(label, ">")]
 	}
 	to.Body = string(w.SelectBody(from))

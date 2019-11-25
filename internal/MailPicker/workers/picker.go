@@ -2,10 +2,9 @@ package workers
 
 import (
 	"2019_2_Next_Level/internal/MailPicker/config"
-	postinterface "2019_2_Next_Level/internal/postInterface"
 	log "2019_2_Next_Level/internal/MailPicker/log"
+	postinterface "2019_2_Next_Level/internal/postInterface"
 	"context"
-	"strings"
 	"sync"
 	"time"
 )
@@ -40,7 +39,8 @@ func (w *MailPicker) Run(externwg *sync.WaitGroup, ctx context.Context, out chan
 				w.inputStatus = !w.inputStatus
 			}
 			log.Log().L("Message got")
-			if w.checkUserExist(strings.Split(email.To, "@")[0]) {
+			//if w.checkUserExist(strings.Split(email.To, "@")[0]) {
+			if true {
 				out <- email
 				time.Sleep(200*time.Millisecond) // for tests
 			}

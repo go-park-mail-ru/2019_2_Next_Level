@@ -3,10 +3,9 @@ package support
 import (
 	"2019_2_Next_Level/internal/Auth"
 	http2 "2019_2_Next_Level/internal/support/http"
+	"2019_2_Next_Level/internal/support/log"
 	repository "2019_2_Next_Level/internal/support/repository"
 	"2019_2_Next_Level/internal/support/usecase"
-
-	"2019_2_Next_Level/internal/support/log"
 	"github.com/gorilla/mux"
 	"net/http"
 	"sync"

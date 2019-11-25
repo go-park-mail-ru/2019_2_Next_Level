@@ -1,36 +1,42 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
-func Construct(status string, args map[string]interface{}) {
-	args["status"] = status
-	js, _ := json.Marshal(args)
-	fmt.Println(string(js))
-}
-
-type T struct {
-	Data int
-	Name string
-}
-
-func (t *T) Set(a int) {
-	t.Data = a
-}
-
-func Parse(data []byte, str interface{}) error {
-	return json.Unmarshal(data, str)
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 }
 
 func main() {
-	// js, _ := json.Marshal("fullName", "password")
-	// fmt.Println(string(js))
-	str := `{"data":12, "name": "ian"}`
-	t := T{}
-	// json.Unmarshal([]byte(str), &t)
-	Parse([]byte(str), &t)
-	fmt.Println(t)
+	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+		conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
+		fmt.Println(err)
+		for {
+			// Read message from browser
+			msgType, msg, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
 
+			// Print the message to the console
+			fmt.Printf("%s sent: %s\n", conn.RemoteAddr(), string(msg))
+
+			// Write message back to browser
+			if err = conn.WriteMessage(msgType, msg); err != nil {
+				return
+			}
+		}
+	})
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "websockets.html")
+	})
+
+	http.ListenAndServe(":8080", nil)
 }

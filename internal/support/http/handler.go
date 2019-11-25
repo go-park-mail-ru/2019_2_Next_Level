@@ -12,19 +12,25 @@ import (
 
 type SupportHandler struct {
 	usecase usecase.Usecase
+	newMessageChan map[string]chan interface{}
 }
 
-func NewSupportHandler(usecase usecase.Usecase) *SupportHandler {
-	return &SupportHandler{usecase: usecase}
+var NewMessageNotify *usecase.WebSocket
+
+func NewSupportHandler(usecase_ usecase.Usecase) *SupportHandler {
+	NewMessageNotify = usecase.NewWebSocket()
+	return &SupportHandler{usecase: usecase_}
 }
 
 func (h *SupportHandler) InflateRouter(router *mux.Router) {
+	h.newMessageChan = make(map[string]chan interface{}, 100)
 	router.HandleFunc("/create", h.StartChat).Methods("POST")
 	router.HandleFunc("/chat", h.GetChatList).Methods("GET")
 	router.HandleFunc("/chat/{id}", h.GetChat).Methods("GET")
 	router.HandleFunc("/chat/{id}/close", h.CloseChat).Methods("POST")
 	router.HandleFunc("/chat/{id}/send", h.SendMessage).Methods("POST")
 	router.HandleFunc("/chat/{id}/message/{message_id}", h.GetMessage).Methods("GET")
+	router.HandleFunc("/newmessage", NewMessageNotify.ListenNewMessageNotify())
 }
 
 func (h *SupportHandler) StartChat(w http.ResponseWriter, r *http.Request) {
