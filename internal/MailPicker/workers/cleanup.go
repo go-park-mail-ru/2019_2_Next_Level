@@ -68,12 +68,12 @@ func (w *MailCleanup) Repack(from *gomail.Message) (model.Email) {
 	to.Header.Subject = from.Header.Subject()
 	to.Header.WhenReceived, _ = from.Header.Date()
 	to.Header.To = from.Header.To()
-	for i, label := range to.Header.To {
-		if len(label)<3 {
-			continue
-		}
-		to.Header.To[i] = label[strings.Index(label, "<")+1 : strings.Index(label, ">")]
-	}
+	//for i, label := range to.Header.To {
+	//	if len(label)<3 {
+	//		continue
+	//	}
+	//	to.Header.To[i] = label[strings.Index(label, "<")+1 : strings.Index(label, ">")]
+	//}
 	to.Body = string(w.SelectBody(from))
 	return to
 }
