@@ -76,7 +76,7 @@ func (r *PostgresRepository) AddEmail(email *model.Email) error {
 			return err
 		}
 
-		recQuery := sqlTools.CreatePacketQuery(`INSERT INTO Receiver (mailId, email) VALUES`, 2, len(email.Header.To))
+		recQuery := sqlTools.CreatePacketQuery(`INSERT INTO Receiver (mailId, email) VALUES`, 2, len(email.To))
 		params := make([]interface{}, 0, 2*len(email.Header.To))
 		for _, addr := range email.Header.To {
 			params = append(params, id, addr)

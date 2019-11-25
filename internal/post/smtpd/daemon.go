@@ -107,7 +107,7 @@ func (s *Server) Send() {
 
 func (s *Server) GenAndSendMailTest() {
 	for {
-		email := post.Email{From:"ivan", To:"ian", Body:`DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=mail.ru; s=mail2;
+		email := post.Email{From:"ivan", To:"ian@mam.sas", Body:`DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=mail.ru; s=mail2;
 		h=ReSent-From:ReSent-To:Content-Type:Resent-Message-ID:Message-ID:Reply-To:Resent-Date:Date:MIME-Version:Subject:To:From; bh=2OIh9hyye6Hw4lQMPR3Loenu9B/A2RdXlp2hZL8j/Uw=;
 		b=Nqm4jK9vGiLpnjXuTbcctSZNA0g3rv1SXCdlcwiFvFMb1H88/D1EC0GePS3lH+weTtlLpS+v3T87BZIbsMDAL54Kv66hR0SOpS6OVsiPwH674ERSc+3jUWLor3majzZqMIwcOFJ4SvAjHkbA0r3IdMCZEIve2VOlnSEjLeQ/wbk=;
 	Received: by f100.i.mail.ru with local (envelope-from <ivanov.vanya.111@mail.ru>)
