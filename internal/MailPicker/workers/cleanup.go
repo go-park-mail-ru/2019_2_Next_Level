@@ -50,7 +50,6 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 			log.Log().L(res)
 			res.From = emailTemp.From
 			res.To = strings.Split(emailTemp.To, "@")[0]
-			res.To = emailTemp.To
 			out <- res
 			time.Sleep(200*time.Millisecond) // for tests
 		}
