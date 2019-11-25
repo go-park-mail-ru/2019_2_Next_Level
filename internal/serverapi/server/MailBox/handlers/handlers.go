@@ -73,21 +73,24 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 	pageTemp := r.FormValue("page")
 	page, err := strconv.ParseInt(pageTemp, 10, 8)
 	if err != nil {
-		resp.SetError(hr.GetError(hr.BadParam))
-		return
+		//resp.SetError(hr.GetError(hr.BadParam))
+		//return
 	}
 	perPage, err := strconv.ParseInt(r.FormValue("perPage"), 10, 8)
 	if err != nil {
-		resp.SetError(hr.GetError(hr.BadParam))
-		return
+		//resp.SetError(hr.GetError(hr.BadParam))
+		//return
 	}
 	folder := r.FormValue("folder")
+	page = 1
+	perPage = 25
 
 	//count, page, list, err := h.usecase.GetMailListPlain(login, int(pg))
 	startLetter := perPage*(page-1)+1
 	list, err := h.usecase.GetMailList(login, folder, "", int(startLetter), int(perPage))
 	if err != nil {
-		resp.SetError(hr.BadParam)
+		log.Log().E("Error after getMailList", err)
+		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
 	resp.SetAnswer(struct{
@@ -137,7 +140,7 @@ func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadSession))
 		return
 	}
-	idTemp := r.FormValue("message")
+	idTemp := r.FormValue("id")
 	id, err := strconv.ParseInt(idTemp, 10, 8)
 	if err != nil {
 		resp.SetError(hr.GetError(hr.BadParam))
