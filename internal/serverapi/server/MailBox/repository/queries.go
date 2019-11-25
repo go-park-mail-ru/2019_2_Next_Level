@@ -1,11 +1,11 @@
 package repository
 
 const(
-	queryGetEmailByCode = `SELECT sender, email AS "receivers", time, body from Message
+	queryGetEmailByCode = `SELECT sender, email AS "receivers", time, subject, body from Message
 							JOIN Receiver ON Message.id=Receiver.mailId
 							WHERE Message.id=$1`
 
-	queryGetEmailList = `SELECT Message.id, sender, email AS "receivers", time, body, isread from Message
+	queryGetEmailList = `SELECT Message.id, sender, email AS "receivers", time, subject, body, isread from Message
 						JOIN Receiver ON Message.id=Receiver.mailId
 						WHERE %s=$1 ORDER BY time LIMIT $2 OFFSET $3;`
 
