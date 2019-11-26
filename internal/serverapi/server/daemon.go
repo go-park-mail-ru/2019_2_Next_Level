@@ -32,10 +32,14 @@ func Run(externwg *sync.WaitGroup) error {
 	defer externwg.Done()
 	log.Log().L("Starting daemon on port ", config.Conf.Port)
 
-	prometheus.MustRegister(metrics.Hits)
+	prometheus.MustRegister(metrics.Hits, metrics.FooCount)
 
 	mainRouter := mux.NewRouter()
 	mainRouter.Handle("/metrics", promhttp.Handler())
+	mainRouter.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		metrics.FooCount.Add(1)
+		fmt.Println("test")
+	})
 
 	router := mainRouter.PathPrefix("/api").Subrouter()
 
@@ -74,6 +78,7 @@ func InflateRouter(router *mux.Router) {
 	InitHTTPMail(mailRouter)
 
 	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		metrics.FooCount.Add(1)
 		fmt.Println("test")
 	})
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
@@ -46,10 +47,11 @@ func AccessLogMiddleware() mux.MiddlewareFunc {
 						r.Header.Get("User-Agent")))
 			sw := &statusWriter{}
 			sw.ResponseWriter = w
+			starttime := time.Now()
 			next.ServeHTTP(sw, r)
 			var res hr.HttpResponse
 			_ = json.Unmarshal(sw.body, &res)
-			metrics.Hits.WithLabelValues(res.Status, r.URL.Path).Inc()
+			metrics.Hits.WithLabelValues(res.Status, r.URL.Path, strconv.FormatInt(time.Since(starttime).Milliseconds(), 10)).Inc()
 		})
 
 	}
