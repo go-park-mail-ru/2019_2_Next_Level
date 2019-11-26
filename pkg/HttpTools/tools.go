@@ -59,7 +59,6 @@ func (r *Response) SetStatus(status int) *Response {
 
 func (r *Response) SetError(err interface{}) *Response {
 	r.body = err
-	r.status = 400
 	return r
 }
 
