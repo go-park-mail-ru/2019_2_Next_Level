@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"2019_2_Next_Level/internal/serverapi/log"
-	hr "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
+	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
 	"2019_2_Next_Level/pkg/HttpTools"
 	"net/http"
 	"strconv"
@@ -93,7 +93,7 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	resp.SetAnswer(struct{
+	resp.SetContent(struct{
 		Status string `json:"status"`
 		PagesCount int `json:"pagesCount"`
 		Page int `json:"page"`
@@ -126,7 +126,7 @@ func (h *MailHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 		log.Log().E(err)
 		return
 	}
-	resp.SetAnswer(struct{
+	resp.SetContent(struct{
 		Status string
 		Count int
 	}{Status:"ok", Count:count})
@@ -141,19 +141,11 @@ func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idTemp := r.FormValue("id")
-	id, err := strconv.ParseInt(idTemp, 10, 8)
+	id, err := strconv.ParseInt(idTemp, 10, 64)
 	if err != nil {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	//id := struct{
-	//	Id models.MailID
-	//}{}
-	//err := HttpTools.StructFromBody(*r, &id)
-	//if err != nil {
-	//	resp.SetError(hr.GetError(hr.BadSession))
-	//	return
-	//}
 	mail, err := h.usecase.GetMail(login, models.MailID(id))
 	if err != nil {
 		resp.SetError(hr.GetError(hr.BadParam))
@@ -177,7 +169,7 @@ func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	resp.SetAnswer(answer)
+	resp.SetContent(answer)
 }
 
 func (h *MailHandler) MarkMailRead(w http.ResponseWriter, r *http.Request) {
@@ -206,7 +198,7 @@ func (h *MailHandler) markMail(w http.ResponseWriter, r *http.Request, mark int)
 	}{}
 	err := HttpTools.StructFromBody(*r, &req)
 	if err != nil {
-		resp.SetError(hr.GetError(hr.BadSession))
+		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
 	err = h.usecase.MarkMail(login, req.Messages, mark)

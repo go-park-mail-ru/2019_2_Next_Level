@@ -2,6 +2,7 @@ package server
 
 import (
 	"2019_2_Next_Level/internal/Auth"
+	postinterface "2019_2_Next_Level/internal/postInterface"
 	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	authhandler "2019_2_Next_Level/internal/serverapi/server/Auth/http"
@@ -14,20 +15,28 @@ import (
 	userrepo "2019_2_Next_Level/internal/serverapi/server/User/repository"
 	userusecase "2019_2_Next_Level/internal/serverapi/server/User/usecase"
 	"2019_2_Next_Level/internal/serverapi/server/config"
+	"2019_2_Next_Level/internal/serverapi/server/metrics"
 	"2019_2_Next_Level/internal/serverapi/server/middleware"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"sync"
 
 	"github.com/gorilla/mux"
-
 )
+
+
 
 func Run(externwg *sync.WaitGroup) error {
 	defer externwg.Done()
 	log.Log().L("Starting daemon on port ", config.Conf.Port)
 
+	prometheus.MustRegister(metrics.Hits)
+
 	mainRouter := mux.NewRouter()
+	mainRouter.Handle("/metrics", promhttp.Handler())
+
 	router := mainRouter.PathPrefix("/api").Subrouter()
 
 	InflateRouter(router)
@@ -105,11 +114,14 @@ func InitHttpUser(router *mux.Router) {
 
 func InitHTTPMail(router *mux.Router) {
 	repo, err := mailrepo.GetPostgres()
+	err = repo.Init()
 	if err != nil {
 		log.Log().E("Error during init Postgres", err)
 		return
 	}
-	mailUsecase := mailboxusecase.NewMailBoxUsecase(&repo)
+	smtpPort := postinterface.NewQueueClient(config.Conf.PostServiceHost, config.Conf.PostServiceSendPort)
+	smtpPort.Init()
+	mailUsecase := mailboxusecase.NewMailBoxUsecase(&repo, smtpPort)
 	handler := mailhandler.NewMailHandler(mailUsecase)
 	handler.InflateRouter(router)
 	//handlers.NewMailHandler(router, &mailUsecase)

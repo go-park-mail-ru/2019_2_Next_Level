@@ -66,7 +66,7 @@ Content-Type: text/html
 
 <div>Hellp</div>`}
 	mockIncoming.EXPECT().Get().Return(returned, nil).Times(1)
-	mockRepo.EXPECT().UserExists("tester").Return(true).Times(1)
+	//mockRepo.EXPECT().UserExists("tester").Return(true).Times(1)
 	mockRepo.EXPECT().AddEmail(gomock.Any()).Return(nil).Times(1)
 
 	timer := time.NewTimer(100 * time.Millisecond)

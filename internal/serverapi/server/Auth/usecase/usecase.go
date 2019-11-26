@@ -4,7 +4,7 @@ import (
 	"2019_2_Next_Level/internal/Auth"
 	"2019_2_Next_Level/internal/model"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
 )
 
 const (

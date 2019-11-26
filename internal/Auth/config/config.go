@@ -6,12 +6,11 @@ import (
 )
 
 type MainConfig struct {
-	HttpConfig HttpConfig `json:"HttpServer"`
 	DB Database `json:"Database"`
+	AuthPort string `json:"authport"`
 }
 
 func (c *MainConfig) Init(args ...interface{}) {
-	//c.HttpConfig.Init()
 	if len(args) >= 2{
 		user, ok := args[0].(string)
 		if !ok {
@@ -28,6 +27,9 @@ func (c *MainConfig) Init(args ...interface{}) {
 		fmt.Println("Wrong param count", len(args))
 		return
 	}
+	if c.AuthPort[0] != ':'{
+		c.AuthPort = ":"+c.AuthPort
+	}
 }
 
 type Database struct {
@@ -41,10 +43,6 @@ type Database struct {
 func (d *Database) Init(user, pass string) {
 	d.User = user
 	d.Password = pass
-}
-
-type HttpConfig struct {
-
 }
 
 var Conf MainConfig

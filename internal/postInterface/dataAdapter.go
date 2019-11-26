@@ -1,8 +1,8 @@
 package postinterface
 
 import (
+	pb "2019_2_Next_Level/generated/post/MessageQueue/service"
 	"2019_2_Next_Level/internal/post"
-	pb "2019_2_Next_Level/internal/post/MessageQueue/service"
 )
 
 type ParcelAdapter struct {

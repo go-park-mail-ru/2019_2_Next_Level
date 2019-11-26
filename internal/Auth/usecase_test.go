@@ -1,8 +1,8 @@
 package Auth
 
 import (
-	pb "2019_2_Next_Level/internal/Auth/service"
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	pb "2019_2_Next_Level/generated/Auth/service"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
 	"2019_2_Next_Level/tests/mock/serverapi/auth"
 	"context"
 	"github.com/golang/mock/gomock"
@@ -41,14 +41,14 @@ func TestAuthServer_LoginBySession(t *testing.T) {
 
 	tests := []TestStruct{
 		{
-			input: []Params{&pb.String{Data:"session_token"}},
-			expected: []Params{&pb.StringResult{Result:"admin", Code: e.OK}, nil},
+			input: []Params{&pb.String{Data: "session_token"}},
+			expected: []Params{&pb.StringResult{Result: "admin", Code: e.OK}, nil},
 			mockParams: []Params{"session_token", "admin", nil},
 		},
 		{
-			input:[]Params{&pb.String{Data:"session_token"}},
+			input:[]Params{&pb.String{Data: "session_token"}},
 			expected: []Params{
-				&pb.StringResult{Result:"", Code: e.NotExists}, nil,
+				&pb.StringResult{Result: "", Code: e.NotExists}, nil,
 			},
 			mockParams: []Params{"session_token", "", e.Error{}.SetCode(e.NotExists)},
 		},
@@ -76,14 +76,14 @@ func TestAuthServer_StartSession(t *testing.T) {
 
 	tests := []TestStruct{
 		{
-			input: []Params{&pb.String{Data:"admin"}},
-			expected: []Params{&pb.StringResult{Result:"session_token", Code: e.OK}, nil},
+			input: []Params{&pb.String{Data: "admin"}},
+			expected: []Params{&pb.StringResult{Result: "session_token", Code: e.OK}, nil},
 			mockParams: []Params{"admin", nil},
 		},
 		{
-			input:[]Params{&pb.String{Data:"admin"}},
+			input:[]Params{&pb.String{Data: "admin"}},
 			expected: []Params{
-				&pb.StringResult{Result:"", Code: e.NotExists},
+				&pb.StringResult{Result: "", Code: e.NotExists},
 				nil,
 			},
 			mockParams: []Params{"admin", e.Error{}.SetCode(e.NotExists)},
@@ -112,12 +112,12 @@ func TestAuthServer_DestroySession(t *testing.T) {
 
 	tests := []TestStruct{
 		{
-			input: []Params{&pb.String{Data:"session_token"}},
+			input: []Params{&pb.String{Data: "session_token"}},
 			expected: []Params{&pb.StatusResult{Code: e.OK}, nil},
 			mockParams: []Params{"session_token", nil},
 		},
 		{
-			input: []Params{&pb.String{Data:"session_token"}},
+			input: []Params{&pb.String{Data: "session_token"}},
 			expected: []Params{&pb.StatusResult{Code: e.NotExists},
 				nil},
 			mockParams: []Params{"session_token", e.Error{}.SetCode(e.NotExists)},
@@ -146,12 +146,12 @@ func TestAuthServer_DestroyUserSessions(t *testing.T) {
 
 	tests := []TestStruct{
 		{
-			input: []Params{&pb.String{Data:"admin"}},
+			input: []Params{&pb.String{Data: "admin"}},
 			expected: []Params{&pb.StatusResult{Code: e.OK}, nil},
 			mockParams: []Params{"admin", nil},
 		},
 		{
-			input: []Params{&pb.String{Data:"admin"}},
+			input: []Params{&pb.String{Data: "admin"}},
 			expected: []Params{&pb.StatusResult{Code: e.NotExists},
 				nil},
 			mockParams: []Params{"admin", e.Error{}.SetCode(e.NotExists)},
@@ -185,7 +185,7 @@ func TestAuthServer_ChangePassword(t *testing.T) {
 	tests := []TestStruct{
 		// OK
 		{
-			input: []Params{&pb.ChangePasswordMessage{Login:"admin", OldPass:"oldpass", NewPass:"newpass"}},
+			input: []Params{&pb.ChangePasswordMessage{Login: "admin", OldPass:"oldpass", NewPass:"newpass"}},
 			expected: []Params{&pb.StatusResult{Code: e.OK}, nil},
 			mockParams: []Params{
 				// GetCredentials
@@ -206,7 +206,7 @@ func TestAuthServer_ChangePassword(t *testing.T) {
 		},
 		// Wrong old pass
 		{
-			input: []Params{&pb.ChangePasswordMessage{Login:"admin", OldPass:"wrongOldpass", NewPass:"newpass"}},
+			input: []Params{&pb.ChangePasswordMessage{Login: "admin", OldPass:"wrongOldpass", NewPass:"newpass"}},
 			expected: []Params{&pb.StatusResult{Code: e.WrongPassword}, nil},
 			mockParams: []Params{
 				// GetCredentials
@@ -220,7 +220,7 @@ func TestAuthServer_ChangePassword(t *testing.T) {
 		},
 		// User not exists
 		{
-			input: []Params{&pb.ChangePasswordMessage{Login:"admin", OldPass:"oldpass", NewPass:"newpass"}},
+			input: []Params{&pb.ChangePasswordMessage{Login: "admin", OldPass:"oldpass", NewPass:"newpass"}},
 			expected: []Params{&pb.StatusResult{Code: e.NotExists}, nil},
 			mockParams: []Params{
 				// GetCredentials
@@ -310,4 +310,12 @@ func TestAuthServer_CheckCredentials(t *testing.T) {
 			t.Errorf("Wrong answer got")
 		}
 	})
+}
+
+func TestClient(t *testing.T) {
+	client := AuthClient{}
+	client.Init("df", "12")
+	client.Destroy()
+	//client.LoginBySession("123")
+	//recover()
 }

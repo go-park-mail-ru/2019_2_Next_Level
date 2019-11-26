@@ -63,7 +63,7 @@ func (s *Server) Run(externwg *sync.WaitGroup) {
 	log.Log().L("Run SMTP...")
 	go s.RunSmtpServer()
 	go s.GetIncomingMessages()
-	go s.GenAndSendMailTest()
+	//go s.GenAndSendMailTest()
 	go s.Send()
 	select {
 	case <-s.quitChan:

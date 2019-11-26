@@ -3,8 +3,8 @@ package http
 import (
 	"2019_2_Next_Level/internal/model"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
-	hr "2019_2_Next_Level/internal/serverapi/server/Error/httpError"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
+	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
 	"2019_2_Next_Level/pkg/HttpTools"
 	"2019_2_Next_Level/tests/mock/mock"
 	"bytes"

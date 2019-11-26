@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"2019_2_Next_Level/internal/model"
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
 	"2019_2_Next_Level/tests/mock/mock"
 	authclient "2019_2_Next_Level/tests/mock/serverapi/auth"
 	"testing"

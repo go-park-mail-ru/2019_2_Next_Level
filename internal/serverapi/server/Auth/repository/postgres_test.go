@@ -3,7 +3,7 @@ package repository
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
 	"fmt"
 	"testing"
 

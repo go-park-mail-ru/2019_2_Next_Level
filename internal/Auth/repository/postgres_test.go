@@ -1,7 +1,7 @@
 package repository
 
 import (
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
 	"2019_2_Next_Level/pkg/TestTools"
 	"bytes"
 	"fmt"
@@ -127,20 +127,20 @@ func TestPostgresRepo_AddNewSession(t *testing.T) {
 			}),
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":"login", "token":"session_token"},
-			map[string]TestTools.Params{"error":e.Error{}.SetCode(e.NotExists)},
+			map[string]TestTools.Params{"error": e.Error{}.SetCode(e.NotExists)},
 			map[string]TestTools.Params{
 				"user_count": "0",
 				"login":"login",
 			}),
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":"login", "token":"session_token"},
-			map[string]TestTools.Params{"error":e.Error{}},
+			map[string]TestTools.Params{"error": e.Error{}},
 			map[string]TestTools.Params{
 				"user_count": "1",
-				"login":"login",
-				"token":"session_token",
+				"login":      "login",
+				"token":      "session_token",
 				"delete_err": nil,
-				"add_err": e.Error{},
+				"add_err":    e.Error{},
 			}),
 	}
 
@@ -195,12 +195,12 @@ func TestPostgresRepo_DeleteSession(t *testing.T) {
 			}),
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"token":"session_token"},
-			map[string]TestTools.Params{"error":e.Error{Code:e.NotExists}.SetError(e.Error{})},
+			map[string]TestTools.Params{"error": e.Error{Code: e.NotExists}.SetError(e.Error{})},
 			map[string]TestTools.Params{
-				"token":"session_token",
-				"id":int64(0),
-				"rows":int64(0),
-				"error":e.Error{},
+				"token": "session_token",
+				"id":    int64(0),
+				"rows":  int64(0),
+				"error": e.Error{},
 			}),
 	}
 
@@ -241,12 +241,12 @@ func TestPostgresRepo_DeleteUserSessions(t *testing.T) {
 			}),
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":"login"},
-			map[string]TestTools.Params{"error":e.Error{}.SetCode(e.NotExists).SetError(e.Error{})},
+			map[string]TestTools.Params{"error": e.Error{}.SetCode(e.NotExists).SetError(e.Error{})},
 			map[string]TestTools.Params{
-				"login":"login",
-				"id":int64(0),
-				"rows":int64(0),
-				"error":e.Error{},
+				"login": "login",
+				"id":    int64(0),
+				"rows":  int64(0),
+				"error": e.Error{},
 			}),
 	}
 

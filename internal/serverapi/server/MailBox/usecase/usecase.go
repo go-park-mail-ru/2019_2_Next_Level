@@ -5,9 +5,9 @@ import (
 	"2019_2_Next_Level/internal/post"
 	postinterface "2019_2_Next_Level/internal/postInterface"
 	"2019_2_Next_Level/internal/serverapi/config"
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
 	"github.com/microcosm-cc/bluemonday"
 	"strconv"
 )
@@ -18,11 +18,12 @@ type MailBoxUsecase struct {
 }
 var sanitizer *bluemonday.Policy
 
-func NewMailBoxUsecase(repo mailbox.MailRepository) *MailBoxUsecase {
+func NewMailBoxUsecase(repo mailbox.MailRepository, smtp postinterface.IPostInterface) *MailBoxUsecase {
 	sanitizer = bluemonday.UGCPolicy()
 	usecase := MailBoxUsecase{repo: repo}
-	usecase.smtpPort = postinterface.NewQueueClient(config.Conf.HttpConfig.PostServiceHost, config.Conf.HttpConfig.PostServiceSendPort)
-	usecase.smtpPort.Init()
+	//usecase.smtpPort = postinterface.NewQueueClient(config.Conf.HttpConfig.PostServiceHost, config.Conf.HttpConfig.PostServiceSendPort)
+	//usecase.smtpPort.Init()
+	usecase.smtpPort = smtp
 	return &usecase
 }
 func (u *MailBoxUsecase) SendMail(email *model.Email) error 	{

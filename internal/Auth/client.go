@@ -1,8 +1,8 @@
 package Auth
 
 import (
-	pb "2019_2_Next_Level/internal/Auth/service"
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
+	pb "2019_2_Next_Level/generated/Auth/service"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
 	"context"
 	"google.golang.org/grpc"
 )
@@ -22,7 +22,7 @@ type IAuthClient interface {
 
 type AuthClient struct {
 	connection *grpc.ClientConn
-	client pb.AuthClient
+	client     pb.AuthClient
 }
 
 func (c *AuthClient) Init(host, port string) error{
@@ -40,50 +40,50 @@ func (c *AuthClient) Destroy() {
 	c.connection.Close()
 }
 func (c *AuthClient) LoginBySession(session string) (string, int32) {
-	message := &pb.String{Data:session}
+	message := &pb.String{Data: session}
 	res, _ := c.client.LoginBySession(context.Background(), message)
 	return res.Result, res.Code
 }
 
 func (c *AuthClient) StartSession(data string) (string, int32) {
-	message := &pb.String{Data:data}
+	message := &pb.String{Data: data}
 	res, _ := c.client.StartSession(context.Background(), message)
 	return res.Result, res.Code
 }
 
 func (c *AuthClient) DestroySession(data string) (int32) {
-	message := &pb.String{Data:data}
+	message := &pb.String{Data: data}
 	res, _ := c.client.DestroySession(context.Background(), message)
 	return res.Code
 }
 
 func (c *AuthClient) DestroyUserSessions(login string) (int32) {
-	message := &pb.String{Data:login}
+	message := &pb.String{Data: login}
 	res, _ := c.client.DestroyUserSessions(context.Background(), message)
 	return res.Code
 }
 
 func (c *AuthClient) ChangePassword(login string, oldPass string, newPass string) (int32) {
-	message := &pb.ChangePasswordMessage{Login:login, OldPass:oldPass, NewPass:newPass}
+	message := &pb.ChangePasswordMessage{Login: login, OldPass:oldPass, NewPass:newPass}
 	res, _ := c.client.ChangePassword(context.Background(), message)
 	return res.Code
 }
 
 func (c *AuthClient) CheckCredentials(login string, password string) (int32) {
-	message := &pb.CredentialsMessage{Login:login, Password:password}
+	message := &pb.CredentialsMessage{Login: login, Password:password}
 	res, _ := c.client.CheckCredentials(context.Background(), message)
 	return res.Code
 }
 
 func (c *AuthClient) RegisterUser(login string, password string) (int32) {
-	message := &pb.CredentialsMessage{Login:login, Password:password}
+	message := &pb.CredentialsMessage{Login: login, Password:password}
 	res, _ := c.client.RegisterUser(context.Background(), message)
 	return res.Code
 }
 
 func (c *AuthClient) GetError(code int32) error {
 	var err error
-	if code != e.OK{
+	if code != e.OK {
 		err = e.Error{}.SetCode(int(code))
 	}
 	return err

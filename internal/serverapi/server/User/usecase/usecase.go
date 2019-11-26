@@ -3,8 +3,8 @@ package usecase
 import (
 	"2019_2_Next_Level/internal/Auth"
 	"2019_2_Next_Level/internal/model"
-	e "2019_2_Next_Level/internal/serverapi/server/Error"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
+	e "2019_2_Next_Level/pkg/HttpError/Error"
 )
 
 func NewUserUsecase(repo user.UserRepository, auth Auth.IAuthClient) UserUsecase {
