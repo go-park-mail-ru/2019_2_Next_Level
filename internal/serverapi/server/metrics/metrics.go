@@ -3,7 +3,7 @@ package metrics
 import "github.com/prometheus/client_golang/prometheus"
 
 var Hits = prometheus.NewCounterVec(prometheus.CounterOpts{
-	Name: "hits",
+	Name: "hitsNew",
 }, []string{"status", "path"})
 
 var FooCount = prometheus.NewCounter(prometheus.CounterOpts{
