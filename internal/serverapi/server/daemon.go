@@ -32,10 +32,10 @@ func Run(externwg *sync.WaitGroup) error {
 	defer externwg.Done()
 	log.Log().L("Starting daemon on port ", config.Conf.Port)
 
-	prometheus.MustRegister(metrics.Hits, metrics.FooCount)
-
+	prometheus.MustRegister(metrics.Hits)
 	mainRouter := mux.NewRouter()
 	mainRouter.Handle("/metrics", promhttp.Handler())
+
 	mainRouter.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		metrics.FooCount.Add(1)
 		fmt.Println("test")
