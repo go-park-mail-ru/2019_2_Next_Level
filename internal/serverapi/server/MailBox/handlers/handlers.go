@@ -32,6 +32,8 @@ func (h *MailHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/read", h.MarkMailRead).Methods("POST")
 	router.HandleFunc("/unread", h.MarkMailUnRead).Methods("POST")
 	router.HandleFunc("/remove", h.DeleteEmail).Methods("POST")
+	router.HandleFunc("/addFolder/{name}", h.CreateFolder).Methods("POST")
+	router.HandleFunc("/changeFolder/{id}/{name}", h.ChangeMailFolder).Methods("POST")
 }
 
 func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
@@ -207,6 +209,62 @@ func (h *MailHandler) markMail(w http.ResponseWriter, r *http.Request, mark int)
 		return
 	}
 }
+func (h *MailHandler) ChangeMailFolder(w http.ResponseWriter, r *http.Request) {
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+
+	login := h.getLogin(r)
+	if login == "" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+	args := mux.Vars(r)
+	folderName, ok := args["name"]
+	if !ok {
+		log.Log().E("No such a param: ", "slug")
+		return
+	}
+	mailIdTemp, ok := args["id"]
+	if !ok {
+		log.Log().E("No such a param: ", "slug")
+		return
+	}
+	mailId, err := strconv.ParseInt(mailIdTemp, 10, 64)
+	if err != nil {
+		return
+	}
+	err = h.usecase.ChangeMailFolder(login, folderName, mailId)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.BadParam))
+		return
+	}
+	resp.SetContent(hr.DefaultResponse)
+
+}
+
+func (h *MailHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	login := h.getLogin(r)
+	if login == "" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+	args := mux.Vars(r)
+	folderName, ok := args["name"]
+	if !ok {
+		log.Log().E("No such a param: ", "slug")
+		return
+	}
+
+	err := h.usecase.AddFolder(login, folderName)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.BadParam))
+		return
+	}
+	resp.SetContent(hr.DefaultResponse)
+}
+
 
 func (h *MailHandler) getLogin(r *http.Request) string {
 	return r.Header.Get("X-Login")

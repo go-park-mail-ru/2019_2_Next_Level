@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	"github.com/gorilla/mux"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -290,6 +291,119 @@ func TestMailHandler_MarkMailRead(t *testing.T) {
 
 
 		h.MarkMailRead(w, r)
+		var got hr.HttpResponse
+		_ =json.Unmarshal([]byte(w.Body.String()), &got)
+		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+			t.Error("Wrong resp")
+		}
+
+	})
+
+}
+
+func TestMailHandler_ChangeMailFolder(t *testing.T) {
+	t.Parallel()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockUsecase := MailBox.NewMockMailBoxUseCase(mockCtrl)
+	h := NewMailHandler(mockUsecase)
+
+	login := "login"
+	tests := []TestTools.TestStructMap{
+		*TestTools.NewTestStructMap(
+			map[string]TestTools.Params{"login":login, "folder":"folder", "id":int64(12345)},
+			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"times":1, "err":nil, "returns":12,
+
+			}),
+		*TestTools.NewTestStructMap(
+			map[string]TestTools.Params{"login":"", "folder":"folder", "id":int64(12345)},
+			map[string]TestTools.Params{"resp": hr.GetError(hr.BadSession)},
+			map[string]TestTools.Params{"times":0, "err":nil, "returns":12,
+
+			}),
+		*TestTools.NewTestStructMap(
+			map[string]TestTools.Params{"login":"login", "folder":"folder", "id":int64(12345)},
+			map[string]TestTools.Params{"resp": hr.GetError(hr.UnknownError)},
+			map[string]TestTools.Params{"times":1, "err":fmt.Errorf(""), "returns":12,
+
+			}),
+	}
+
+
+	TestTools.RunTestingMapped(tests, func(map[string]TestTools.Params){}, func(test TestTools.TestStructMap) {
+		var err error
+		if test.MockParams["err"] != nil {
+			err = test.MockParams["err"].(error)
+		}
+		mockUsecase.EXPECT().
+			ChangeMailFolder(test.Input["login"].(string), test.Input["folder"].(string), test.Input["id"].(int64)).
+			Return(err).
+			Times(test.MockParams["times"].(int))
+		r := httptest.NewRequest("GET", "/messages/createFolder/folder?folder=folder", strings.NewReader("folder=inbox"))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+		r = mux.SetURLVars(r, map[string]string{"name":"folder", "id":"12345"})
+		w := httptest.NewRecorder()
+		r.Header = http.Header{"X-Login": []string{test.Input["login"].(string)}}
+
+
+		h.ChangeMailFolder(w, r)
+		var got hr.HttpResponse
+		_ =json.Unmarshal([]byte(w.Body.String()), &got)
+		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+			t.Error("Wrong resp")
+		}
+
+	})
+
+}
+
+func TestMailHandler_CreateFolder(t *testing.T) {
+	t.Parallel()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockUsecase := MailBox.NewMockMailBoxUseCase(mockCtrl)
+	h := NewMailHandler(mockUsecase)
+
+	login := "login"
+	tests := []TestTools.TestStructMap{
+		*TestTools.NewTestStructMap(
+			map[string]TestTools.Params{"login":login, "folder":"folder"},
+			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"times":1, "err":nil, "returns":12,
+
+			}),
+		*TestTools.NewTestStructMap(
+			map[string]TestTools.Params{"login":"", "folder":"folder"},
+			map[string]TestTools.Params{"resp": hr.GetError(hr.BadSession)},
+			map[string]TestTools.Params{"times":0, "err":nil, "returns":12,
+
+			}),
+		*TestTools.NewTestStructMap(
+			map[string]TestTools.Params{"login":"login", "folder":"folder"},
+			map[string]TestTools.Params{"resp": hr.GetError(hr.UnknownError)},
+			map[string]TestTools.Params{"times":1, "err":fmt.Errorf(""), "returns":12,
+
+			}),
+	}
+
+
+	TestTools.RunTestingMapped(tests, func(map[string]TestTools.Params){}, func(test TestTools.TestStructMap) {
+		var err error
+		if test.MockParams["err"] != nil {
+			err = test.MockParams["err"].(error)
+		}
+		mockUsecase.EXPECT().AddFolder(test.Input["login"].(string), test.Input["folder"].(string)).
+			Return(err).
+			Times(test.MockParams["times"].(int))
+		r := httptest.NewRequest("GET", "/messages/createFolder/folder?folder=folder", strings.NewReader("folder=inbox"))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+		r = mux.SetURLVars(r, map[string]string{"name":"folder"})
+		w := httptest.NewRecorder()
+		r.Header = http.Header{"X-Login": []string{test.Input["login"].(string)}}
+
+
+		h.CreateFolder(w, r)
 		var got hr.HttpResponse
 		_ =json.Unmarshal([]byte(w.Body.String()), &got)
 		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {

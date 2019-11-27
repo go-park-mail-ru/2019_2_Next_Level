@@ -86,3 +86,10 @@ func (u *MailBoxUsecase) GetUnreadCount(login string) (int, error) {
 func (u *MailBoxUsecase) MarkMail(login string, ids []models.MailID, mark int) error {
 	return u.repo.MarkMessages(login, ids, mark)
 }
+
+func (u *MailBoxUsecase) AddFolder(login string, foldername string) error {
+	return u.repo.AddFolder(login, foldername)
+}
+func (u *MailBoxUsecase) ChangeMailFolder(login string, foldername string, mailid int64) error {
+	return u.repo.ChangeMailFolder(login, foldername, mailid)
+}

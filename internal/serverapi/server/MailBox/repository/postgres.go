@@ -159,3 +159,14 @@ func (r *PostgresRepository) PutSentMessage(email model.Email) error {
 
 	return sqlTools.WithTransaction(r.DB, task)
 }
+
+func (r *PostgresRepository) AddFolder(login string, foldername string) error {
+	query := `INSERT INTO Folder (name, owner) VALUES ($1, $2)`
+	_, err := r.DB.Exec(query, foldername, login)
+	return err
+}
+func (r *PostgresRepository) ChangeMailFolder(login string, foldername string, mailid int64) error {
+	query := `UPDATE Message SET folder=$1 WHERE id=$2`
+	_, err := r.DB.Exec(query, foldername, mailid)
+	return err
+}

@@ -186,3 +186,57 @@ func TestPostgresRepository_PutSentMessage(t *testing.T) {
 
 	})
 }
+
+func TestPostgresRepository_AddFolder(t *testing.T) {
+	repo, _ := GetPostgres()
+	tests := []TestTools.TestStruct{
+		*TestTools.NewTestStruct(
+			[]TestTools.Params{"ivan", "test"},
+			[]TestTools.Params{nil},
+			[]TestTools.Params{"ivan", "test"},
+		),
+	}
+	query := `INSERT INTO Folder \(name\, owner\) VALUES \(\$1\, \$2\)`
+
+	TestTools.RunTesting(tests, expectedFunc, func(test TestTools.TestStruct) {
+		db, mock, _ := sqlmock.New()
+		repo.DB = db
+		defer db.Close()
+
+		mock.ExpectExec(query).WithArgs(sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(1,1)).
+			WillReturnError(nil)
+
+		err := repo.AddFolder("ivan", "test")
+		if err != err {
+			t.Errorf("Wrong answer: %v instead %v",err, test.Expected[0].(bool))
+		}
+
+	})
+}
+
+func TestPostgresRepository_ChangeMailFolder(t *testing.T) {
+	repo, _ := GetPostgres()
+	tests := []TestTools.TestStruct{
+		*TestTools.NewTestStruct(
+			[]TestTools.Params{"ivan", "test"},
+			[]TestTools.Params{nil},
+			[]TestTools.Params{"ivan", "test"},
+		),
+	}
+	query := `UPDATE Message SET folder=\$1 WHERE id=\$2`
+
+	TestTools.RunTesting(tests, expectedFunc, func(test TestTools.TestStruct) {
+		db, mock, _ := sqlmock.New()
+		repo.DB = db
+		defer db.Close()
+
+		mock.ExpectExec(query).WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(1,1)).
+			WillReturnError(nil)
+
+		err := repo.ChangeMailFolder("ivan", "test", 12345)
+		if err != err {
+			t.Errorf("Wrong answer: %v instead %v",err, test.Expected[0].(bool))
+		}
+
+	})
+}
