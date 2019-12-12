@@ -72,10 +72,15 @@ func (u *MailBoxUsecase) GetMailListPlain(login string, page int) (int, int, []m
 	return count/mailsPerPage+1, page, list, nil
 }
 
-func (u *MailBoxUsecase) GetMail(login string, mailID models.MailID) (model.Email, error) {
-	id := strconv.Itoa(int(mailID))
+func (u *MailBoxUsecase) GetMail(login string, mailID []models.MailID) ([]model.Email, error) {
+	id := make([]string, 0, len(mailID))
+	for _, elem := range mailID {
+		id = append(id, strconv.Itoa(int(elem)))
+	}
 	email, err := u.repo.GetEmailByCode(login, id)
-	email.Sanitize()
+	for i := range email {
+		email[i].Sanitize()
+	}
 	return email, err
 }
 
@@ -95,4 +100,8 @@ func (u *MailBoxUsecase) ChangeMailFolder(login string, foldername string, maili
 }
 func (u *MailBoxUsecase) DeleteFolder(login string, foldername string) error {
 	return u.repo.DeleteFolder(login, foldername)
+}
+
+func (u *MailBoxUsecase) FindMessages(login, request string) ([]int64, error) {
+	return u.repo.FindMessages(login, request)
 }

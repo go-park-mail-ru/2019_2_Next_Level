@@ -41,7 +41,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		BirthDate string `json:"birthDate"`
 		Sex       string `json:"sex"`
 		Email     string `json:"login"`
-		Avatar    string `json:"avatars"`
+		Avatar    string `json:"avatar"`
 		Login 	  string `json:"nickName"`
 		Folders   []model.Folder `json:"folders"`
 	}
@@ -93,19 +93,6 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 		newProfile.Avatar = newFilename;
 	}
 
-	//var user model.User
-	//var req struct{
-	//	UserInfo model.User `json:"userInfo"`
-	//}
-	//
-	//err := HttpTools.StructFromBody(*r, &req)
-	//if err != nil {
-	//	resp.SetError(hr.GetError(hr.BadParam))
-	//	return
-	//}
-	//user = req.UserInfo
-	//login := r.Header.Get("X-Login")
-	//user.Email = login
 	err := h.usecase.EditUser(&newProfile);
 	if err != nil {
 		status := hr.UnknownError

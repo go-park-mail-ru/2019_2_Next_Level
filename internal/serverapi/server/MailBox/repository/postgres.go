@@ -53,29 +53,37 @@ func (r *PostgresRepository) Init() error {
 	return nil
 }
 
-func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) (model.Email, error) {
+func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) ([]model.Email, error) {
 	query := queryGetEmailByCode
 
-	mail := model.Email{}
-	var when string
-	id, _ := strconv.ParseInt(code.(string), 10, 64)
-	err := r.DB.QueryRow(query, id).Scan(&mail.From, &mail.To, &when, &mail.Header.Subject, &mail.Body)
-	if err != nil {
-		return mail, e.Error{}.SetError(err)
+	mails := make([]model.Email, 0)
+	ids := make([]int64, 0)
+	if codes, ok := code.([]string); ok {
+		for _, elem := range codes {
+			id, _ := strconv.ParseInt(elem, 10, 64)
+			ids = append(ids, id)
+		}
+	} else {
+		id, _ := strconv.ParseInt(code.(string), 10, 64)
+		ids = append(ids, id)
 	}
-	mail.Header.WhenReceived, _ = time.Parse("2006/01/02 15:04:05", when)
-	return mail, nil
+	for _, id := range ids {
+		var mail model.Email
+		var when string
+		err := r.DB.QueryRow(query, id).Scan(&mail.From, &mail.To, &when, &mail.Header.Subject, &mail.Body)
+		if err != nil {
+			return mails, e.Error{}.SetError(err)
+		}
+		mail.Header.WhenReceived, _= time.Parse(time.RFC3339, when)
+		mails = append(mails, mail)
+	}
+	return mails, nil
 }
 
 func (r *PostgresRepository) GetEmailList(login string, folder string, sort interface{}, firstNumber int, count int) ([]model.Email, error) {
 	query := queryGetEmailList
 	var placeholder string
 
-	if folder=="sent" || folder=="proceed"{
-		placeholder = "Message.sender"
-	}else{
-		placeholder = "Receiver.email"
-	}
 	placeholder = `Message.owner`
 	query = fmt.Sprintf(query, placeholder)
 
@@ -98,7 +106,6 @@ func (r *PostgresRepository) GetEmailList(login string, folder string, sort inte
 	}
 	return list, nil
 }
-
 func (r *PostgresRepository) GetMessagesCount(login string, folder string, flag interface{}) (int, error) {
 	query := queryGetMessagesCount
 	var count int
@@ -176,4 +183,36 @@ func (r *PostgresRepository) DeleteFolder(login string, folderName string) error
 	query := `DELETE FROM Folder WHERE owner=$1 AND name=$2`
 	_, err := r.DB.Exec(query, login, folderName)
 	return err;
+}
+
+func (r *PostgresRepository) FindMessages(login, request string) ([]int64, error) {
+	query := `WITH
+			own_messages AS (SELECT id, concat(subject, ' ', body) as data FROM Message
+					WHERE owner=$1),
+			fulltest_search AS (SELECT id, data FROM own_messages
+					WHERE to_tsvector("data") @@ plainto_tsquery($2)),
+			res AS (SELECT id, sum(p) as p FROM
+					(SELECT id, p from
+						(SELECT id, ts_rank(to_tsvector("data"), plainto_tsquery('t')) as p FROM fulltest_search) as b
+						UNION
+						(SELECT id, 0 as p FROM own_messages WHERE lower(data) LIKE concat('%', lower($2), '%'))
+					) as FF
+					GROUP BY id
+				)
+	SELECT res.id FROM res JOIN Message ON Message.id=res.id ORDER BY res.p desc, res.id;`
+
+	row, err := r.DB.Query(query, login, request)
+	list := make([]int64, 0)
+	if err != nil {
+		return list, e.Error{}.SetCode(e.NotExists).SetError(err)
+	}
+
+	for row.Next() {
+		var id int64
+		if err := row.Scan(&id); err != nil {
+			return list, e.Error{}.SetError(err)
+		}
+		list = append(list, id)
+	}
+	return list, nil
 }

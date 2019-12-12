@@ -56,7 +56,7 @@ func (r *PostgresRepository) Init() error {
 
 func (r *PostgresRepository) GetUser(login string) (model.User, error) {
 	user := model.User{}
-	query := `SELECT login, firstname, secondname, sex, avatars, birthdate FROM users WHERE login=$1`
+	query := `SELECT login, firstname, secondname, sex, avatar, birthdate FROM users WHERE login=$1`
 	res := r.DB.QueryRow(query, login)
 	if res == nil {
 		return user, e.Error{}.SetCode(e.ProcessError)

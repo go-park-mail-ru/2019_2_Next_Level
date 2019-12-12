@@ -60,6 +60,19 @@ create table if not exists Message
     CONSTRAINT cnst FOREIGN KEY (folder, owner) REFERENCES Folder(name, owner)
 );
 
+CREATE INDEX idx_gin_document_rus_body
+ON Message
+USING gin (to_tsvector('russian', "body"));
+CREATE INDEX idx_gin_document_en_body
+ON Message
+USING gin (to_tsvector('english', "body"));
+CREATE INDEX idx_gin_document_rus_subj
+ON Message
+USING gin (to_tsvector('russian', "subject"));
+CREATE INDEX idx_gin_document_en_subj
+ON Message
+USING gin (to_tsvector('english', "subject"));
+
 
 create table if not exists Receiver
 (
@@ -187,6 +200,7 @@ $on_remove_folder$ language plpgsql;
 drop trigger if exists on_remove_folder ON Folder;
 create trigger on_remove_folder BEFORE DELETE ON Folder
     FOR EACH row execute procedure on_remove_folder();
+
 
 INSERT INTO Users (login, password, sault, firstname, secondname)
     VALUES ('admin', 'wedewde', 'wedewdewd', 'Ian', 'Ivanov');

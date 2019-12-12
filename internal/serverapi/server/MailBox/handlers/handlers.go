@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/log"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
@@ -28,6 +29,7 @@ func (h *MailHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/send", h.SendMail).Methods("POST")
 	router.HandleFunc("/getByPage", h.GetMailList).Methods("GET")
 	router.HandleFunc("/get", h.GetEmail).Methods("GET")
+	router.HandleFunc("/getById", h.GetEmailsById).Methods("POST")
 	router.HandleFunc("/getUnreadCount", h.GetUnreadCount).Methods("GET")
 	router.HandleFunc("/read", h.MarkMailRead).Methods("POST")
 	router.HandleFunc("/unread", h.MarkMailUnRead).Methods("POST")
@@ -35,6 +37,34 @@ func (h *MailHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/addFolder/{name}", h.CreateFolder).Methods("POST")
 	router.HandleFunc("/deleteFolder/{name}", h.DeleteFolder).Methods("POST")
 	router.HandleFunc("/changeFolder/{id}/{name}", h.ChangeMailFolder).Methods("POST")
+	router.HandleFunc("/search/{request}", h.FindMessages).Methods("GET")
+}
+
+func (h *MailHandler) FindMessages(w http.ResponseWriter, r *http.Request) {
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	login := h.getLogin(r)
+	if login=="" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+
+	args := mux.Vars(r)
+	request, _ := args["request"]
+	list, err := h.usecase.FindMessages(login, request)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.UnknownError))
+		return
+	}
+	respList := struct{
+		Status string `json:"status"`
+		Messages []int64 `json:"messages"`
+	}{
+		Status: "ok",
+		Messages: list,
+	}
+	resp.SetContent(respList)
+
 }
 
 func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
@@ -147,30 +177,47 @@ func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	mail, err := h.usecase.GetMail(login, models.MailID(id))
+	mails, err := h.usecase.GetMail(login, []models.MailID{models.MailID(id)})
 	if err != nil {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-
+	mail := mails[0]
 	answer := struct {
-		Status string `json:"status"`
+		Status  string           `json:"status"`
 		Message models.MailToGet `json:"message"`
 	}{
 		Status: "ok",
-		Message:models.MailToGet{
-			Id: models.MailID(id),
-			From: models.Sender{
-				Name:  "",
-				Email: mail.From,
-			},
-			Subject:mail.Header.Subject,
-			Content:mail.Body,
-			Replies:[]models.MailID{},
-		},
+		Message: models.MailToGet{}.FromMain(&mail),
+	}
+	resp.SetContent(answer)
+}
+
+func (h *MailHandler) GetEmailsById (w http.ResponseWriter, r *http.Request) {
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	login := h.getLogin(r)
+	if login=="" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+	req := struct{
+		Id []int64 `json:"ids"`
+	}{}
+	_ = HttpTools.StructFromBody(*r, &req)
+	ids := make([]models.MailID, 0, len(req.Id))
+	for _, elem := range req.Id {
+		ids = append(ids, models.MailID(elem))
 	}
 
-	resp.SetContent(answer)
+	mails, err := h.usecase.GetMail(login, ids)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.BadParam))
+		return
+	}
+	resp.SetContent(h.prepareList(mails))
+	return
+
 }
 
 func (h *MailHandler) MarkMailRead(w http.ResponseWriter, r *http.Request) {
@@ -208,6 +255,7 @@ func (h *MailHandler) markMail(w http.ResponseWriter, r *http.Request, mark int)
 		return
 	}
 }
+
 func (h *MailHandler) ChangeMailFolder(w http.ResponseWriter, r *http.Request) {
 	resp := h.resp.SetWriter(w).Copy()
 	defer resp.Send()
@@ -289,4 +337,22 @@ func (h *MailHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 
 func (h *MailHandler) getLogin(r *http.Request) string {
 	return r.Header.Get("X-Login")
+}
+
+func (h *MailHandler) prepareList(list []model.Email) interface{} {
+	answer := struct {
+		Status  string           `json:"status"`
+		Messages []models.MailToGet `json:"messages"`
+	}{
+		Status: "ok",
+		//Messages: mailsToGet,
+		Messages: func()[]models.MailToGet{
+			localList := make([]models.MailToGet, 0, len(list))
+			for _, elem := range list {
+				localList = append(localList, models.MailToGet{}.FromMain(&elem))
+			}
+			return localList
+		}(),
+	}
+	return answer
 }
