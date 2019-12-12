@@ -86,13 +86,16 @@ func (u *UserUsecase) EditAvatar(login string, file multipart.File, header *mult
 	filename += typeFile
 
 	path +=  filename
+	fmt.Println(file)
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
+		fmt.Println(err)
 		//log.Log().E(fmt.Sprintf("Cannot create avatar file for %s with error: %v", login, err));
 		return "", err
 	}
 	defer f.Close()
 	_, err = io.Copy(f, file)
+	fmt.Println(err)
 	return filename, err
 }
 

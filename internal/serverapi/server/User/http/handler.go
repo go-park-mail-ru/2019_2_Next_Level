@@ -8,6 +8,7 @@ import (
 	e "2019_2_Next_Level/pkg/HttpError/Error"
 	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
 	"2019_2_Next_Level/pkg/HttpTools"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -97,6 +98,7 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 	err := h.usecase.EditUser(&newProfile);
 	if err != nil {
 		log.Log().E(err)
+		fmt.Println(err)
 		status := hr.UnknownError
 		switch err.(type) {
 		case e.Error:
