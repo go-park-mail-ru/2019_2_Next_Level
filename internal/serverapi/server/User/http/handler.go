@@ -2,6 +2,7 @@ package http
 
 import (
 	"2019_2_Next_Level/internal/model"
+	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
 	e "2019_2_Next_Level/pkg/HttpError/Error"
@@ -95,6 +96,7 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	err := h.usecase.EditUser(&newProfile);
 	if err != nil {
+		log.Log().E(err)
 		status := hr.UnknownError
 		switch err.(type) {
 		case e.Error:
