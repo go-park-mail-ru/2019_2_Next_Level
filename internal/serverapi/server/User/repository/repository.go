@@ -89,7 +89,7 @@ func (r *PostgresRepository) GetUserFolders(login string) ([]model.Folder, error
 }
 
 func (r *PostgresRepository) UpdateUserData(user *model.User) error {
-	query := `UPDATE users SET avatars=$1, firstName=$2, secondname=$3, sex=$4, birthdate=$5 WHERE login=$6;`
+	query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3, sex=$4, birthdate=$5 WHERE login=$6;`
 	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)
 	if err0 != nil {
 		return e.Error{}.SetCode(e.InvalidParams).SetError(err0)

@@ -16,7 +16,7 @@ type User struct {
 	Sex        string `json:"sex"`
 	Email      string `json:"login"`
 	Password   string `json:"password"`
-	Avatar     string `json:"avatars"`
+	Avatar     string `json:"avatar"`
 	Sault string `json:-`
 }
 

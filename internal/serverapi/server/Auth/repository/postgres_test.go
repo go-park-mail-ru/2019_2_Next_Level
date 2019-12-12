@@ -289,7 +289,7 @@ func TestCreateUser(t *testing.T) {
 		t.Errorf("Error during getPostgres(): %s", err)
 		return
 	}
-	query := `INSERT INTO users \(login\, password\, sault\, firstname\, secondname\, sex\, birthdate\, avatars\)
+	query := `INSERT INTO users \(login\, password\, sault\, firstname\, secondname\, sex\, birthdate\, avatar\)
 	VALUES\(\$1\, \$2\, \$3\, \$4\, \$5\, \$6\, \$7\, \$8\)`
 	testUser := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
 

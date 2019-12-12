@@ -38,8 +38,8 @@ func (u *UserUsecase) GetUser(login string) (model.User, error) {
 		return user, e.Error{}.SetCode(e.ProcessError)
 	}
 	user.Login = user.Email
-	//user.Avatar = config.Conf.HttpConfig.SelfURL + "avatars/"+user.Avatar
-	//user.Avatar = "/static/images/icon/no-avatars.svg"
+	//user.Avatar = config.Conf.HttpConfig.SelfURL + "avatar/"+user.Avatar
+	//user.Avatar = "/static/images/icon/no-avatar.svg"
 	if user.Avatar=="" {
 		user.Avatar = config.Conf.DefaultAvatar
 	}
@@ -88,7 +88,7 @@ func (u *UserUsecase) EditAvatar(login string, file multipart.File, header *mult
 	path +=  filename
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		//log.Log().E(fmt.Sprintf("Cannot create avatars file for %s with error: %v", login, err));
+		//log.Log().E(fmt.Sprintf("Cannot create avatar file for %s with error: %v", login, err));
 		return "", err
 	}
 	defer f.Close()

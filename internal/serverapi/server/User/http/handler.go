@@ -83,7 +83,7 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 	newProfile.InflateFromFormdata(r);
 	newProfile.Email = login;
 
-	avaFile, handler, _ := r.FormFile("avatars");
+	avaFile, handler, _ := r.FormFile("avatar");
 	if avaFile!=nil {
 		newFilename, err := h.usecase.EditAvatar(login, avaFile, handler);
 		if err != nil {

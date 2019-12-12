@@ -75,20 +75,20 @@ func TestGetUser(t *testing.T) {
 		t.Errorf("Error during getPostgres(): %s", err)
 		return
 	}
-	query := `SELECT login\, firstname\, secondname\, sex\, avatars\, birthdate FROM users WHERE login=\$1`
+	query := `SELECT login\, firstname\, secondname\, sex\, avatar\, birthdate FROM users WHERE login=\$1`
 	user := model.User{Email: "ivanovivan", Name: "Anonim", Sirname: "Noone",
 		Sex: "male", Avatar: "my_ava.png", BirthDate: "01.01.1274"}
 
 	setDB := []func(sqlmock.Sqlmock) string{
 		func(mock sqlmock.Sqlmock) string {
 			parsed, _ := time.Parse("02.01.2006", user.BirthDate)
-			rows := sqlmock.NewRows([]string{"login", "firstname", "secondname", "sex", "avatars", "birthdate"}).
+			rows := sqlmock.NewRows([]string{"login", "firstname", "secondname", "sex", "avatar", "birthdate"}).
 				AddRow(user.Email, user.Name, user.Sirname, user.Sex, user.Avatar, parsed)
 			mock.ExpectQuery(query).WithArgs(user.Email).WillReturnRows(rows)
 			return user.Email
 		},
 		func(mock sqlmock.Sqlmock) string {
-			rows := sqlmock.NewRows([]string{"login", "firstname", "secondname", "sex", "avatars", "birthdate"})
+			rows := sqlmock.NewRows([]string{"login", "firstname", "secondname", "sex", "avatar", "birthdate"})
 			// AddRow(user.Email, user.Name, user.Sirname, user.Sex, user.Avatar, user.BirthDate)
 			mock.ExpectQuery(query).WithArgs(user.Email).WillReturnRows(rows)
 			return user.Email
@@ -128,7 +128,7 @@ func TestPostgresRepository_UpdateUserData(t *testing.T) {
 		t.Errorf("Error during getPostgres(): %s", err)
 		return
 	}
-	query := `UPDATE users SET avatars=\$1\, firstName=\$2\, secondname=\$3\, sex=\$4\, birthdate=\$5 WHERE login=\$6`
+	query := `UPDATE users SET avatar=\$1\, firstName=\$2\, secondname=\$3\, sex=\$4\, birthdate=\$5 WHERE login=\$6`
 	user := model.User{Email: "ivanovivan", Name: "Anonim", Sirname: "Noone",
 		Sex: "male", Avatar: "my_ava.png", BirthDate: "01.01.1274"}
 	parsedDate, _ := time.Parse("02.01.2006", user.BirthDate)

@@ -29,7 +29,7 @@ func TestGet(t *testing.T) {
 		BirthDate string `json:"birthDate"`
 		Sex       string `json:"sex"`
 		Email     string `json:"login"`
-		Avatar    string `json:"avatars"`
+		Avatar    string `json:"avatar"`
 	}
 	user := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
 	userResponse, err := json.Marshal(struct{

@@ -50,7 +50,7 @@ func easyjson9e1087fdDecode20192NextLevelInternalModel(in *jlexer.Lexer, out *Us
 			out.Email = string(in.String())
 		case "password":
 			out.Password = string(in.String())
-		case "avatars":
+		case "avatar":
 			out.Avatar = string(in.String())
 		case "Sault":
 			out.Sault = string(in.String())
@@ -104,7 +104,7 @@ func easyjson9e1087fdEncode20192NextLevelInternalModel(out *jwriter.Writer, in U
 		out.String(string(in.Password))
 	}
 	{
-		const prefix string = ",\"avatars\":"
+		const prefix string = ",\"avatar\":"
 		out.RawString(prefix)
 		out.String(string(in.Avatar))
 	}
