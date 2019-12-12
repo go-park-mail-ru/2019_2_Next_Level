@@ -12,5 +12,6 @@ type MailRepository interface {
 	MarkMessages(login string, messagesID []models.MailID, mark interface{}) error
 	PutSentMessage(email model.Email) error
 	AddFolder(login string, foldername string) error
+	DeleteFolder(login string, foldername string) error
 	ChangeMailFolder(login string, foldername string, mailid int64) error
 }

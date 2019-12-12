@@ -56,7 +56,7 @@ func (r *PostgresRepository) Init() error {
 
 func (r *PostgresRepository) GetUser(login string) (model.User, error) {
 	user := model.User{}
-	query := `SELECT login, firstname, secondname, sex, avatar, birthdate FROM users WHERE login=$1`
+	query := `SELECT login, firstname, secondname, sex, avatars, birthdate FROM users WHERE login=$1`
 	res := r.DB.QueryRow(query, login)
 	if res == nil {
 		return user, e.Error{}.SetCode(e.ProcessError)
@@ -70,8 +70,26 @@ func (r *PostgresRepository) GetUser(login string) (model.User, error) {
 	return user, nil
 }
 
+func (r *PostgresRepository) GetUserFolders(login string) ([]model.Folder, error) {
+	folders :=make([]model.Folder, 0)
+	query := `SELECT name, count FROM Folder WHERE owner=$1`
+	rows, err := r.DB.Query(query, login)
+	if err != nil {
+		return folders, e.Error{}.SetCode(e.ProcessError)
+	}
+	for rows.Next(){
+		var folder model.Folder
+		err := rows.Scan(&folder.Name, &folder.MessageCount)
+		if err != nil {
+			return folders, e.Error{}.SetCode(e.ProcessError).SetError(err)
+		}
+		folders = append(folders, folder)
+	}
+	return folders, nil
+}
+
 func (r *PostgresRepository) UpdateUserData(user *model.User) error {
-	query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3, sex=$4, birthdate=$5 WHERE login=$6;`
+	query := `UPDATE users SET avatars=$1, firstName=$2, secondname=$3, sex=$4, birthdate=$5 WHERE login=$6;`
 	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)
 	if err0 != nil {
 		return e.Error{}.SetCode(e.InvalidParams).SetError(err0)

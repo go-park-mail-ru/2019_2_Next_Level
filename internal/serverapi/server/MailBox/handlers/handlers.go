@@ -33,6 +33,7 @@ func (h *MailHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/unread", h.MarkMailUnRead).Methods("POST")
 	router.HandleFunc("/remove", h.DeleteEmail).Methods("POST")
 	router.HandleFunc("/addFolder/{name}", h.CreateFolder).Methods("POST")
+	router.HandleFunc("/deleteFolder/{name}", h.DeleteFolder).Methods("POST")
 	router.HandleFunc("/changeFolder/{id}/{name}", h.ChangeMailFolder).Methods("POST")
 }
 
@@ -84,8 +85,6 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 		//return
 	}
 	folder := r.FormValue("folder")
-	page = 1
-	perPage = 25
 
 	//count, page, list, err := h.usecase.GetMailListPlain(login, int(pg))
 	startLetter := perPage*(page-1)+1
@@ -265,6 +264,28 @@ func (h *MailHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 	resp.SetContent(hr.DefaultResponse)
 }
 
+func (h *MailHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
+	resp := h.resp.SetWriter(w).Copy()
+	defer resp.Send()
+	login := h.getLogin(r)
+	if login == "" {
+		resp.SetError(hr.GetError(hr.BadSession))
+		return
+	}
+	args := mux.Vars(r)
+	folderName, ok := args["name"]
+	if !ok {
+		log.Log().E("No such a param: ", "slug")
+		return
+	}
+
+	err := h.usecase.DeleteFolder(login, folderName)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.BadParam))
+		return
+	}
+	resp.SetContent(hr.DefaultResponse)
+}
 
 func (h *MailHandler) getLogin(r *http.Request) string {
 	return r.Header.Get("X-Login")

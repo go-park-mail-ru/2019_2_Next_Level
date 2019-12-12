@@ -1,6 +1,6 @@
 {
     "HttpServer": {
-        "whitelist": {
+        "Whitelist": {
             "https://next-level-mail.kerimovdev.now.sh/": true,
             "https://next-level-mail.ivanovvanya111.now.sh": true,
             "https://nextlevelmail-qjyh50dq4.now.sh/": true,
@@ -8,20 +8,22 @@
             "http://89.178.23.76:3000": true,
 	    "https://nextlevel.now.sh": true
         },
-        "staticDir": "C:\\Users\\Ian\\go\\src\\2019_2_Next_Level\\public",
-        "port": "3001",
-        "fileForFolder": "index.html",
-        "openDir": "open",
-        "privateDir": "private",
-        "selfURL": "http://84.201.143.48/",
-        "defaultAvatar": "default.png",
-        "postServiceHost": "nlmail.hldns.ru",
-        "postServiceSendPort" : "2000",
-        "hostname": "nlmail.hldns.ru"
+        "RootDir": "C:/Users/Ian/go/src/2019_2_Next_Level/",
+        "StaticDir": "public",
+        "Port": "3001",
+        "FileForFolder": "index.html",
+        "AvatarDir": "avatars",
+        "OpenDir": "open",
+        "PrivateDir": "private",
+        "SelfURL": "http://84.201.143.48/",
+        "DefaultAvatar": "no-avatar.svg",
+        "PostServiceHost": "nlmail.hldns.ru",
+        "PostServiceSendPort" : "2000",
+        "HostName": "localhost:4000"
     },
     "Database": {
-        "port": "5432",
-        "host": "0.0.0.0",
-        "dbname": "nextlevel"
+        "Port": "5432",
+        "Host": "0.0.0.0",
+        "DBName": "nextlevel"
     }
 }

@@ -13,5 +13,6 @@ type MailBoxUseCase interface {
 	GetUnreadCount(login string) (int, error)
 	MarkMail(login string, ids []models.MailID, mark int) error
 	AddFolder(login string, foldername string) error
+	DeleteFolder(login string, foldername string) error
 	ChangeMailFolder(login string, foldername string, mailid int64) error
 }

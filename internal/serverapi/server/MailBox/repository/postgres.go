@@ -76,9 +76,10 @@ func (r *PostgresRepository) GetEmailList(login string, folder string, sort inte
 	}else{
 		placeholder = "Receiver.email"
 	}
+	placeholder = `Message.owner`
 	query = fmt.Sprintf(query, placeholder)
 
-	row, err := r.DB.Query(query, login, count, firstNumber-1)
+	row, err := r.DB.Query(query, login, folder, count, firstNumber-1)
 	list := make([]model.Email, 0)
 	if err != nil {
 		return list, e.Error{}.SetCode(e.NotExists)
@@ -169,4 +170,10 @@ func (r *PostgresRepository) ChangeMailFolder(login string, foldername string, m
 	query := `UPDATE Message SET folder=$1 WHERE id=$2`
 	_, err := r.DB.Exec(query, foldername, mailid)
 	return err
+}
+
+func (r *PostgresRepository) DeleteFolder(login string, folderName string) error {
+	query := `DELETE FROM Folder WHERE owner=$1 AND name=$2`
+	_, err := r.DB.Exec(query, login, folderName)
+	return err;
 }

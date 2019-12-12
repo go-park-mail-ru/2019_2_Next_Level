@@ -30,7 +30,7 @@ func NewUserHandler(uc user.UserUsecase) UserHandler {
 
 func (h *UserHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/get", h.GetProfile).Methods("GET")
-	router.HandleFunc("/editUserInfo", h.EditUserInfo).Methods("POST")
+	router.HandleFunc("/editUserInfo", h.EditUserInfo).Methods("PUT")
 	router.HandleFunc("/editPassword", h.EditUserPassword).Methods("POST")
 }
 
@@ -41,8 +41,9 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		BirthDate string `json:"birthDate"`
 		Sex       string `json:"sex"`
 		Email     string `json:"login"`
-		Avatar    string `json:"avatar"`
-		Login string `json:"nickName"`
+		Avatar    string `json:"avatars"`
+		Login 	  string `json:"nickName"`
+		Folders   []model.Folder `json:"folders"`
 	}
 	resp := h.resp.SetWriter(w).Copy()
 	// defer resp.Send()
@@ -53,12 +54,18 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Password = ""
+	folders, err := h.usecase.GetUserFolders(login)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.IncorrectLogin)).Send()
+		return
+	}
 	ans := struct{
 		Status string `json:"status"`
 		Answer Answer `json:"userInfo"`
 	}{"ok",
 		Answer{Name:user.Name, Sirname:user.Sirname, BirthDate:user.BirthDate,
-			Sex:user.Sex, Email:user.Email, Avatar:user.Avatar, Login:user.Login},
+			Sex:user.Sex, Email:user.Email, Avatar:user.Avatar, Login:user.Login,
+			Folders:folders},
 	}
 	err = HttpTools.BodyFromStruct(w, &ans)
 	if err != nil {
@@ -70,20 +77,36 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 	resp := h.resp.SetWriter(w).Copy()
 	defer resp.Send()
-	var user model.User
-	var req struct{
-		UserInfo model.User `json:"userInfo"`
+	login := r.Header.Get("X-Login")
+
+	var newProfile model.User;
+	newProfile.InflateFromFormdata(r);
+	newProfile.Email = login;
+
+	avaFile, handler, _ := r.FormFile("avatars");
+	if avaFile!=nil {
+		newFilename, err := h.usecase.EditAvatar(login, avaFile, handler);
+		if err != nil {
+			resp.SetError(hr.GetError(hr.BadParam));
+			return
+		}
+		newProfile.Avatar = newFilename;
 	}
 
-	err := HttpTools.StructFromBody(*r, &req)
-	if err != nil {
-		resp.SetError(hr.GetError(hr.BadParam))
-		return
-	}
-	user = req.UserInfo
-	login := r.Header.Get("X-Login")
-	user.Email = login
-	err = h.usecase.EditUser(&user)
+	//var user model.User
+	//var req struct{
+	//	UserInfo model.User `json:"userInfo"`
+	//}
+	//
+	//err := HttpTools.StructFromBody(*r, &req)
+	//if err != nil {
+	//	resp.SetError(hr.GetError(hr.BadParam))
+	//	return
+	//}
+	//user = req.UserInfo
+	//login := r.Header.Get("X-Login")
+	//user.Email = login
+	err := h.usecase.EditUser(&newProfile);
 	if err != nil {
 		status := hr.UnknownError
 		switch err.(type) {

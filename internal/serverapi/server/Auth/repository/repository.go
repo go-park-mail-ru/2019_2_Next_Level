@@ -92,7 +92,7 @@ func (r *PostgresRepository) GetLoginBySession(uuid string) (string, error) {
 }
 
 func (r *PostgresRepository) AddNewUser(user *model.User) error {
-	query := `INSERT INTO users (login, password, sault, firstname, secondname, sex, birthdate, avatar)
+	query := `INSERT INTO users (login, password, sault, firstname, secondname, sex, birthdate, avatars)
 				VALUES($1, $2, $3, $4, $5, $6, $7, $8);`
 
 	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)

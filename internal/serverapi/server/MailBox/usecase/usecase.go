@@ -93,3 +93,6 @@ func (u *MailBoxUsecase) AddFolder(login string, foldername string) error {
 func (u *MailBoxUsecase) ChangeMailFolder(login string, foldername string, mailid int64) error {
 	return u.repo.ChangeMailFolder(login, foldername, mailid)
 }
+func (u *MailBoxUsecase) DeleteFolder(login string, foldername string) error {
+	return u.repo.DeleteFolder(login, foldername)
+}
