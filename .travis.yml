@@ -2,6 +2,7 @@ language: go
 
 go:
   - 1.13.x
+go_import_path: 2019_2_Next_Level
 script:
   - pwd
   - lsg
@@ -19,3 +20,5 @@ script:
 before_install:
   - openssl aes-256-cbc -K $encrypted_363a4fc03002_key -iv $encrypted_363a4fc03002_iv
     -in deploy_key.enc -out ./deploy_key -d
+  - pwd
+  - ls
