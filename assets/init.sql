@@ -133,6 +133,18 @@ DROP TRIGGER IF EXISTS user_created ON Users;
 CREATE TRIGGER user_created AFTER INSERT ON Users
     FOR EACH ROW EXECUTE PROCEDURE user_created();
 
+CREATE OR REPLACE FUNCTION user_changed() RETURNS trigger AS $user_changed$
+    BEGIN
+        IF NEW.avatar='' then
+            NEW.avatar=OLD.avatar;
+        end if;
+        RETURN NEW;
+    END
+$user_changed$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS user_changed ON Users;
+CREATE TRIGGER user_changed BEFORE UPDATE ON Users
+    FOR EACH ROW EXECUTE PROCEDURE user_changed();
+
 
 -- CREATE OR REPLACE FUNCTION user_changed() RETURNS trigger AS $user_changed$
 --     BEGIN
@@ -182,6 +194,20 @@ $message_owner$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS message_owner ON Message;
 CREATE TRIGGER message_owner BEFORE INSERT ON Message
     FOR EACH ROW EXECUTE PROCEDURE message_owner();
+
+CREATE OR REPLACE FUNCTION message_delete() RETURNS trigger AS $message_delete$
+    BEGIN
+        if OLD.isRead=NEW.isRead AND OLD.isMarked=NEW.isMarked AND OLD.folder=NEW.folder AND NEW.folder='trash' then
+            -- значит пытались удалить из корзины
+            DELETE FROM Message WHERE id=NEW.id;
+            return null;
+        end if;
+        return NEW;
+    END
+$message_delete$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS message_delete ON Message;
+CREATE TRIGGER message_delete BEFORE UPDATE ON Message
+    FOR EACH ROW EXECUTE PROCEDURE message_delete();
 
 -- Перемещает сообщения из папок при удалении
 CREATE or replace function on_remove_folder() returns trigger as $on_remove_folder$
