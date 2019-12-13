@@ -1,0 +1,5 @@
+before_install:
+- openssl aes-256-cbc -K $encrypted_5588e7643ada_key -iv $encrypted_5588e7643ada_iv
+  -in deploy_key.enc -out deploy_key -d
+- openssl aes-256-cbc -K $encrypted_5588e7643ada_key -iv $encrypted_5588e7643ada_iv
+  -in deploy_key.enc -out ./deploy_key -d
