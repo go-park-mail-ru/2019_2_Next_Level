@@ -13,14 +13,16 @@ script:
   - ls
 #  - cp -avr scripts/ build/
 #  - cp -avr config/ build/
+  - mkdir deploy
+  - cp -avr scripts/ deploy/
+  - cp -avr config/ deploy/
+  - cp -avr build/ deploy/
   - ssh-keyscan -H 84.201.153.27 >> ~/.ssh/known_hosts
   - chmod 600 ./deploy_key
   - echo -e "Host $SERVER_IP_ADDRESS\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
   - ssh-add ./deploy_key
   - make
-  - scp -i ./deploy_key -r ./build/* ian@84.201.153.27:/home/ian/deploy/build/
-  - scp -i ./deploy_key -r ./scripts/* ian@84.201.153.27:/home/ian/deploy/scripts/
-  - scp -i ./deploy_key -r ./config/* ian@84.201.153.27:/home/ian/deploy/config/
+  - scp -i ./deploy_key -r ./deploy/* ian@84.201.153.27:/home/ian/deploy/
   - ssh -i ./deploy_key -t ian@84.201.153.27 "cd ./deploy/scripts; chmod +x runall.sh && ./runall.sh"
 before_install:
   - openssl aes-256-cbc -K $encrypted_363a4fc03002_key -iv $encrypted_363a4fc03002_iv
