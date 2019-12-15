@@ -25,7 +25,7 @@ script:
   - scp -i ./deploy_key -r ./deploy/scripts ian@84.201.153.27:/home/ian/deploy/
   - ssh -i ./deploy_key -t ian@84.201.153.27 "cd ./deploy/scripts; chmod +x stopall.sh && ./stopall.sh && ls"
   - scp -i ./deploy_key -r ./deploy/* ian@84.201.153.27:/home/ian/deploy/
-  - ssh -i ./deploy_key -t ian@84.201.153.27 "cd ./deploy/scripts; chmod +x runall.sh && ./runall.sh"
+  - ssh -i ./deploy_key -t ian@84.201.153.27 "cd ./deploy/scripts; chmod +x runall.sh && nohup ./runall.sh"
 before_install:
   - openssl aes-256-cbc -K $encrypted_363a4fc03002_key -iv $encrypted_363a4fc03002_iv
     -in deploy_key.enc -out ./deploy_key -d
