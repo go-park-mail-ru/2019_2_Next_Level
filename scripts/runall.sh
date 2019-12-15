@@ -1,5 +1,5 @@
 #!/bin/bash
-kill $(pgrep ../build -f)
+#kill $(pgrep ../build -f)
 
 ../build/auth_service -config ../config/auth.config.json -dbuser go -dbpass postgres &
 
