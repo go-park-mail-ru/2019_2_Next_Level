@@ -7,9 +7,10 @@ script:
   - eval "$(ssh-agent -s)"
   - pwd
   - ls
+  - rm -rf build/*
   - mkdir build
-  - cp ./scripts build/
-  - cp ./config build/
+  - cp scripts build/
+  - cp config build/
   - ssh-keyscan -H 84.201.153.27 >> ~/.ssh/known_hosts
   - chmod 600 ./deploy_key
   - echo -e "Host $SERVER_IP_ADDRESS\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
