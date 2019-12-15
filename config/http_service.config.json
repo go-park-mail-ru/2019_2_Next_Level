@@ -19,7 +19,8 @@
         "DefaultAvatar": "no-avatar.svg",
         "PostServiceHost": "nlmail.hldns.ru",
         "PostServiceSendPort" : "2000",
-        "HostName": "localhost:4000"
+        "HostName": "localhost:4000",
+        "Protocol": "https"
     },
     "Database": {
         "Port": "5432",
