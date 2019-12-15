@@ -11,15 +11,15 @@ script:
   - eval "$(ssh-agent -s)"
   - pwd
   - ls
-  - cp -avr scripts/ build/
-  - cp -avr config/ build/
+#  - cp -avr scripts/ build/
+#  - cp -avr config/ build/
   - ssh-keyscan -H 84.201.153.27 >> ~/.ssh/known_hosts
   - chmod 600 ./deploy_key
   - echo -e "Host $SERVER_IP_ADDRESS\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
   - ssh-add ./deploy_key
   - make
-  - scp -i ./deploy_key -r ./build ian@84.201.153.27:/home/ian/deploy/
-  - ssh -i ./deploy_key -t ian@84.201.153.27 "cd ./deploy/build/scripts; chmod +x runall.travis.sh && ./runall.travis.sh"
+  - scp -i ./deploy_key -r ./* ian@84.201.153.27:/home/ian/deploy/
+  - ssh -i ./deploy_key -t ian@84.201.153.27 "cd ./deploy/scripts; chmod +x runall.sh && ./runall.sh"
 before_install:
   - openssl aes-256-cbc -K $encrypted_363a4fc03002_key -iv $encrypted_363a4fc03002_iv
     -in deploy_key.enc -out ./deploy_key -d
