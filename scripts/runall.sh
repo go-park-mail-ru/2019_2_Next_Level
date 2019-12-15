@@ -1,7 +1,7 @@
 #!/bin/bash
 kill $(pgrep ../build -f)
 
-../build/auth_service &
+../build/auth_service -config ../config/auth.config.json -dbuser go -dbpass postgres &
 
 #go run ../cmd/MailPicker/main.go -config=../config/mailpicker.config.json -dbuser go -dbpass postgres &
 

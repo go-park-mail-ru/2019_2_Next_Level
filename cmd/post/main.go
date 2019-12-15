@@ -72,10 +72,7 @@ func Execute(daemons ...daemon) {
 func initializeConfig() error {
 	configFilename := flag.String("config", configFilenameDefault, "Path to config file")
 	flag.Parse()
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
+	ex, _ := os.Executable()
 	location := filepath.Dir(ex)
 	log.Log().E(location)
 
