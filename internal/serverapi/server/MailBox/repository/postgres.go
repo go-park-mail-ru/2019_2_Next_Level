@@ -74,6 +74,7 @@ func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) ([]m
 		if err != nil {
 			return mails, e.Error{}.SetError(err)
 		}
+		mail.Id=int(id)
 		mail.Header.WhenReceived, _= time.Parse(time.RFC3339, when)
 		mails = append(mails, mail)
 	}
