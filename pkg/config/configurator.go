@@ -2,10 +2,8 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 )
 
 const (
@@ -17,12 +15,6 @@ type ConfigInterface interface {
 }
 
 func Inflate(filename string, dest ConfigInterface, args ...interface{}) error {
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	location := filepath.Dir(ex)
-	fmt.Println(location)
 	jsonFile, err := os.Open(configPath + filename)
 	if err != nil {
 		return err
