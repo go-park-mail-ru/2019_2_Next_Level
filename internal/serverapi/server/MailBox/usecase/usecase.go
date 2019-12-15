@@ -27,8 +27,9 @@ func NewMailBoxUsecase(repo mailbox.MailRepository, smtp postinterface.IPostInte
 	return &usecase
 }
 func (u *MailBoxUsecase) SendMail(email *model.Email) error 	{
-	email.From = email.From+"@"+config.Conf.HttpConfig.HostName
+	//email.From = email.From+"@"+config.Conf.HttpConfig.HostName
 	//email.From = email.From+"@"+"nlmail.hldns.ru"
+	email.From = email.From+"@"+"mail.nl-mail.ru"
 	login, host := email.Split(email.To)
 	if host==""{
 		email.To = login + "@"+config.Conf.HttpConfig.HostName
