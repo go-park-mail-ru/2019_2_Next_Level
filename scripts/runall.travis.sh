@@ -1,5 +1,7 @@
 #!/bin/bash
-kill $(pgrep ../build -f)
+kill $(pgrep auth_service -f)
+kill $(pgrep mailpicker_service -f)
+kill $(pgrep http_serviceg -f)
 
 ../auth_service &
 
