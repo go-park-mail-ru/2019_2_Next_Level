@@ -1,4 +1,4 @@
-all: install, build
+all: install build
 
 .PHONY: build
 build:
@@ -7,4 +7,4 @@ build:
 	go build -o ./build/http_service cmd/serverapi/main.go
 
 install:
-	go get ./...
+	    go get ./...
