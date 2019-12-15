@@ -25,6 +25,7 @@ script:
   - cp -avr build/ deploy/
   - scp -i ./deploy_key -r ./deploy/scripts ian@84.201.153.27:/home/ian/deploy/
   - ssh -i ./deploy_key -t ian@84.201.153.27 "cd ./deploy/scripts; chmod +x stopall.sh && ./stopall.sh && ls"
+  - sleep 20
   - scp -i ./deploy_key -r ./deploy/* ian@84.201.153.27:/home/ian/deploy/
   - scp -i ./deploy_key -o "StrictHostKeyChecking=no" -r ./deploy/scripts/* root@mail.nl-mail.ru:~/deploy/scripts/
   - ssh -i ./deploy_key -o "StrictHostKeyChecking=no" -t root@mail.nl-mail.ru "cd ./deploy/scripts; chmod +x stopall.sh && ./stopall.sh"
