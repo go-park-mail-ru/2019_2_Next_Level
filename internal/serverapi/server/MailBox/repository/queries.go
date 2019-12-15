@@ -7,7 +7,7 @@ const(
 
 	queryGetEmailList = `SELECT Message.id, sender, email AS "receivers", time, subject, body, isread from Message
 						JOIN Receiver ON Message.id=Receiver.mailId
-						WHERE %s=$1 AND folder=$2 ORDER BY time LIMIT $3 OFFSET $4;`
+						WHERE %s=$1 AND folder=$2 ORDER BY id DESC LIMIT $3 OFFSET $4;`
 
 	queryGetMessagesCount = `SELECT COUNT(Message.id) from Message JOIN Receiver ON Message.id=Receiver.mailId
 							WHERE Receiver.email=$1`
