@@ -2,7 +2,7 @@ language: go
 
 go:
   - 1.13.x
-go_import_path: 2019_2_Next_Level
+go_import_path: ./2019_2_Next_Level
 script:
   - eval "$(ssh-agent -s)"
   - pwd
@@ -12,9 +12,6 @@ script:
   - echo -e "Host $SERVER_IP_ADDRESS\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
   - ssh-add ./deploy_key
   - ssh -i ./deploy_key ian@84.201.153.27 pwd
-  - go build -o ./build/auth_service cmd/Auth/main.go
-  - go build -o ./build/mailpicker_service cmd/MailPicker/main.go
-  - go build -o ./build/http_service cmd/serverapi/main.go
   - scp -i ./deploy_key -r ./* ian@84.201.153.27:/home/ian/deploy/ && \
     kill $(pgrep ../build -f) && cd ./scripts && chmod +x runall.sh && ./runall.shg
 before_install:
