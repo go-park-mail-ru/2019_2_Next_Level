@@ -19,4 +19,3 @@ before_install:
   - openssl aes-256-cbc -K $encrypted_363a4fc03002_key -iv $encrypted_363a4fc03002_iv
     -in deploy_key.enc -out ./deploy_key -d
   - rm -rf build/*
-  - mkdir build
