@@ -1,4 +1,5 @@
 #!/bin/bash
+kill $(pgrep ../build -f)
 
 ../build/auth_service &
 

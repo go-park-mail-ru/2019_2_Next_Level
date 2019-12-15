@@ -45,7 +45,7 @@ func (u *UserUsecase) GetUser(login string) (model.User, error) {
 	}
 	a := config.Conf
 	fmt.Println(a)
-	user.Avatar = "http://" + config.Conf.HostName+"/"+config.Conf.StaticDir+"/"+config.Conf.AvatarDir + "/" + user.Avatar;
+	user.Avatar = config.Conf.Protocol+"://" + config.Conf.HostName+"/"+config.Conf.StaticDir+"/"+config.Conf.AvatarDir + "/" + user.Avatar;
 	user.Sanitize()
 	return user, nil
 }

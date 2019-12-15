@@ -1,0 +1,32 @@
+{
+    "HttpServer": {
+        "Whitelist": {
+            "https://next-level-mail.kerimovdev.now.sh/": true,
+            "https://next-level-mail.ivanovvanya111.now.sh": true,
+            "https://nextlevelmail-qjyh50dq4.now.sh/": true,
+            "http://localhost:3000": true,
+            "http://89.178.23.76:3000": true,
+            "https://nextlevel.now.sh": true,
+            "https://debug-nextlevel.now.sh": true,
+            "https://nl-mail.ru": true
+        },
+        "RootDir": "/var/www/nextlevel",
+        "StaticDir": "backend_public",
+        "Port": "3001",
+        "FileForFolder": "index.html",
+        "AvatarDir": "avatars",
+        "OpenDir": "open",
+        "PrivateDir": "private",
+        "SelfURL": "http://84.201.143.48/",
+        "DefaultAvatar": "no-avatar.svg",
+        "PostServiceHost": "nlmail.hldns.ru",
+        "PostServiceSendPort" : "2000",
+        "HostName": "nl-mail.ru",
+        "Protocol": "https"
+    },
+    "Database": {
+        "Port": "5432",
+        "Host": "0.0.0.0",
+        "DBName": "nextlevel"
+    }
+}

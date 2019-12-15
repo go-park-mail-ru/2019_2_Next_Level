@@ -15,6 +15,7 @@ type HTTPConfig struct {
 	DefaultAvatar       string
 	PostServiceHost     string
 	PostServiceSendPort string
+	Protocol 			string
 	HostName string
 }
 
