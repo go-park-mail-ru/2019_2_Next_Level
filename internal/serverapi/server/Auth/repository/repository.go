@@ -6,7 +6,6 @@ import (
 	e "2019_2_Next_Level/pkg/HttpError/Error"
 	"database/sql"
 	"fmt"
-	"time"
 
 	_ "github.com/jackc/pgx/stdlib"
 )
@@ -92,15 +91,10 @@ func (r *PostgresRepository) GetLoginBySession(uuid string) (string, error) {
 }
 
 func (r *PostgresRepository) AddNewUser(user *model.User) error {
-	query := `INSERT INTO users (login, password, sault, firstname, secondname, sex, birthdate, avatar)
-				VALUES($1, $2, $3, $4, $5, $6, $7, $8);`
+	query := `INSERT INTO users (login, password, sault, firstname, secondname, avatar)
+				VALUES($1, $2, $3, $4, $5, $6);`
 
-	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)
-	if err0 != nil {
-		return e.Error{}.SetCode(e.InvalidParams).SetError(err0)
-	}
-	user.BirthDate = parsedDate.Format("2006/01/02")
-	_, err := r.DB.Exec(query, user.Email, []byte(user.Password), []byte(user.Sault), user.Name, user.Sirname, user.Sex, user.BirthDate, user.Avatar)
+	_, err := r.DB.Exec(query, user.Email, []byte(user.Password), []byte(user.Sault), user.Name, user.Sirname, user.Avatar)
 	if err != nil {
 		return e.Error{}.SetCode(e.AlreadyExists).SetError(err)
 	}

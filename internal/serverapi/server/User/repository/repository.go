@@ -4,7 +4,6 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
 	e "2019_2_Next_Level/pkg/HttpError/Error"
-	"2019_2_Next_Level/pkg/sqlTools"
 	"database/sql"
 	"fmt"
 	"time"
@@ -89,12 +88,8 @@ func (r *PostgresRepository) GetUserFolders(login string) ([]model.Folder, error
 }
 
 func (r *PostgresRepository) UpdateUserData(user *model.User) error {
-	query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3, sex=$4, birthdate=$5 WHERE login=$6;`
-	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)
-	if err0 != nil {
-		return e.Error{}.SetCode(e.InvalidParams).SetError(err0)
-	}
-	_, err := r.DB.Exec(query, user.Avatar, user.Name, user.Sirname, user.Sex, sqlTools.FormatDate(sqlTools.BDPostgres, parsedDate), user.Email)
+	query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3 WHERE login=$4;`
+	_, err := r.DB.Exec(query, user.Avatar, user.Name, user.Sirname, user.Email)
 	if err != nil {
 		return err
 	}
