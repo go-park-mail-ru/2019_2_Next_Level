@@ -88,11 +88,28 @@ func (r *PostgresRepository) GetUserFolders(login string) ([]model.Folder, error
 }
 
 func (r *PostgresRepository) UpdateUserData(user *model.User) error {
-	query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3 WHERE login=$4;`
-	_, err := r.DB.Exec(query, user.Avatar, user.Name, user.Sirname, user.Email)
+	//query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3 WHERE login=$4;`
+	f := func (name, value string) error{
+		query := `UPDATE users SET %1=$1 WHERE login=$2`
+		if value != ""{
+			_, err := r.DB.Exec(fmt.Sprintf(query, name), value, user.Login)
+			return err
+		}
+		return nil
+	}
+	err := f("firstName", user.Name)
 	if err != nil {
 		return err
 	}
+	err = f("secondNameName", user.Sirname)
+	if err != nil {
+		return err
+	}
+	err = f("avatar", user.Avatar)
+	if err != nil {
+		return err
+	}
+	//_, err := r.DB.Exec(query, user.Avatar, user.Name, user.Sirname, user.Email)
 	return nil
 }
 
