@@ -3,6 +3,7 @@ package repository
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
+	"2019_2_Next_Level/internal/serverapi/log"
 	e "2019_2_Next_Level/pkg/HttpError/Error"
 	"database/sql"
 	"fmt"
@@ -92,7 +93,8 @@ func (r *PostgresRepository) UpdateUserData(user *model.User) error {
 	f := func (name, value string) error{
 		query := `UPDATE users SET %1=$1 WHERE login=$2`
 		if value != ""{
-			_, err := r.DB.Exec(fmt.Sprintf(query, name), value, user.Login)
+			_, err := r.DB.Exec(fmt.Sprintf(query, name), value, user.Email)
+			log.Log().L("Result user.repo:97 ", err);
 			return err
 		}
 		return nil
