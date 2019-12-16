@@ -103,7 +103,7 @@ func (r *PostgresRepository) UpdateUserData(user *model.User) error {
 	if err != nil {
 		return err
 	}
-	err = f("secondNameName", user.Sirname)
+	err = f("secondName", user.Sirname)
 	if err != nil {
 		return err
 	}
