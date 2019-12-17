@@ -83,6 +83,8 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Log().L("New avatar name ", newFilename)
 		newProfile.Avatar = newFilename;
+	} else {
+		log.Log().E("No avatar")
 	}
 
 	err := h.usecase.EditUser(&newProfile);
