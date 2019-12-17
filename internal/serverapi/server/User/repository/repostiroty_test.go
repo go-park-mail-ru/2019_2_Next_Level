@@ -3,7 +3,7 @@ package repository
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/TestTools"
 	"2019_2_Next_Level/pkg/sqlTools"
 	"testing"
@@ -20,54 +20,6 @@ func init() {
 	defaultConf = config.Database{DBName: "nextlevel", Port: "5432", Host: "localhost", User: "postgres", Password: "postgres"}
 	config.Conf.DB = defaultConf
 }
-
-func TestGetUserCredentials(t *testing.T) {
-	repo, err := GetPostgres()
-	if err != nil {
-		t.Errorf("Error during getPostgres(): %s", err)
-		return
-	}
-	query := `SELECT password\, sault FROM users WHERE login=\$1`
-
-	setDB := []func(sqlmock.Sqlmock) string{
-		func(mock sqlmock.Sqlmock) string {
-			rows := sqlmock.NewRows([]string{"password", "sault"}).AddRow("password", "sault")
-			mock.ExpectQuery(query).WithArgs("login").WillReturnRows(rows)
-			return "login"
-		},
-		func(mock sqlmock.Sqlmock) string {
-			mock.ExpectQuery(query).WithArgs("login")
-			return "login"
-		},
-	}
-
-	expected := []struct {
-		Ans []string
-		Err error
-	}{
-		{[]string{"password", "sault"}, nil},
-		{[]string{"", ""}, e.Error{}},
-	}
-
-	for i, f := range setDB {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			t.Errorf("Error doring init sqlmock")
-			return
-		}
-		defer db.Close()
-		repo.DB = db
-		param := f(mock)
-		pass, saut, err := repo.GetUserCredentials(param)
-		if expected[i].Ans[0] != pass || expected[i].Ans[1] != saut {
-			t.Errorf("Wrong answer: %v instead %v", []string{pass, saut}, expected[i].Ans)
-		}
-		if (err != nil) != (expected[i].Err != nil) {
-			t.Errorf("Wrong error: %v instead %v", err, expected[i].Err)
-		}
-	}
-}
-
 func TestGetUser(t *testing.T) {
 
 	repo, err := GetPostgres()
@@ -122,6 +74,64 @@ func TestGetUser(t *testing.T) {
 	}
 }
 
+func TestPostgresRepository_GetUserFolders(t *testing.T) {
+
+	repo, err := GetPostgres()
+	if err != nil {
+		t.Errorf("Error during getPostgres(): %s", err)
+		return
+	}
+	query := `SELECT name\, count FROM Folder WHERE owner=\$1`
+	login := "ian"
+
+	setDB := []func(sqlmock.Sqlmock) []model.Folder{
+		func(mock sqlmock.Sqlmock) []model.Folder {
+			rows := sqlmock.NewRows([]string{"name", "count"}).
+				AddRow("folder", 1)
+			mock.ExpectQuery(query).WithArgs(login).WillReturnRows(rows).WillReturnError(nil)
+			return []model.Folder{model.Folder{
+				Name:         "folder",
+				MessageCount: 1,
+			}}
+		},
+		func(mock sqlmock.Sqlmock) []model.Folder {
+			rows := sqlmock.NewRows([]string{"name", "count"}).
+				AddRow("folder", 1)
+			mock.ExpectQuery(query).WithArgs(login).WillReturnRows(rows).WillReturnError(e.Error{})
+			return []model.Folder{}
+		},
+	}
+
+	expected := []struct {
+		Folder []model.Folder
+		Err error
+	}{
+		{[]model.Folder{model.Folder{
+			Name:         "folder",
+			MessageCount: 1,
+		}}, nil},
+		{[]model.Folder{}, e.Error{}},
+	}
+
+	for i, f := range setDB {
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Errorf("Error doring init sqlmock")
+			return
+		}
+		defer db.Close()
+		repo.DB = db
+		f(mock)
+		gotUser, err := repo.GetUserFolders(login)
+		if !cmp.Equal(gotUser, expected[i].Folder) {
+			t.Errorf("Wrong answer: %v instead %v", gotUser, expected[i].Folder)
+		}
+		if (err != nil) != (expected[i].Err != nil) {
+			t.Errorf("Wrong error: %v instead %v", err, expected[i].Err)
+		}
+	}
+}
+
 func TestPostgresRepository_UpdateUserData(t *testing.T) {
 	repo, err := GetPostgres()
 	if err != nil {
@@ -153,7 +163,7 @@ func TestPostgresRepository_UpdateUserData(t *testing.T) {
 		mock.ExpectExec(query).WithArgs(user.Avatar, user.Name, user.Sirname, user.Sex,
 			sqlTools.FormatDate(sqlTools.BDPostgres, parsedDate), user.Email)
 
-		_ = repo.UpdateUserPassword("login", "password", "sault")
+		_ = repo.UpdateUserData(&user)
 	})
 }
 

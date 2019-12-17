@@ -2,7 +2,7 @@ package repository
 
 import (
 	"2019_2_Next_Level/internal/model"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 	"fmt"
 )
 const (

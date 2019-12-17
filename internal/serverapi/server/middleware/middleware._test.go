@@ -4,6 +4,7 @@ import (
 	"2019_2_Next_Level/internal/serverapi/config"
 	"2019_2_Next_Level/internal/serverapi/log"
 	mokk "2019_2_Next_Level/tests/mock"
+	"2019_2_Next_Level/tests/mock/Auth"
 	"2019_2_Next_Level/tests/mock/mock"
 	"bytes"
 	"net/http"
@@ -36,7 +37,7 @@ func TestAuth(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockUsecase := mock.NewMockUsecase(mockCtrl)
+	mockUsecase := Auth.NewMockUsecase(mockCtrl)
 	mockHttpHandler := mock.NewMockHandler(mockCtrl)
 
 	login := "aaa"
@@ -92,7 +93,7 @@ func TestCors(t *testing.T) {
 	if headers.Get("Access-Control-Allow-Origin") != hostName ||
 		headers.Get("Access-Control-Allow-Credentials") != "true" ||
 		headers.Get("Access-Control-Allow-Headers") != "Content-Type" ||
-		headers.Get("Access-Control-Allow-Methods") != "GET, POST, OPTIONS" {
+		headers.Get("Access-Control-Allow-Methods") != "GET, POST, OPTIONS, PUT, DELETE" {
 		t.Error("Wrong headers got")
 	}
 }

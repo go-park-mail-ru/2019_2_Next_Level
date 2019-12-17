@@ -3,9 +3,9 @@ package handlers
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/log"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
 	"2019_2_Next_Level/pkg/HttpTools"
 	"net/http"
 	"strconv"
@@ -21,7 +21,7 @@ type MailHandler struct {
 // NewMailHandler : sets handlers for specified routes (prefix = "/mail")
 func NewMailHandler(usecase mailbox.MailBoxUseCase) *MailHandler{
 	handler := MailHandler{usecase: usecase}
-	handler.resp = (&HttpTools.Response{}).SetError(hr.DefaultResponse)
+	handler.resp = (&HttpTools.Response{}).SetError(&hr.DefaultResponse)
 	return &handler
 }
 
@@ -56,14 +56,11 @@ func (h *MailHandler) FindMessages(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.UnknownError))
 		return
 	}
-	respList := struct{
-		Status string `json:"status"`
-		Messages []int64 `json:"messages"`
-	}{
+	respList := GetMessagesList{
 		Status: "ok",
 		Messages: list,
 	}
-	resp.SetContent(respList)
+	resp.SetContent(&respList)
 
 }
 
@@ -104,19 +101,10 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pageTemp := r.FormValue("page")
-	page, err := strconv.ParseInt(pageTemp, 10, 8)
-	if err != nil {
-		//resp.SetError(hr.GetError(hr.BadParam))
-		//return
-	}
-	perPage, err := strconv.ParseInt(r.FormValue("perPage"), 10, 8)
-	if err != nil {
-		//resp.SetError(hr.GetError(hr.BadParam))
-		//return
-	}
+	page, err := strconv.ParseInt(pageTemp, 10, 64)
+	perPage, err := strconv.ParseInt(r.FormValue("perPage"), 10, 64)
 	folder := r.FormValue("folder")
 
-	//count, page, list, err := h.usecase.GetMailListPlain(login, int(pg))
 	startLetter := perPage*(page-1)+1
 	list, err := h.usecase.GetMailList(login, folder, "", int(startLetter), int(perPage))
 	if err != nil {
@@ -124,12 +112,7 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	resp.SetContent(struct{
-		Status string `json:"status"`
-		PagesCount int `json:"pagesCount"`
-		Page int `json:"page"`
-		Messages []models.MailToGet `json:"messages"`
-	}{
+	resp.SetContent(&GetFolderMessagesResponse{
 		Status:"ok",
 		PagesCount:10,
 		Page: int(page),
@@ -157,10 +140,7 @@ func (h *MailHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 		log.Log().E(err)
 		return
 	}
-	resp.SetContent(struct{
-		Status string
-		Count int
-	}{Status:"ok", Count:count})
+	resp.SetContent(&GetMessagesCountResponse{Status:"ok", Count:count})
 }
 
 func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
@@ -183,14 +163,11 @@ func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mail := mails[0]
-	answer := struct {
-		Status  string           `json:"status"`
-		Message models.MailToGet `json:"message"`
-	}{
+	answer := GetMessageResponse{
 		Status: "ok",
 		Message: models.MailToGet{}.FromMain(&mail),
 	}
-	resp.SetContent(answer)
+	resp.SetContent(&answer)
 }
 
 func (h *MailHandler) GetEmailsById (w http.ResponseWriter, r *http.Request) {
@@ -285,7 +262,7 @@ func (h *MailHandler) ChangeMailFolder(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	resp.SetContent(hr.DefaultResponse)
+	resp.SetContent(&hr.DefaultResponse)
 
 }
 
@@ -309,7 +286,7 @@ func (h *MailHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	resp.SetContent(hr.DefaultResponse)
+	resp.SetContent(&hr.DefaultResponse)
 }
 
 func (h *MailHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
@@ -332,20 +309,16 @@ func (h *MailHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	resp.SetContent(hr.DefaultResponse)
+	resp.SetContent(&hr.DefaultResponse)
 }
 
 func (h *MailHandler) getLogin(r *http.Request) string {
 	return r.Header.Get("X-Login")
 }
 
-func (h *MailHandler) prepareList(list []model.Email) interface{} {
-	answer := struct {
-		Status  string           `json:"status"`
-		Messages []models.MailToGet `json:"messages"`
-	}{
+func (h *MailHandler) prepareList(list []model.Email) *GetMessagesListResponse {
+	answer := GetMessagesListResponse{
 		Status: "ok",
-		//Messages: mailsToGet,
 		Messages: func()[]models.MailToGet{
 			localList := make([]models.MailToGet, 0, len(list))
 			for _, elem := range list {
@@ -354,5 +327,5 @@ func (h *MailHandler) prepareList(list []model.Email) interface{} {
 			return localList
 		}(),
 	}
-	return answer
+	return &answer
 }

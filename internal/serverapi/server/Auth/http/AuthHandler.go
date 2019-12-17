@@ -3,8 +3,8 @@ package http
 import (
 	"2019_2_Next_Level/internal/model"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
+	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/HttpTools"
 	"net/http"
 	"time"
@@ -23,7 +23,7 @@ type AuthHandler struct {
 }
 
 func NewAuthHandler(uc auth.Usecase) AuthHandler {
-	resp := (&HttpTools.Response{}).SetError(hr.DefaultResponse)
+	resp := (&HttpTools.Response{}).SetError(&hr.DefaultResponse)
 	handler := AuthHandler{usecase: uc, resp: resp}
 	return handler
 }

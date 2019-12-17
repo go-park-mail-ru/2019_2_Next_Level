@@ -1,0 +1,3 @@
+go test -coverprofile=cover.out.tmp -coverpkg=./internal/... -cover ./internal/...
+type cover.out.tmp | findstr -v "_easyjson.go" > cover.out
+go tool cover -func=cover.out

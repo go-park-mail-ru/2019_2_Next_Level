@@ -7,7 +7,7 @@ import (
 	"2019_2_Next_Level/internal/serverapi/config"
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 	"github.com/microcosm-cc/bluemonday"
 	"strconv"
 )

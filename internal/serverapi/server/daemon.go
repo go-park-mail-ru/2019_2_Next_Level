@@ -62,7 +62,7 @@ func Run(externwg *sync.WaitGroup) error {
 }
 
 func InflateRouter(router *mux.Router) {
-	router.Use(middleware.CorsMethodMiddleware()) // CORS for all requests
+	//router.Use(middleware.CorsMethodMiddleware()) // CORS for all requests
 	router.Use(middleware.AccessLogMiddleware())
 	router.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 

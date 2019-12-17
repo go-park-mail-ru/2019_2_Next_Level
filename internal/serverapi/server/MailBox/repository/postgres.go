@@ -4,7 +4,7 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/sqlTools"
 	"database/sql"
 	"fmt"

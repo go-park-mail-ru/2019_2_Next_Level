@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
 	"github.com/gorilla/mux"
 )
 type statusWriter struct {

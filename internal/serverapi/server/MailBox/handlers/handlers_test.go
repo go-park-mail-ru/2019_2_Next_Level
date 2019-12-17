@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"2019_2_Next_Level/internal/model"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
 	"2019_2_Next_Level/pkg/TestTools"
-	"2019_2_Next_Level/tests/mock/MailBox"
+	MailBox "2019_2_Next_Level/tests/mock/serverapi"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -32,7 +32,7 @@ func TestMailHandler_SendMail(t *testing.T) {
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":login},
-			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"resp": &hr.DefaultResponse},
 			map[string]TestTools.Params{"times":1, "returns":nil,
 
 			}),
@@ -73,7 +73,7 @@ func TestMailHandler_SendMail(t *testing.T) {
 		h.SendMail(w, r)
 		var got hr.HttpResponse
 		_ =json.Unmarshal([]byte(w.Body.String()), &got)
-		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+		if !cmp.Equal(got.Status, test.Expected["resp"].(*hr.HttpResponse).Status) {
 			t.Error("Wrong resp")
 		}
 
@@ -95,7 +95,7 @@ func TestMailHandler_GetMailList(t *testing.T) {
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":login},
-			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"resp": &hr.DefaultResponse},
 			map[string]TestTools.Params{"times":1, "err":nil, "list":list,
 
 			}),
@@ -119,7 +119,7 @@ func TestMailHandler_GetMailList(t *testing.T) {
 		if test.MockParams["err"] != nil {
 			err = test.MockParams["err"].(error)
 		}
-		mockUsecase.EXPECT().GetMailList(login, "inbox", "", 1, 25).
+		mockUsecase.EXPECT().GetMailList(login, "inbox", "", 1, 0).
 			Return(test.MockParams["list"].([]model.Email), err).Times(test.MockParams["times"].(int))
 		r := httptest.NewRequest("POST", "/auth.signin?folder=inbox", strings.NewReader("folder=inbox"))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
@@ -130,7 +130,7 @@ func TestMailHandler_GetMailList(t *testing.T) {
 		h.GetMailList(w, r)
 		var got hr.HttpResponse
 		_ =json.Unmarshal([]byte(w.Body.String()), &got)
-		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+		if !cmp.Equal(got.Status, test.Expected["resp"].(*hr.HttpResponse).Status) {
 			t.Error("Wrong resp")
 		}
 
@@ -149,7 +149,7 @@ func TestMailHandler_GetUnreadCount(t *testing.T) {
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":login},
-			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"resp": &hr.DefaultResponse},
 			map[string]TestTools.Params{"times":1, "err":nil, "returns":12,
 
 			}),
@@ -184,7 +184,7 @@ func TestMailHandler_GetUnreadCount(t *testing.T) {
 		h.GetUnreadCount(w, r)
 		var got hr.HttpResponse
 		_ =json.Unmarshal([]byte(w.Body.String()), &got)
-		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+		if !cmp.Equal(got.Status, test.Expected["resp"].(*hr.HttpResponse).Status) {
 			t.Error("Wrong resp")
 		}
 
@@ -204,7 +204,7 @@ func TestMailHandler_GetEmail(t *testing.T) {
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":login},
-			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"resp": &hr.DefaultResponse},
 			map[string]TestTools.Params{"times":1, "err":nil, "returns":email,
 
 			}),
@@ -228,8 +228,8 @@ func TestMailHandler_GetEmail(t *testing.T) {
 		if test.MockParams["err"] != nil {
 			err = test.MockParams["err"].(error)
 		}
-		mockUsecase.EXPECT().GetMail(test.Input["login"].(string), models.MailID(12345)).
-			Return(test.MockParams["returns"].(model.Email), err).Times(test.MockParams["times"].(int))
+		mockUsecase.EXPECT().GetMail(test.Input["login"].(string), []models.MailID{models.MailID(12345)}).
+			Return([]model.Email{test.MockParams["returns"].(model.Email)}, err).Times(test.MockParams["times"].(int))
 		r := httptest.NewRequest("GET", "/auth.signin?id=12345", strings.NewReader(""))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 		w := httptest.NewRecorder()
@@ -239,7 +239,7 @@ func TestMailHandler_GetEmail(t *testing.T) {
 		h.GetEmail(w, r)
 		var got hr.HttpResponse
 		_ =json.Unmarshal([]byte(w.Body.String()), &got)
-		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+		if !cmp.Equal(got.Status, test.Expected["resp"].(*hr.HttpResponse).Status) {
 			t.Error("Wrong resp")
 		}
 
@@ -263,7 +263,7 @@ func TestMailHandler_MarkMailRead(t *testing.T) {
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":login, "req":req},
-			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"resp": &hr.DefaultResponse},
 			map[string]TestTools.Params{"times":1, "err":nil, "mark":models.MarkMessageRead,
 
 			}),
@@ -293,7 +293,7 @@ func TestMailHandler_MarkMailRead(t *testing.T) {
 		h.MarkMailRead(w, r)
 		var got hr.HttpResponse
 		_ =json.Unmarshal([]byte(w.Body.String()), &got)
-		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+		if !cmp.Equal(got.Status, test.Expected["resp"].(*hr.HttpResponse).Status) {
 			t.Error("Wrong resp")
 		}
 
@@ -312,7 +312,7 @@ func TestMailHandler_ChangeMailFolder(t *testing.T) {
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":login, "folder":"folder", "id":int64(12345)},
-			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"resp": &hr.DefaultResponse},
 			map[string]TestTools.Params{"times":1, "err":nil, "returns":12,
 
 			}),
@@ -350,7 +350,7 @@ func TestMailHandler_ChangeMailFolder(t *testing.T) {
 		h.ChangeMailFolder(w, r)
 		var got hr.HttpResponse
 		_ =json.Unmarshal([]byte(w.Body.String()), &got)
-		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+		if !cmp.Equal(got.Status, test.Expected["resp"].(*hr.HttpResponse).Status) {
 			t.Error("Wrong resp")
 		}
 
@@ -369,7 +369,7 @@ func TestMailHandler_CreateFolder(t *testing.T) {
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":login, "folder":"folder"},
-			map[string]TestTools.Params{"resp": hr.DefaultResponse},
+			map[string]TestTools.Params{"resp": &hr.DefaultResponse},
 			map[string]TestTools.Params{"times":1, "err":nil, "returns":12,
 
 			}),
@@ -406,7 +406,7 @@ func TestMailHandler_CreateFolder(t *testing.T) {
 		h.CreateFolder(w, r)
 		var got hr.HttpResponse
 		_ =json.Unmarshal([]byte(w.Body.String()), &got)
-		if !cmp.Equal(got.Status, test.Expected["resp"].(hr.HttpResponse).Status) {
+		if !cmp.Equal(got.Status, test.Expected["resp"].(*hr.HttpResponse).Status) {
 			t.Error("Wrong resp")
 		}
 

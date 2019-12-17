@@ -4,10 +4,10 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
-	httperror "2019_2_Next_Level/pkg/HttpError/Error/httpError"
+	httperror "2019_2_Next_Level/internal/serverapi/server/HttpError"
+	e "2019_2_Next_Level/pkg/Error"
 	mockk "2019_2_Next_Level/tests/mock"
-	"2019_2_Next_Level/tests/mock/mock"
+	"2019_2_Next_Level/tests/mock/Auth"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -26,7 +26,7 @@ func TestIsAuth(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockUsecase := mock.NewMockUsecase(mockCtrl)
+	mockUsecase := Auth.NewMockUsecase(mockCtrl)
 	h := NewAuthHandler(mockUsecase)
 
 	body := bytes.Reader{}
@@ -64,7 +64,7 @@ func TestLogout(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockUsecase := mock.NewMockUsecase(mockCtrl)
+	mockUsecase := Auth.NewMockUsecase(mockCtrl)
 	h := NewAuthHandler(mockUsecase)
 
 	body := bytes.Reader{}
@@ -75,7 +75,7 @@ func TestLogout(t *testing.T) {
 		res      error
 		expected interface{}
 	}{
-		{token.String(), nil, httperror.HttpResponse{Status: "ok"}},
+		{token.String(), nil, httperror.DefaultResponse},
 		{"123", e.Error{}.SetCode(e.InvalidParams), httperror.GetError(httperror.BadSession)},
 	}
 
@@ -103,7 +103,7 @@ func TestSignUp(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockUsecase := mock.NewMockUsecase(mockCtrl)
+	mockUsecase := Auth.NewMockUsecase(mockCtrl)
 	h := NewAuthHandler(mockUsecase)
 
 	testUser := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
@@ -126,7 +126,7 @@ func TestSignUp(t *testing.T) {
 		},
 	}
 	response := []interface{}{
-		httperror.HttpResponse{Status: "ok"},
+		httperror.DefaultResponse,
 		httperror.GetError(httperror.IncorrectBirthDate),
 		httperror.GetError(httperror.LoginAlreadyExists),
 		httperror.GetError(httperror.UnknownError),
@@ -151,7 +151,7 @@ func TestSignIn(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockUsecase := mock.NewMockUsecase(mockCtrl)
+	mockUsecase := Auth.NewMockUsecase(mockCtrl)
 	h := NewAuthHandler(mockUsecase)
 
 	testUser := struct {
@@ -175,7 +175,7 @@ func TestSignIn(t *testing.T) {
 		},
 	}
 	response := []interface{}{
-		httperror.HttpResponse{Status: "ok"},
+		httperror.DefaultResponse,
 		httperror.GetError(httperror.WrongPassword),
 		httperror.GetError(httperror.WrongPassword),
 		httperror.GetError(httperror.LoginNotExist),

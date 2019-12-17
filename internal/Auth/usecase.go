@@ -2,7 +2,7 @@ package Auth
 
 import (
 	pb "2019_2_Next_Level/generated/Auth/service"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 	"context"
 	"fmt"
 	"github.com/google/uuid"

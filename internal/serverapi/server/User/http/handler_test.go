@@ -3,14 +3,16 @@ package http
 import (
 	"2019_2_Next_Level/internal/model"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
+	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/HttpTools"
-	"2019_2_Next_Level/tests/mock/mock"
+	UserMock "2019_2_Next_Level/tests/mock/serverapi"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -20,7 +22,7 @@ func TestGet(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockUsecase := mock.NewMockUserUsecase(mockCtrl)
+	mockUsecase := UserMock.NewMockUserUsecase(mockCtrl)
 	h := NewUserHandler(mockUsecase)
 	login := "Ian"
 	type Answer struct {
@@ -47,6 +49,7 @@ func TestGet(t *testing.T) {
 	funcs := []F{
 		func() {
 			mockUsecase.EXPECT().GetUser(login).Return(user, nil).Times(1)
+			mockUsecase.EXPECT().GetUserFolders(login).Return(make([]model.Folder, 0), nil)
 		},
 	}
 	response := []string{
@@ -77,10 +80,10 @@ func TestEditUser(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockUsecase := mock.NewMockUserUsecase(mockCtrl)
+	mockUsecase := UserMock.NewMockUserUsecase(mockCtrl)
 	h := NewUserHandler(mockUsecase)
 
-	user := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan", Password:"12345"}
+	user := model.User{Name:"Ivan", Sirname:"Ivanov", BirthDate:"01.01.1900", Sex:"male", Email:"ivan"}
 
 	type Req struct{
 		UserInfo model.User `json:"userInfo"`
@@ -101,11 +104,14 @@ func TestEditUser(t *testing.T) {
 		(&HttpTools.Response{}).SetError(hr.GetError(hr.IncorrectPassword)).String(),
 	}
 	for i, resp := range response {
-		js, _ := json.Marshal(Req{UserInfo:user})
-		body := bytes.NewReader(js)
-		r := httptest.NewRequest("GET", "/user/get", body)
+		//js, _ := json.Marshal(user)
+		//body := bytes.NewReader(js)
+		s := fmt.Sprintf("firstName=%s&secondName=%s&birthDate=%s&sex=%s",
+			user.Name, user.Sirname, user.BirthDate, user.Sex)
+		r := httptest.NewRequest("POST", "/user/get", strings.NewReader(s))
 		w := httptest.NewRecorder()
 		r.Header = http.Header{"X-Login": []string{user.Email}}
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 		funcs[i]()
 		h.EditUserInfo(w, r)
 		got := w.Body.String()
@@ -120,7 +126,7 @@ func TestEditPassword(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockUsecase := mock.NewMockUserUsecase(mockCtrl)
+	mockUsecase := UserMock.NewMockUserUsecase(mockCtrl)
 	h := NewUserHandler(mockUsecase)
 	login := "ivanov"
 

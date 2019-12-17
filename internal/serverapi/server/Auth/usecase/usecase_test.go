@@ -2,13 +2,13 @@ package usecase
 
 import (
 	"2019_2_Next_Level/internal/model"
-	"2019_2_Next_Level/tests/mock/mock"
+	"2019_2_Next_Level/tests/mock/Auth"
 	authclient "2019_2_Next_Level/tests/mock/serverapi/auth"
 	"testing"
 
 	"github.com/google/uuid"
 
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 
 	"github.com/golang/mock/gomock"
 )
@@ -18,7 +18,7 @@ func TestCheckAuth(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockRepo := mock.NewMockRepository(mockCtrl)
+	mockRepo := Auth.NewMockRepository(mockCtrl)
 	mockService := authclient.NewMockIAuthClient(mockCtrl)
 	u := NewAuthUsecase(mockRepo, mockService)
 
@@ -53,7 +53,7 @@ func TestSignOut(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockRepo := mock.NewMockRepository(mockCtrl)
+	mockRepo := Auth.NewMockRepository(mockCtrl)
 	mockService := authclient.NewMockIAuthClient(mockCtrl)
 	u := NewAuthUsecase(mockRepo, mockService)
 
@@ -87,7 +87,7 @@ func TestSignUp(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockRepo := mock.NewMockRepository(mockCtrl)
+	mockRepo := Auth.NewMockRepository(mockCtrl)
 	mockService := authclient.NewMockIAuthClient(mockCtrl)
 	u := NewAuthUsecase(mockRepo, mockService)
 
@@ -126,7 +126,7 @@ func TestSignIn(t *testing.T) {
 	t.Parallel()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockRepo := mock.NewMockRepository(mockCtrl)
+	mockRepo := Auth.NewMockRepository(mockCtrl)
 	mockService := authclient.NewMockIAuthClient(mockCtrl)
 	u := NewAuthUsecase(mockRepo, mockService)
 

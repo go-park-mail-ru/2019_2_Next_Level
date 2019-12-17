@@ -16,8 +16,8 @@ func CorsMethodMiddleware() mux.MiddlewareFunc {
 			log.Log().L("origin: ", origin)
 			if !config.Conf.HttpConfig.Whitelist[origin] {
 				log.Log().I("Not in whitelist: ", origin)
-				//http.Error(w, "Not in whitelist", http.StatusForbidden)
-				//return
+				http.Error(w, "Not in whitelist", http.StatusForbidden)
+				return
 			}
 			headers.Add("Access-Control-Allow-Origin", origin)
 			headers.Add("Access-Control-Allow-Credentials", "true")

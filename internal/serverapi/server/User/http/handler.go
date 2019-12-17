@@ -4,11 +4,10 @@ import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
+	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/HttpTools"
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,7 +24,7 @@ type UserHandler struct {
 }
 
 func NewUserHandler(uc user.UserUsecase) UserHandler {
-	resp := (&HttpTools.Response{}).SetError(hr.DefaultResponse)
+	resp := (&HttpTools.Response{}).SetError(&hr.DefaultResponse)
 	handler := UserHandler{usecase: uc, resp: resp}
 	return handler
 }
@@ -37,16 +36,6 @@ func (h *UserHandler) InflateRouter(router *mux.Router) {
 }
 
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
-	type Answer struct {
-		Name      string `json:"firstName"`
-		Sirname   string `json:"secondName"`
-		BirthDate string `json:"birthDate"`
-		Sex       string `json:"sex"`
-		Email     string `json:"login"`
-		Avatar    string `json:"avatar"`
-		Login 	  string `json:"nickName"`
-		Folders   []model.Folder `json:"folders"`
-	}
 	resp := h.resp.SetWriter(w).Copy()
 	// defer resp.Send()
 	login := r.Header.Get("X-Login")
@@ -61,11 +50,9 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(hr.IncorrectLogin)).Send()
 		return
 	}
-	ans := struct{
-		Status string `json:"status"`
-		Answer Answer `json:"userInfo"`
-	}{"ok",
-		Answer{Name:user.Name, Sirname:user.Sirname, BirthDate:user.BirthDate,
+	ans := GetUserProfile{
+		Status: "ok",
+		Answer: GetUserProfileAnswer{Name:user.Name, Sirname:user.Sirname, BirthDate:user.BirthDate,
 			Sex:user.Sex, Email:user.Email, Avatar:user.Avatar, Login:user.Login,
 			Folders:folders},
 	}
@@ -98,7 +85,7 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 	err := h.usecase.EditUser(&newProfile);
 	if err != nil {
 		log.Log().E(err)
-		fmt.Println(err)
+		//fmt.Println(err)
 		status := hr.UnknownError
 		switch err.(type) {
 		case e.Error:

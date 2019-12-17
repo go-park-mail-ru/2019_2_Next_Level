@@ -5,10 +5,10 @@ import (
 	"2019_2_Next_Level/internal/post"
 	"2019_2_Next_Level/internal/serverapi/config"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/TestTools"
-	"2019_2_Next_Level/tests/mock/MailBox"
 	"2019_2_Next_Level/tests/mock/postinterface"
+	MailBox "2019_2_Next_Level/tests/mock/serverapi"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	"strconv"
@@ -157,16 +157,16 @@ func TestMailBoxUsecase_GetMail(t *testing.T) {
 		}
 		login := test.Input["login"].(string)
 		id := test.Input["id"].(models.MailID)
-		mockRepo.EXPECT().GetEmailByCode(login, strconv.Itoa(int(id))).
-			Return(test.Expected["res"].(model.Email), err).Times(test.MockParams["times"].(int))
+		mockRepo.EXPECT().GetEmailByCode(login, []string{strconv.Itoa(int(id))}).
+			Return([]model.Email{test.Expected["res"].(model.Email)}, err).Times(test.MockParams["times"].(int))
 
-		res, err := u.GetMail(login, id)
+		res, err := u.GetMail(login, []models.MailID{id})
 		var expected model.Email
 		if test.Expected["res"] != nil {
 			expected = test.Expected["res"].(model.Email)
 			//expected[0].Sanitize()
 		}
-		if !cmp.Equal(res, expected) {
+		if !cmp.Equal(res[0], expected) {
 			t.Errorf("Wrong result")
 		}
 	})
@@ -213,7 +213,7 @@ func TestMailBoxUsecase_SendMail(t *testing.T) {
 			err = test.MockParams["err2"].(error)
 		}
 		emailT := email
-		emailT.From+="@w"
+		emailT.From+="@mail.nl-mail.ru"
 		mockRepo.EXPECT().PutSentMessage(emailT).Times(test.MockParams["times2"].(int))
 
 		err = u.SendMail(&email)
