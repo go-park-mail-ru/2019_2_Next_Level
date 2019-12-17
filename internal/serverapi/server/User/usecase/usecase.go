@@ -6,7 +6,7 @@ import (
 	user "2019_2_Next_Level/internal/serverapi/server/User"
 	"2019_2_Next_Level/internal/serverapi/server/config"
 	e "2019_2_Next_Level/pkg/Error"
-	"crypto/md5"
+	"crypto/sha1"
 	"encoding/hex"
 	"io"
 	"mime/multipart"
@@ -71,7 +71,8 @@ func (u *UserUsecase) EditAvatar(login string, file multipart.File, header *mult
 	path += config.Conf.AvatarDir+ "/"
 
 	keyToHash := login + ":" + time.Now().String()
-	filename := hex.EncodeToString(md5.New().Sum([]byte(keyToHash)))
+	//filename := hex.EncodeToString(md5.New().Sum([]byte(keyToHash)))
+	filename := hex.EncodeToString(sha1.New().Sum([]byte(keyToHash)))
 	temp := strings.Split(header.Filename, ".")
 	var typeFile string
 	if len(temp) < 0 {
