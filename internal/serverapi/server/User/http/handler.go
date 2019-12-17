@@ -8,6 +8,7 @@ import (
 	user "2019_2_Next_Level/internal/serverapi/server/User"
 	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/HttpTools"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -85,7 +86,8 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	err := h.usecase.EditUser(&newProfile);
 	if err != nil {
-		log.Log().E(err)
+		log.Log().E(log.GetLogString(login, err))
+		fmt.Println("FMT, err: ", err)
 		//fmt.Println(err)
 		status := hr.UnknownError
 		switch err.(type) {
@@ -123,6 +125,7 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(status))
 		return
 	}
+	log.Log().E(log.GetLogString(login, "ok"))
 
 }
 
