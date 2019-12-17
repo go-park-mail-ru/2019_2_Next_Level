@@ -2,6 +2,7 @@ package model
 
 import (
 	"2019_2_Next_Level/pkg/HttpTools"
+	"net/http"
 )
 
 type UUID interface {
@@ -31,6 +32,13 @@ func (user *User) Inflate(name, sirname, birth, sex, login, password string) {
 	user.Sex = sex
 	user.Email = login
 	user.Password = password
+}
+
+func (user *User) InflateFromFormdata(r *http.Request) {
+	user.Name = r.FormValue("firstName")
+	user.Sirname = r.FormValue("secondName")
+	user.BirthDate = r.FormValue("birthDate")
+	user.Sex = r.FormValue("sex")
 }
 
 func (user *User) Sanitize() {

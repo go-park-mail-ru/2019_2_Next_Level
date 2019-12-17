@@ -22,7 +22,7 @@ func CorsMethodMiddleware() mux.MiddlewareFunc {
 			headers.Add("Access-Control-Allow-Origin", origin)
 			headers.Add("Access-Control-Allow-Credentials", "true")
 			headers.Add("Access-Control-Allow-Headers", "Content-Type")
-			headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
 
 			next.ServeHTTP(w, r)
 		})

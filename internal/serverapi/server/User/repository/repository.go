@@ -3,8 +3,7 @@ package repository
 import (
 	"2019_2_Next_Level/internal/model"
 	"2019_2_Next_Level/internal/serverapi/config"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
-	"2019_2_Next_Level/pkg/sqlTools"
+	e "2019_2_Next_Level/pkg/Error"
 	"database/sql"
 	"fmt"
 	"time"
@@ -55,48 +54,70 @@ func (r *PostgresRepository) Init() error {
 }
 
 func (r *PostgresRepository) GetUser(login string) (model.User, error) {
+	local := "User.Repository.GetUser"
 	user := model.User{}
 	query := `SELECT login, firstname, secondname, sex, avatar, birthdate FROM users WHERE login=$1`
 	res := r.DB.QueryRow(query, login)
 	if res == nil {
-		return user, e.Error{}.SetCode(e.ProcessError)
+		return user, e.Error{}.SetCode(e.ProcessError).SetPlace(local)
 	}
 	var birthDateRaw time.Time
 	err := res.Scan(&user.Email, &user.Name, &user.Sirname, &user.Sex, &user.Avatar, &birthDateRaw)
 	if err != nil {
-		return user, e.Error{}.SetCode(e.NotExists).SetError(err)
+		return user, e.Error{}.SetCode(e.NotExists).SetError(err).SetPlace(local)
 	}
 	user.BirthDate = birthDateRaw.Format("02.01.2006")
 	return user, nil
 }
 
+func (r *PostgresRepository) GetUserFolders(login string) ([]model.Folder, error) {
+	local := "User.Repository.GetUserFolders"
+	folders :=make([]model.Folder, 0)
+	query := `SELECT name, count FROM Folder WHERE owner=$1`
+	rows, err := r.DB.Query(query, login)
+	if err != nil {
+		return folders, e.Error{}.SetCode(e.ProcessError).SetPlace(local).SetError(err)
+	}
+	for rows.Next(){
+		var folder model.Folder
+		err := rows.Scan(&folder.Name, &folder.MessageCount)
+		if err != nil {
+			return folders, e.Error{}.SetCode(e.ProcessError).SetError(err).SetPlace(local)
+		}
+		folders = append(folders, folder)
+	}
+	return folders, nil
+}
+
 func (r *PostgresRepository) UpdateUserData(user *model.User) error {
-	query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3, sex=$4, birthdate=$5 WHERE login=$6;`
-	parsedDate, err0 := time.Parse("02.01.2006", user.BirthDate)
-	if err0 != nil {
-		return e.Error{}.SetCode(e.InvalidParams).SetError(err0)
+	//query := `UPDATE users SET avatar=$1, firstName=$2, secondname=$3 WHERE login=$4;`
+	f := func (name, value string) error{
+		query := `UPDATE users SET %s=$1 WHERE login=$2`
+		if value != ""{
+			_, err := r.DB.Exec(fmt.Sprintf(query, name), value, user.Email)
+			//log.Log().L("Result user.repo:99 ", err);
+			return err
+		}
+		return nil
 	}
-	_, err := r.DB.Exec(query, user.Avatar, user.Name, user.Sirname, user.Sex, sqlTools.FormatDate(sqlTools.BDPostgres, parsedDate), user.Email)
-	if err != nil {
-		return err
+	inflate := func () error {
+		err := f("firstName", user.Name)
+		if err != nil {
+			return err
+		}
+		err = f("secondName", user.Sirname)
+		if err != nil {
+			return err
+		}
+		err = f("avatar", user.Avatar)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
+	if err:=inflate(); err != nil {
+		return e.Error{}.SetError(err).SetPlace("User.Repository.UpdateUserData")
+	}
+	//_, err := r.DB.Exec(query, user.Avatar, user.Name, user.Sirname, user.Email)
 	return nil
-}
-
-func (r *PostgresRepository) UpdateUserPassword(login string, newPassword string, sault string) error {
-	query := `UPDATE users SET password=$1, sault=$2 WHERE login=$3`
-	_, err := r.DB.Exec(query, []byte(newPassword), []byte(sault), login)
-	return err
-}
-
-func (r *PostgresRepository) GetUserCredentials(login string) (string, string, error) {
-	query := "SELECT password, sault FROM users WHERE login=$1;"
-	row := r.DB.QueryRow(query, login)
-
-	var pass, sault string
-	err := row.Scan(&pass, &sault)
-	if err != nil {
-		return "", "", e.Error{}.SetCode(e.NotExists).SetError(err)
-	}
-	return pass, sault, nil
 }

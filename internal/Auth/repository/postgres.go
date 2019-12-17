@@ -2,7 +2,7 @@ package repository
 
 import (
 	"2019_2_Next_Level/internal/model"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 	"fmt"
 )
 const (
@@ -35,10 +35,10 @@ func (r *PostgresRepo) AddNewSession(login string, uuid string) error {
 	if ok := r.checkUserExist(login); !ok {
 		return e.Error{}.SetCode(e.NotExists)
 	}
-	clearExistSessionQuery := `DELETE FROM session WHERE login=$1`
+	//clearExistSessionQuery := `DELETE FROM session WHERE login=$1`
 	query := fmt.Sprintf("INSERT INTO %s (login, token) VALUES ($1, $2);", "session")
 
-	r.DB.Exec(clearExistSessionQuery, login)
+	//r.DB.Exec(clearExistSessionQuery, login)
 	_, err := r.DB.Exec(query, login, uuid)
 	return err
 }

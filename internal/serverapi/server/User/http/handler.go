@@ -2,11 +2,13 @@ package http
 
 import (
 	"2019_2_Next_Level/internal/model"
+	"2019_2_Next_Level/internal/serverapi/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
+	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/HttpTools"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -23,27 +25,18 @@ type UserHandler struct {
 }
 
 func NewUserHandler(uc user.UserUsecase) UserHandler {
-	resp := (&HttpTools.Response{}).SetError(hr.DefaultResponse)
+	resp := (&HttpTools.Response{}).SetError(&hr.DefaultResponse)
 	handler := UserHandler{usecase: uc, resp: resp}
 	return handler
 }
 
 func (h *UserHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/get", h.GetProfile).Methods("GET")
-	router.HandleFunc("/editUserInfo", h.EditUserInfo).Methods("POST")
+	router.HandleFunc("/editUserInfo", h.EditUserInfo).Methods("PUT")
 	router.HandleFunc("/editPassword", h.EditUserPassword).Methods("POST")
 }
 
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
-	type Answer struct {
-		Name      string `json:"firstName"`
-		Sirname   string `json:"secondName"`
-		BirthDate string `json:"birthDate"`
-		Sex       string `json:"sex"`
-		Email     string `json:"login"`
-		Avatar    string `json:"avatar"`
-		Login string `json:"nickName"`
-	}
 	resp := h.resp.SetWriter(w).Copy()
 	// defer resp.Send()
 	login := r.Header.Get("X-Login")
@@ -53,12 +46,16 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Password = ""
-	ans := struct{
-		Status string `json:"status"`
-		Answer Answer `json:"userInfo"`
-	}{"ok",
-		Answer{Name:user.Name, Sirname:user.Sirname, BirthDate:user.BirthDate,
-			Sex:user.Sex, Email:user.Email, Avatar:user.Avatar, Login:user.Login},
+	folders, err := h.usecase.GetUserFolders(login)
+	if err != nil {
+		resp.SetError(hr.GetError(hr.IncorrectLogin)).Send()
+		return
+	}
+	ans := GetUserProfile{
+		Status: "ok",
+		Answer: GetUserProfileAnswer{Name:user.Name, Sirname:user.Sirname, BirthDate:user.BirthDate,
+			Sex:user.Sex, Email:user.Email, Avatar:user.Avatar, Login:user.Login,
+			Folders:folders},
 	}
 	err = HttpTools.BodyFromStruct(w, &ans)
 	if err != nil {
@@ -70,21 +67,31 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 	resp := h.resp.SetWriter(w).Copy()
 	defer resp.Send()
-	var user model.User
-	var req struct{
-		UserInfo model.User `json:"userInfo"`
+	login := r.Header.Get("X-Login")
+
+	var newProfile model.User;
+	newProfile.InflateFromFormdata(r);
+	newProfile.Email = login;
+
+	avaFile, handler, _ := r.FormFile("avatar");
+	if avaFile!=nil {
+		newFilename, err := h.usecase.EditAvatar(login, avaFile, handler);
+		if err != nil {
+			log.Log().E(log.GetLogString(login, err))
+			resp.SetError(hr.GetError(hr.BadParam));
+			return
+		}
+		log.Log().L("New avatar name ", newFilename)
+		newProfile.Avatar = newFilename;
+	} else {
+		log.Log().E("No avatar")
 	}
 
-	err := HttpTools.StructFromBody(*r, &req)
+	err := h.usecase.EditUser(&newProfile);
 	if err != nil {
-		resp.SetError(hr.GetError(hr.BadParam))
-		return
-	}
-	user = req.UserInfo
-	login := r.Header.Get("X-Login")
-	user.Email = login
-	err = h.usecase.EditUser(&user)
-	if err != nil {
+		log.Log().E(log.GetLogString(login, err))
+		fmt.Println("FMT, err: ", err)
+		//fmt.Println(err)
 		status := hr.UnknownError
 		switch err.(type) {
 		case e.Error:
@@ -121,6 +128,7 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 		resp.SetError(hr.GetError(status))
 		return
 	}
+	log.Log().E(log.GetLogString(login, "ok"))
 
 }
 

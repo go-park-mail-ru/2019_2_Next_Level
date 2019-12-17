@@ -1,3 +1,6 @@
 .vscode/*
 __debug_bin
 .idea/*
+public
+
+deploy_key

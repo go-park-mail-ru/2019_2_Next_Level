@@ -81,10 +81,10 @@ func TestPostgresRepository_AddEmail(t *testing.T) {
 			Subject string
 			ReplyTo []string
 			WhenReceived time.Time
-		}{From: "testsender", To: []string{"testreceiver"}, 	WhenReceived: time.Now(),},
+		}{From: "testsender", Subject:"S", To: []string{"testreceiver"}, WhenReceived: time.Now(),},
 	}
 	query := []string{
-		`INSERT INTO Message \(sender\, time\, body\) VALUES \(\$1\, \$2\, \$3\) RETURNING id`,
+		`INSERT INTO Message \(sender\, time\, body\, subject\) VALUES \(\$1\, \$2\, \$3\, \$4\) RETURNING id`,
 		`INSERT INTO Receiver \(mailId\, email\) VALUES \(\$1\, \$2\)`,
 	}
 
@@ -94,7 +94,7 @@ func TestPostgresRepository_AddEmail(t *testing.T) {
 			id := sqlmock.NewRows([]string{"id"}).AddRow("123")
 			mock.ExpectBegin()
 			mock.ExpectPrepare(query[0]).ExpectQuery().
-				WithArgs(email.From, sqlTools.FormatDate(sqlTools.BDPostgres, email.Header.WhenReceived), email.Body).
+				WithArgs(email.From, sqlTools.FormatDate(sqlTools.BDPostgres, email.Header.WhenReceived), email.Body, email.Header.Subject).
 				WillReturnRows(id)
 			mock.ExpectPrepare(query[1]).ExpectExec().WithArgs(123, email.Header.To[0]).WillReturnResult(sqlmock.NewResult(0,1))
 			mock.ExpectCommit()
@@ -111,7 +111,7 @@ func TestPostgresRepository_AddEmail(t *testing.T) {
 		func(mock sqlmock.Sqlmock) error {
 			mock.ExpectBegin()
 			mock.ExpectPrepare(query[0]).ExpectQuery().
-				WithArgs(email.From, sqlTools.FormatDate(sqlTools.BDPostgres, email.Header.WhenReceived), email.Body).
+				WithArgs(email.From, sqlTools.FormatDate(sqlTools.BDPostgres, email.Header.WhenReceived), email.Body, email.Header.Subject).
 				WillReturnError(fmt.Errorf(""))
 			mock.ExpectRollback()
 			return nil
@@ -132,7 +132,7 @@ func TestPostgresRepository_AddEmail(t *testing.T) {
 			id := sqlmock.NewRows([]string{"id"}).AddRow("123")
 			mock.ExpectBegin()
 			mock.ExpectPrepare(query[0]).ExpectQuery().
-				WithArgs(email.From, sqlTools.FormatDate(sqlTools.BDPostgres, email.Header.WhenReceived), email.Body).
+				WithArgs(email.From, sqlTools.FormatDate(sqlTools.BDPostgres, email.Header.WhenReceived), email.Body, email.Header.Subject).
 				WillReturnRows(id)
 			mock.ExpectPrepare(query[1]).ExpectExec().WithArgs(123, email.Header.To[0]).WillReturnError(fmt.Errorf(""))
 			mock.ExpectRollback()

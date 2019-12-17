@@ -7,9 +7,9 @@
 
 <h3>Деплой</h3>
 <ul>
-  <li><b><a href="https://nextlevel.now.sh">Фронтенд</a></b></li>
-  <li><b><a href="https://nextlevel.hldns.ru/">Бекенд</a></b></li>
-  <li>Почтовый адрес: <b><a href="http://nlmail.hldns.ru">nlmail.hldns.ru</a></b></li>
+  <li><b><a href="https://nl-mail.ru">Фронтенд</a></b></li>
+  <li><b><a href="https://nl-mail.ru/api">Бекенд</a></b></li>
+  <li>Почтовый адрес: <b><a href="http://mail.nl-mail.ru">mail.nl-mail.ru</a></b></li>
 
 
 ## Команда разработчиков

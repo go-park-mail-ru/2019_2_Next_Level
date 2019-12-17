@@ -35,6 +35,7 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 			email.From = emailTemp.From
 			email.To = emailTemp.To
 			email.Body += "\n\n" // preventing the EOF error of bloody the parser
+			email.Header.Subject = emailTemp.Subject
 
 			reader := strings.NewReader(email.Body)
 			msg, err := gomail.ParseMessage(reader)

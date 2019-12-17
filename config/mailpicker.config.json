@@ -1,13 +1,13 @@
 {
-    "remotePort": "2001",
-    "remoteHost": "nlmail.hldns.ru",
-    "remoteCheckTimeout": 500 ,
-    "pickerWorkerCount": 1,
+    "RemotePort": "2002",
+    "RemoteHost": "nlmail.hldns.ru",
+    "remoteCheckTimeout": 100 ,
+    "pickerWorkerCount": 5,
     "cleanerWorkerCount": 1,
     "saverWorkerCount": 1,
     "Database": {
-        "port": "5432",
-        "host": "127.0.0.1",
-        "dbname": "nextlevel"
+        "Port": "5432",
+        "Host": "127.0.0.1",
+        "DBName": "nextlevel"
     }
 }

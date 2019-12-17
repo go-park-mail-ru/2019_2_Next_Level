@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 )
-
+//easyjson:json
 type MainConfig struct {
 	HttpConfig httpConfig.HTTPConfig `json:"HttpServer"`
 	DB Database `json:"Database"`
@@ -31,7 +31,7 @@ func (c *MainConfig) Init(args ...interface{}) {
 	}
 	httpConfig.Conf = c.HttpConfig
 }
-
+//easyjson:json
 type Database struct {
 	Port string
 	Host string

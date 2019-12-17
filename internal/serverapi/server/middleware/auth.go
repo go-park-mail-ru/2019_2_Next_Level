@@ -3,7 +3,7 @@ package middleware
 import (
 	"2019_2_Next_Level/internal/post/log"
 	auth "2019_2_Next_Level/internal/serverapi/server/Auth"
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
 	"2019_2_Next_Level/pkg/HttpTools"
 	"net/http"
 

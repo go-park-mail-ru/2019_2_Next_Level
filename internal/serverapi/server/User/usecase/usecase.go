@@ -4,7 +4,15 @@ import (
 	"2019_2_Next_Level/internal/Auth"
 	"2019_2_Next_Level/internal/model"
 	user "2019_2_Next_Level/internal/serverapi/server/User"
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	"2019_2_Next_Level/internal/serverapi/server/config"
+	e "2019_2_Next_Level/pkg/Error"
+	"crypto/sha1"
+	"encoding/hex"
+	"io"
+	"mime/multipart"
+	"os"
+	"strings"
+	"time"
 )
 
 func NewUserUsecase(repo user.UserRepository, auth Auth.IAuthClient) UserUsecase {
@@ -29,11 +37,68 @@ func (u *UserUsecase) GetUser(login string) (model.User, error) {
 		return user, e.Error{}.SetCode(e.ProcessError)
 	}
 	user.Login = user.Email
-	//user.Avatar = config.Conf.HttpConfig.SelfURL + "avatar/"+user.Avatar
-	user.Avatar = "/static/images/icon/no-avatar.svg"
+	if user.Avatar=="" {
+		user.Avatar = config.Conf.DefaultAvatar
+	}
+	user.Avatar = config.Conf.Protocol+"://" + config.Conf.HostName+"/"+config.Conf.StaticDir+"/"+config.Conf.AvatarDir + "/" + user.Avatar;
 	user.Sanitize()
 	return user, nil
 }
+
+func (u *UserUsecase) GetUserFolders(login string) ([]model.Folder, error) {
+	folders, err := u.repo.GetUserFolders(login)
+	if err != nil {
+		switch err.(type) {
+		case e.Error:
+			return folders, err
+		default:
+			break
+		}
+		return folders, e.Error{}.SetCode(e.ProcessError)
+	}
+	for i := range folders {
+		folders[i].Sanitize()
+	}
+	return folders, nil
+}
+
+func (u *UserUsecase) EditAvatar(login string, file multipart.File, header *multipart.FileHeader) (string, error) {
+	local := "UserUsecase.EditAvatar"
+	path := config.Conf.RootDir + "/" + config.Conf.StaticDir
+	if path[len(path)-1] != '/' {
+		path = path + "/"
+	}
+	path += config.Conf.AvatarDir+ "/"
+
+	keyToHash := login + ":" + time.Now().String()
+	//filename := hex.EncodeToString(md5.New().Sum([]byte(keyToHash)))
+	filename := hex.EncodeToString(sha1.New().Sum([]byte(keyToHash)))
+	temp := strings.Split(header.Filename, ".")
+	var typeFile string
+	if len(temp) < 0 {
+		typeFile = ""
+	} else {
+		typeFile = "." + temp[len(temp)-1]
+	}
+	filename += typeFile
+
+	path +=  filename
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		err = e.Error{}.SetPlace(local).SetError(err)
+		//fmt.Println(err)
+		//log.Log().E(fmt.Sprintf("Cannot create avatar file for %s with error: %v", login, err));
+		return "", err
+	}
+	defer f.Close()
+	defer f.Sync()
+	_, err = io.Copy(f, file)
+	if err != nil {
+		err = e.Error{}.SetPlace(local).SetError(err)
+	}
+	return filename, err
+}
+
 func (u *UserUsecase) EditUser(user *model.User) error {
 	user.Password = ""
 	err := u.repo.UpdateUserData(user)
@@ -49,6 +114,12 @@ func (u *UserUsecase) EditUser(user *model.User) error {
 
 	return nil
 }
+
 func (u *UserUsecase) EditPassword(login string, oldPass string, newPass string) error {
-	return u.auth.GetError(u.auth.ChangePassword(login, oldPass, newPass))
+	local := "User.Usecase.EditPassword"
+	err :=  u.auth.GetError(u.auth.ChangePassword(login, oldPass, newPass))
+	if err != nil {
+		err = e.Error{}.SetPlace(local).SetError(err).SetCode(e.WrongPassword)
+	}
+	return err
 }

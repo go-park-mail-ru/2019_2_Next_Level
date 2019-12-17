@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	hr "2019_2_Next_Level/pkg/HttpError/Error/httpError"
+	hr "2019_2_Next_Level/internal/serverapi/server/HttpError"
 	"github.com/gorilla/mux"
 )
 type statusWriter struct {
@@ -36,13 +36,14 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 func AccessLogMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			url := r.URL.String()
+			url := r.URL
 			log.Log().I(
 				fmt.Sprintf(
-					"%s Request\nTo: %s\nOrigin: %s\nAgent: %s\n",
+					"%s Request\nTo: %s\nOrigin: %s\nMethod: %s\nAgent: %s\n",
 						time.Now().String(),
 						url,
 						r.Header.Get("Origin"),
+						r.Method,
 						r.Header.Get("User-Agent")))
 			sw := &statusWriter{}
 			sw.ResponseWriter = w

@@ -9,6 +9,8 @@ import (
 	"2019_2_Next_Level/pkg/config"
 	"2019_2_Next_Level/pkg/logger"
 	"flag"
+	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -70,6 +72,9 @@ func Execute(daemons ...daemon) {
 func initializeConfig() error {
 	configFilename := flag.String("config", configFilenameDefault, "Path to config file")
 	flag.Parse()
+	ex, _ := os.Executable()
+	location := filepath.Dir(ex)
+	log.Log().E(location)
 
 	return config.Inflate(*configFilename, &post.Conf)
 }

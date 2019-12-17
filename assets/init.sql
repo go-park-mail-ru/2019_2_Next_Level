@@ -1,7 +1,7 @@
 drop table if exists Session;
 drop table if exists Receiver;
-drop table if exists Folder;
 drop table if exists Message;
+drop table if exists Folder;
 drop table if exists ChatMessage;
 drop table if exists Chat;
 drop table if exists Users;
@@ -31,13 +31,14 @@ create table if not exists Users
 
 create table if not exists Session
 (
-    login CITEXT NOT NULL REFERENCES Users (login),
+    login CITEXT NOT NULL REFERENCES Users (login) ON DELETE CASCADE,
     token uuid NOT NULL
 );
 
 create table if not exists Folder (
+    id BIGSERIAL not null,
     name TEXT NOT NULL DEFAULT 'inbox',
-    owner citext REFERENCES Users (login) NOT NULL,
+    owner citext REFERENCES Users (login) ON DELETE CASCADE NOT NULL ,
     count integer DEFAULT 0,
     UNIQUE (name, owner)
 );
@@ -45,6 +46,7 @@ create table if not exists Folder (
 create table if not exists Message
 (
     id bigserial not null primary key,
+    owner citext REFERENCES Users (login) ON DELETE CASCADE,
 
     sender CITEXT not null,
     subject TEXT NOT NULL DEFAULT '',
@@ -54,8 +56,22 @@ create table if not exists Message
     time timestamp with time zone not null default NOW(),
     folder TEXT DEFAULT 'inbox' NOT NULL,
     isRead bool DEFAULT false,
-    isMarked bool DEFAULT false
+    isMarked bool DEFAULT false,
+    CONSTRAINT cnst FOREIGN KEY (folder, owner) REFERENCES Folder(name, owner)
 );
+
+CREATE INDEX idx_gin_document_rus_body
+ON Message
+USING gin (to_tsvector('russian', "body"));
+CREATE INDEX idx_gin_document_en_body
+ON Message
+USING gin (to_tsvector('english', "body"));
+CREATE INDEX idx_gin_document_rus_subj
+ON Message
+USING gin (to_tsvector('russian', "subject"));
+CREATE INDEX idx_gin_document_en_subj
+ON Message
+USING gin (to_tsvector('english', "subject"));
 
 
 create table if not exists Receiver
@@ -117,24 +133,40 @@ DROP TRIGGER IF EXISTS user_created ON Users;
 CREATE TRIGGER user_created AFTER INSERT ON Users
     FOR EACH ROW EXECUTE PROCEDURE user_created();
 
+CREATE OR REPLACE FUNCTION user_changed() RETURNS trigger AS $user_changed$
+    BEGIN
+        IF NEW.avatar='' then
+            NEW.avatar=OLD.avatar;
+        end if;
+        RETURN NEW;
+    END
+$user_changed$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS user_changed ON Users;
+CREATE TRIGGER user_changed BEFORE UPDATE ON Users
+    FOR EACH ROW EXECUTE PROCEDURE user_changed();
+
+
+-- CREATE OR REPLACE FUNCTION user_changed() RETURNS trigger AS $user_changed$
+--     BEGIN
+--         IF NEW.avatars=='' then
+--             NEW.avatars = 'default';
+--         end if;
+--         return NEW;
+--     END
+-- $user_changed$ LANGUAGE plpgsql;
+-- DROP TRIGGER IF EXISTS user_changed ON Users;
+-- CREATE TRIGGER user_changed AFTER UPDATE OR INSERT ON Users
+--     FOR EACH ROW EXECUTE PROCEDURE user_changed();
+
+
 -- Обновляет счетчики у папок
 CREATE OR REPLACE FUNCTION folder_counter() RETURNS trigger AS $folder_counter$
     BEGIN
         if tg_op='INSERT' OR tg_op='UPDATE' then
-            if NEW.direction='in' then
-                UPDATE Folder SET count=count+1 WHERE owner IN (SELECT Receiver.email FROM Receiver WHERE mailid=NEW.id) AND name=NEW.folder;
-                RAISE NOTICE 'IN';
-            else
-                UPDATE Folder SET count=count+1 WHERE owner=NEW.sender AND name=NEW.folder;
-                RAISE NOTICE 'OUT';
-            end if;
+            UPDATE Folder SET count=count+1 WHERE owner=NEW.owner AND name=NEW.folder;
         end if;
         if tg_op='DELETE' OR tg_op='UPDATE' then
-            if OLD.direction='in' then
-                UPDATE Folder SET count=count-1 WHERE owner IN (SELECT Receiver.email FROM Receiver WHERE mailid=OLD.id) AND name=OLD.folder;
-            else
-                UPDATE Folder SET count=count-1 WHERE owner=OLD.sender AND name=OLD.folder;
-            end if;
+            UPDATE Folder SET count=count-1 WHERE owner=OLD.owner AND name=OLD.folder;
             RETURN OLD;
         end if;
         RETURN NEW;
@@ -144,6 +176,72 @@ DROP TRIGGER IF EXISTS folder_counter ON Message;
 CREATE CONSTRAINT TRIGGER folder_counter AFTER INSERT OR DELETE OR UPDATE ON Message
     DEFERRABLE INITIALLY DEFERRED
     FOR EACH ROW EXECUTE PROCEDURE folder_counter();
+
+-- Пзаполнение поля "owner" для совместимости со старыми запросами
+CREATE OR REPLACE FUNCTION message_owner() RETURNS trigger AS $message_owner$
+    BEGIN
+        if NEW.owner IS NULL then
+            if NEW.sender IN (SELECT login FROM Users) then
+                NEW.owner = NEW.sender;
+            else
+                NEW.owner = (SELECT email FROM receiver WHERE mailid=NEW.id LIMIT 1);
+            end if;
+            RETURN NEW;
+        end if;
+        RETURN NEW;
+    END
+$message_owner$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS message_owner ON Message;
+CREATE TRIGGER message_owner BEFORE INSERT ON Message
+    FOR EACH ROW EXECUTE PROCEDURE message_owner();
+
+CREATE OR REPLACE FUNCTION message_delete() RETURNS trigger AS $message_delete$
+    BEGIN
+        if OLD.isRead=NEW.isRead AND OLD.isMarked=NEW.isMarked AND OLD.folder=NEW.folder AND NEW.folder='trash' then
+            -- значит пытались удалить из корзины
+            DELETE FROM Message WHERE id=NEW.id;
+            return null;
+        end if;
+        return NEW;
+    END
+$message_delete$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS message_delete ON Message;
+CREATE TRIGGER message_delete BEFORE UPDATE ON Message
+    FOR EACH ROW EXECUTE PROCEDURE message_delete();
+
+CREATE OR REPLACE FUNCTION receiver_own() RETURNS trigger AS $receiver_own$
+    BEGIN
+        if NEW.email LIKE '%nl-mail.ru' then
+            NEW.email = (SELECT substr(NEW.email, 0, position('@' in NEW.email)));
+        end if;
+        if NEW.email in (SELECT login FROM Users) then
+            UPDATE Message SET owner=NEW.email WHERE id=NEW.mailid;
+        end if;
+        return NEW;
+    END
+$receiver_own$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS receiver_own ON Receiver;
+CREATE TRIGGER receiver_own BEFORE INSERT ON Receiver
+    FOR EACH ROW EXECUTE PROCEDURE receiver_own();
+
+-- Перемещает сообщения из папок при удалении
+CREATE or replace function on_remove_folder() returns trigger as $on_remove_folder$
+    begin
+--         CREATE VIEW list AS SELECT id from Message where folder=OLD.name;
+--         UPDATE Message SET folder='inbox' WHERE id in (SELECT id from list) AND direction='in';
+--         UPDATE Message SET folder='sent'  WHERE id in (SELECT id from list) AND direction='out';
+        UPDATE Message SET folder=CASE(direction)
+                                    WHEN 'in' THEN 'inbox'
+                                    WHEN 'out'THEN 'sent'
+                                    END
+                    WHERE id in (SELECT id from Message where folder=OLD.name) AND direction='out';
+        return old;
+    end
+$on_remove_folder$ language plpgsql;
+drop trigger if exists on_remove_folder ON Folder;
+create trigger on_remove_folder BEFORE DELETE ON Folder
+    FOR EACH row execute procedure on_remove_folder();
+
 
 INSERT INTO Users (login, password, sault, firstname, secondname)
     VALUES ('admin', 'wedewde', 'wedewdewd', 'Ian', 'Ivanov');

@@ -1,10 +1,9 @@
 package repository
 
 import (
-	e "2019_2_Next_Level/pkg/HttpError/Error"
+	e "2019_2_Next_Level/pkg/Error"
 	"2019_2_Next_Level/pkg/TestTools"
 	"bytes"
-	"fmt"
 	"github.com/google/go-cmp/cmp"
 	//"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
@@ -112,7 +111,7 @@ func TestPostgresRepo_AddNewSession(t *testing.T) {
 	repo := NewPostgresRepo()
 	query1 := `SELECT COUNT\(login\)>0 FROM users WHERE login=\$1`
 	query2 := `INSERT INTO session \(login\, token\) VALUES \(\$1\, \$2\)`
-	query3 := `DELETE FROM session WHERE login=\$1`
+	//query3 := `DELETE FROM session WHERE login=\$1`
 
 	tests := []TestTools.TestStructMap{
 		*TestTools.NewTestStructMap(
@@ -122,7 +121,7 @@ func TestPostgresRepo_AddNewSession(t *testing.T) {
 				"user_count": "1",
 				"login":"login",
 				"token":"session_token",
-				"delete_err": fmt.Errorf("Not exist"),
+				"delete_err": nil,
 				"add_err": nil,
 			}),
 		*TestTools.NewTestStructMap(
@@ -131,10 +130,11 @@ func TestPostgresRepo_AddNewSession(t *testing.T) {
 			map[string]TestTools.Params{
 				"user_count": "0",
 				"login":"login",
+				"delete_err": e.Error{}.SetCode(e.NotExists),
 			}),
 		*TestTools.NewTestStructMap(
 			map[string]TestTools.Params{"login":"login", "token":"session_token"},
-			map[string]TestTools.Params{"error": e.Error{}},
+			map[string]TestTools.Params{"error": nil},
 			map[string]TestTools.Params{
 				"user_count": "1",
 				"login":      "login",
@@ -159,12 +159,12 @@ func TestPostgresRepo_AddNewSession(t *testing.T) {
 			} else {
 				err = params["delete_err"].(error)
 			}
-			mock.ExpectExec(query3).WithArgs(params["login"].(string)).WillReturnError(err)
-			if params["add_err"] == nil {
-				err = nil
-			} else {
-				err = params["add_err"].(error)
-			}
+			//mock.ExpectExec(query3).WithArgs(params["login"].(string)).WillReturnError(err)
+			//if params["add_err"] == nil {
+			//	err = nil
+			//} else {
+			//	err = params["add_err"].(error)
+			//}
 			mock.ExpectExec(query2).WithArgs(params["login"].(string), params["token"].(string)).
 				WillReturnResult(sqlmock.NewResult(0, 1)).
 				WillReturnError(err)

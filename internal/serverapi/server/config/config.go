@@ -1,9 +1,12 @@
 package config
 
+//easyjson:json
 type HTTPConfig struct {
 	//config.Config
 	Whitelist           map[string]bool
 	StaticDir           string
+	RootDir 			string
+	AvatarDir 			string
 	Port                string
 	FileForFolder       string
 	OpenDir             string
@@ -12,7 +15,8 @@ type HTTPConfig struct {
 	DefaultAvatar       string
 	PostServiceHost     string
 	PostServiceSendPort string
-	HostName string `json:"hostname"`
+	Protocol 			string
+	HostName string
 }
 
 func (c *HTTPConfig) Init(args ...interface{}) {
