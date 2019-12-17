@@ -8,7 +8,7 @@
             "http://89.178.23.76:3000": true,
 	    "https://nextlevel.now.sh": true
         },
-        "RootDir": "C:/Users/Ian/go/src/2019_2_Next_Level/",
+        "RootDir": "C:/Users/Ian/go/src/2019_2_Next_Level",
         "StaticDir": "public",
         "Port": "3001",
         "FileForFolder": "index.html",
@@ -20,7 +20,7 @@
         "PostServiceHost": "nlmail.hldns.ru",
         "PostServiceSendPort" : "2000",
         "HostName": "localhost:4000",
-        "Protocol": "https"
+        "Protocol": "http"
     },
     "Database": {
         "Port": "5432",
