@@ -76,6 +76,7 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 	if avaFile!=nil {
 		newFilename, err := h.usecase.EditAvatar(login, avaFile, handler);
 		if err != nil {
+			log.Log().E(err)
 			resp.SetError(hr.GetError(hr.BadParam));
 			return
 		}

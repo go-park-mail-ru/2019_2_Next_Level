@@ -90,6 +90,7 @@ func (u *UserUsecase) EditAvatar(login string, file multipart.File, header *mult
 		return "", err
 	}
 	defer f.Close()
+	defer f.Sync()
 	_, err = io.Copy(f, file)
 	if err != nil {
 		err = e.Error{}.SetPlace(local).SetError(err)
