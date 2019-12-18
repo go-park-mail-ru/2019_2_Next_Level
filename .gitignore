@@ -2,5 +2,8 @@
 __debug_bin
 .idea/*
 public
+*.out
+*.tmp
+*.tmp
 
 deploy_key

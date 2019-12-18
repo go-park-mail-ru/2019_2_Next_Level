@@ -19,5 +19,5 @@ func Log() logger.ILog {
 }
 
 func GetLogString(login string, params ...interface{}) string {
-	return fmt.Sprintf("Login: %s, status: ", login)+fmt.Sprintln(params)
+	return fmt.Sprintf("Login: %s, status: ", login)+fmt.Sprintln(params...)
 }

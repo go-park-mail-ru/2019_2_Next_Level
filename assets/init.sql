@@ -227,14 +227,12 @@ CREATE TRIGGER receiver_own BEFORE INSERT ON Receiver
 -- Перемещает сообщения из папок при удалении
 CREATE or replace function on_remove_folder() returns trigger as $on_remove_folder$
     begin
---         CREATE VIEW list AS SELECT id from Message where folder=OLD.name;
---         UPDATE Message SET folder='inbox' WHERE id in (SELECT id from list) AND direction='in';
---         UPDATE Message SET folder='sent'  WHERE id in (SELECT id from list) AND direction='out';
         UPDATE Message SET folder=CASE(direction)
                                     WHEN 'in' THEN 'inbox'
                                     WHEN 'out'THEN 'sent'
                                     END
-                    WHERE id in (SELECT id from Message where folder=OLD.name) AND direction='out';
+                    WHERE id in (SELECT id from Message where owner=OLD.owner AND folder=OLD.name);
+        RAISE NOTICE 'Remove';
         return old;
     end
 $on_remove_folder$ language plpgsql;
