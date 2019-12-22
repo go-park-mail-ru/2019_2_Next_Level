@@ -10,6 +10,7 @@ import (
 	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -70,7 +71,7 @@ func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) ([]m
 	for _, id := range ids {
 		var mail model.Email
 		var when string
-		err := r.DB.QueryRow(query, id).Scan(&mail.From, &mail.To, &when, &mail.Header.Subject, &mail.Body)
+		err := r.DB.QueryRow(query, id).Scan(&mail.From, &mail.To, &when, &mail.Header.Subject, &mail.Body, &mail.IsRead)
 		if err != nil {
 			return mails, e.Error{}.SetError(err)
 		}
@@ -81,17 +82,13 @@ func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) ([]m
 	return mails, nil
 }
 
-func (r *PostgresRepository) GetEmailList(login string, folder string, sort interface{}, firstNumber int, count int) ([]model.Email, error) {
+func (r *PostgresRepository) GetEmailList(login string, folder string, sort interface{}, since int64, count int) ([]model.Email, error) {
 	query := queryGetEmailList
-	var placeholder string
 
-	placeholder = `Message.owner`
-	query = fmt.Sprintf(query, placeholder)
-
-	row, err := r.DB.Query(query, login, folder, count, firstNumber-1)
+	row, err := r.DB.Query(query, login, folder, count, since)
 	list := make([]model.Email, 0)
 	if err != nil {
-		return list, e.Error{}.SetCode(e.NotExists)
+		return list, e.Error{}.SetCode(e.NotExists).SetError(err)
 	}
 
 	for row.Next() {
@@ -174,9 +171,19 @@ func (r *PostgresRepository) AddFolder(login string, foldername string) error {
 	_, err := r.DB.Exec(query, foldername, login)
 	return err
 }
-func (r *PostgresRepository) ChangeMailFolder(login string, foldername string, mailid int64) error {
-	query := `UPDATE Message SET folder=$1 WHERE id=$2`
-	_, err := r.DB.Exec(query, foldername, mailid)
+func (r *PostgresRepository) ChangeMailFolder(login string, foldername string, mailid []models.MailID) error {
+	query := `UPDATE Message SET folder=$1 WHERE id IN (%s)`
+	var args []string
+	for i:=0; i<len(mailid); i++ {
+		args = append(args, `$`+strconv.Itoa(i+2))
+	}
+	query = fmt.Sprintf(query, strings.Join(args, ", "))
+	params := make([]interface{}, 0, len(mailid)+1)
+	params = append(params, foldername)
+	for _, val := range mailid{
+		params = append(params, val)
+	}
+	_, err := r.DB.Exec(query, params...)
 	return err
 }
 

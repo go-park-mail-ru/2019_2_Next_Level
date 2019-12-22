@@ -46,8 +46,8 @@ func (u *MailBoxUsecase) SendMail(email *model.Email) error 	{
 	return u.repo.PutSentMessage(*email)
 }
 
-func (u *MailBoxUsecase) GetMailList(login string, folder string, sort string, from int, count int) ([]model.Email, error) {
-	list, err := u.repo.GetEmailList(login, folder, sort, from, count)
+func (u *MailBoxUsecase) GetMailList(login string, folder string, sort string, since int64, count int) ([]model.Email, error) {
+	list, err := u.repo.GetEmailList(login, folder, sort, since, count)
 	if err != nil {
 		return list, e.Error{}.SetError(err).SetCode(e.ProcessError)
 	}
@@ -55,23 +55,6 @@ func (u *MailBoxUsecase) GetMailList(login string, folder string, sort string, f
 		list[i].Sanitize()
 	}
 	return list, nil
-}
-
-func (u *MailBoxUsecase) GetMailListPlain(login string, page int) (int, int, []model.Email, error) {
-	mailsPerPage := 25
-	count, err := u.repo.GetMessagesCount(login, models.InboxFolder, models.FlagMessageTotal)
-	if err != nil {
-		return 0, 0, []model.Email{}, err
-	}
-	from := mailsPerPage*(page-1)+1
-	list, err := u.repo.GetEmailList(login, models.InboxFolder, "", from, mailsPerPage)
-	for i, _ := range list {
-		list[i].Sanitize()
-	}
-	if err != nil {
-		return 0, 0, list, e.Error{}.SetError(err).SetCode(e.ProcessError)
-	}
-	return count/mailsPerPage+1, page, list, nil
 }
 
 func (u *MailBoxUsecase) GetMail(login string, mailID []models.MailID) ([]model.Email, error) {
@@ -97,7 +80,7 @@ func (u *MailBoxUsecase) MarkMail(login string, ids []models.MailID, mark int) e
 func (u *MailBoxUsecase) AddFolder(login string, foldername string) error {
 	return u.repo.AddFolder(login, foldername)
 }
-func (u *MailBoxUsecase) ChangeMailFolder(login string, foldername string, mailid int64) error {
+func (u *MailBoxUsecase) ChangeMailFolder(login string, foldername string, mailid []models.MailID) error {
 	return u.repo.ChangeMailFolder(login, foldername, mailid)
 }
 func (u *MailBoxUsecase) DeleteFolder(login string, foldername string) error {

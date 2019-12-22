@@ -27,8 +27,8 @@ func NewMailHandler(usecase mailbox.MailBoxUseCase) *MailHandler{
 
 func (h *MailHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/send", h.SendMail).Methods("POST")
-	router.HandleFunc("/getByPage", h.GetMailList).Methods("GET")
-	router.HandleFunc("/get", h.GetEmail).Methods("GET")
+	router.HandleFunc("/getByPage", h.GetMessagesInFolder).Methods("GET")
+	//router.HandleFunc("/get", h.GetEmail).Methods("GET")
 	router.HandleFunc("/getById", h.GetEmailsById).Methods("POST")
 	router.HandleFunc("/getUnreadCount", h.GetUnreadCount).Methods("GET")
 	router.HandleFunc("/read", h.MarkMailRead).Methods("POST")
@@ -36,7 +36,8 @@ func (h *MailHandler) InflateRouter(router *mux.Router) {
 	router.HandleFunc("/remove", h.DeleteEmail).Methods("POST")
 	router.HandleFunc("/addFolder/{name}", h.CreateFolder).Methods("POST")
 	router.HandleFunc("/deleteFolder/{name}", h.DeleteFolder).Methods("POST")
-	router.HandleFunc("/changeFolder/{id}/{name}", h.ChangeMailFolder).Methods("POST")
+	//router.HandleFunc("/changeFolder/{id}/{name}", h.ChangeMailFolder).Methods("POST")
+	router.HandleFunc("/changeFolder/{name}", h.ChangeMailFolder).Methods("POST")
 	router.HandleFunc("/search/{request}", h.FindMessages).Methods("GET")
 }
 
@@ -92,7 +93,7 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
+func (h *MailHandler) GetMessagesInFolder(w http.ResponseWriter, r *http.Request) {
 	resp := h.resp.SetWriter(w).Copy()
 	defer resp.Send()
 	login := h.getLogin(r)
@@ -104,9 +105,9 @@ func (h *MailHandler) GetMailList(w http.ResponseWriter, r *http.Request) {
 	page, err := strconv.ParseInt(pageTemp, 10, 64)
 	perPage, err := strconv.ParseInt(r.FormValue("perPage"), 10, 64)
 	folder := r.FormValue("folder")
+	fromId, _ := strconv.ParseInt(r.FormValue("since"), 10, 64);
 
-	startLetter := perPage*(page-1)+1
-	list, err := h.usecase.GetMailList(login, folder, "", int(startLetter), int(perPage))
+	list, err := h.usecase.GetMailList(login, folder, "", fromId, int(perPage))
 	if err != nil {
 		log.Log().E("Error after getMailList", err)
 		resp.SetError(hr.GetError(hr.BadParam))
@@ -141,33 +142,6 @@ func (h *MailHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp.SetContent(&GetMessagesCountResponse{Status:"ok", Count:count})
-}
-
-func (h *MailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
-	defer resp.Send()
-	login := h.getLogin(r)
-	if login=="" {
-		resp.SetError(hr.GetError(hr.BadSession))
-		return
-	}
-	idTemp := r.FormValue("id")
-	id, err := strconv.ParseInt(idTemp, 10, 64)
-	if err != nil {
-		resp.SetError(hr.GetError(hr.BadParam))
-		return
-	}
-	mails, err := h.usecase.GetMail(login, []models.MailID{models.MailID(id)})
-	if err != nil {
-		resp.SetError(hr.GetError(hr.BadParam))
-		return
-	}
-	mail := mails[0]
-	answer := GetMessageResponse{
-		Status: "ok",
-		Message: models.MailToGet{}.FromMain(&mail),
-	}
-	resp.SetContent(&answer)
 }
 
 func (h *MailHandler) GetEmailsById (w http.ResponseWriter, r *http.Request) {
@@ -248,16 +222,21 @@ func (h *MailHandler) ChangeMailFolder(w http.ResponseWriter, r *http.Request) {
 		log.Log().E("No such a param: ", "slug")
 		return
 	}
-	mailIdTemp, ok := args["id"]
-	if !ok {
-		log.Log().E("No such a param: ", "slug")
-		return
-	}
-	mailId, err := strconv.ParseInt(mailIdTemp, 10, 64)
+	//mailIdTemp, ok := args["id"]
+	//if !ok {
+	//	log.Log().E("No such a param: ", "slug")
+	//	return
+	//}
+	//mailId, err := strconv.ParseInt(mailIdTemp, 10, 64)
+	req := struct {
+		Messages []models.MailID
+	}{}
+	err := HttpTools.StructFromBody(*r, &req)
 	if err != nil {
+		resp.SetError(hr.GetError(hr.BadParam))
 		return
 	}
-	err = h.usecase.ChangeMailFolder(login, folderName, mailId)
+	err = h.usecase.ChangeMailFolder(login, folderName, req.Messages)
 	if err != nil {
 		resp.SetError(hr.GetError(hr.BadParam))
 		return
