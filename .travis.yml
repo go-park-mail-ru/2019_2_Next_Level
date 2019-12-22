@@ -24,6 +24,7 @@ script:
   - make
   - cp -avr build/ deploy/
   - scp -i ./deploy_key -r ./deploy/scripts ian@nl-mail.ru:/home/ian/deploy/
+  - scp -i ./deploy_key -o "StrictHostKeyChecking=no" -r ./deploy/scripts root@mail.nl-mail.ru:~/deploy/
   - ssh -i ./deploy_key -t ian@nl-mail.ru "cd ./deploy/scripts; chmod +x stopall.sh && ./stopall.sh && ls"
   - ssh -i ./deploy_key -o "StrictHostKeyChecking=no" -t root@mail.nl-mail.ru "cd ./deploy/scripts; chmod +x stopall.sh && ./stopall.sh"
   - sleep 10
