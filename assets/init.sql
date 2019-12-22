@@ -40,6 +40,7 @@ create table if not exists Folder (
     name TEXT NOT NULL DEFAULT 'inbox',
     owner citext REFERENCES Users (login) ON DELETE CASCADE NOT NULL ,
     count integer DEFAULT 0,
+    isSystem bool DEFAULT false NOT NULL,
     UNIQUE (name, owner)
 );
 
@@ -120,12 +121,12 @@ $get_chat_id$ LANGUAGE plpgsql;
 -- Создаёт каждому пользователю стандартные папки
 CREATE OR REPLACE FUNCTION user_created() RETURNS trigger AS $user_created$
     BEGIN
-        INSERT INTO Folder (name, owner) VALUES
-            ('inbox', NEW.login),
-            ('sent', NEW.login),
-            ('proceed', NEW.login),
-            ('spam', NEW.login),
-            ('trash', NEW.login);
+        INSERT INTO Folder (name, owner, isSystem) VALUES
+            ('inbox', NEW.login, true),
+            ('sent', NEW.login, true),
+            ('proceed', NEW.login, true),
+            ('spam', NEW.login, true),
+            ('trash', NEW.login, true);
         RETURN NEW;
     END
 $user_created$ LANGUAGE plpgsql;
@@ -227,6 +228,9 @@ CREATE TRIGGER receiver_own BEFORE INSERT ON Receiver
 -- Перемещает сообщения из папок при удалении
 CREATE or replace function on_remove_folder() returns trigger as $on_remove_folder$
     begin
+        if OLD.isSystem=true then
+            return null;
+        end if;
         UPDATE Message SET folder=CASE(direction)
                                     WHEN 'in' THEN 'inbox'
                                     WHEN 'out'THEN 'sent'

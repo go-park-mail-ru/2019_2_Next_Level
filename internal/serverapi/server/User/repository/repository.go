@@ -73,14 +73,14 @@ func (r *PostgresRepository) GetUser(login string) (model.User, error) {
 func (r *PostgresRepository) GetUserFolders(login string) ([]model.Folder, error) {
 	local := "User.Repository.GetUserFolders"
 	folders :=make([]model.Folder, 0)
-	query := `SELECT name, count FROM Folder WHERE owner=$1`
+	query := `SELECT name, count, isSystem FROM Folder WHERE owner=$1 ORDER BY id`
 	rows, err := r.DB.Query(query, login)
 	if err != nil {
 		return folders, e.Error{}.SetCode(e.ProcessError).SetPlace(local).SetError(err)
 	}
 	for rows.Next(){
 		var folder model.Folder
-		err := rows.Scan(&folder.Name, &folder.MessageCount)
+		err := rows.Scan(&folder.Name, &folder.MessageCount, &folder.IsSystem)
 		if err != nil {
 			return folders, e.Error{}.SetCode(e.ProcessError).SetError(err).SetPlace(local)
 		}
