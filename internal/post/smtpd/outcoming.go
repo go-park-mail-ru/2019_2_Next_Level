@@ -1,6 +1,8 @@
 package smtpd
 
 import (
+	"2019_2_Next_Level/internal/post"
+	"2019_2_Next_Level/internal/post/smtpd/worker"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -15,10 +17,11 @@ type SMTPSender struct {
 	password string
 	host string
 	port string
+	localOutChan chan worker.EmailNil
 }
 
-func NewSMTPSender(login string, password string, host string, port string) *SMTPSender {
-	return &SMTPSender{login: login, password: password, host: host, port: port}
+func NewSMTPSender(login string, password string, host string, port string, localOutChan chan worker.EmailNil) *SMTPSender {
+	return &SMTPSender{login: login, password: password, host: host, port: port, localOutChan:localOutChan}
 }
 
 func (s *SMTPSender) Send(from string, to []string, subject string, body []byte) error {
@@ -30,6 +33,19 @@ func (s *SMTPSender) Send(from string, to []string, subject string, body []byte)
 	mx, err := getMXRecord(to[0])
 	fmt.Println("MX: ", mx)
 	if err != nil {
+		if err.Error()=="Local" {
+			s.localOutChan <- worker.EmailNil{
+				Email: post.Email{
+					From:    from,
+					To:      to[0],
+					Body:    string(body),
+					Subject: subject,
+				},
+				Error: nil,
+			}
+			fmt.Println("Sent local")
+			return nil;
+		}
 		return err
 	}
 
@@ -41,6 +57,11 @@ func (s *SMTPSender) Send(from string, to []string, subject string, body []byte)
 }
 
 func getMXRecord(to string) (mx string, err error) {
+	cache := map[string]string {
+		"mail.nl-mail.ru": "mail.nl-mail.ru",
+		"nl-mail.ru": "mail.nl-mail.ru",
+		"nlmail.hldns.ru" : "nlmail.hldns.ru",
+	}
 	var e *mail.Address
 	e, err = mail.ParseAddress(to)
 	if err != nil {
@@ -50,8 +71,12 @@ func getMXRecord(to string) (mx string, err error) {
 	domain := strings.Split(e.Address, "@")[1]
 
 	var mxs []*net.MX
-	mxs, err = net.LookupMX(domain)
+	//mxs, err = net.LookupMX(domain)
 	fmt.Println("Domain: ", domain)
+	if _, ok := cache[domain]; ok {
+		return "",fmt.Errorf("Local")
+	}
+	mxs, err = LookupMXCached(domain, cache)
 
 	if err != nil || len(mxs) == 0 {
 		fmt.Println("Error 1: ", err)
@@ -97,4 +122,13 @@ func composeMimeMail(to string, from string, subject string, body string) []byte
 	message += "\r\n" + base64.StdEncoding.EncodeToString([]byte(body))
 
 	return []byte(message)
+}
+
+func LookupMXCached(domain string, cache map[string]string) ([]*net.MX, error) {
+	if addr, ok := cache[domain]; ok {
+		return []*net.MX{
+			&net.MX{Host:addr},
+		}, nil
+	}
+	return net.LookupMX(domain)
 }

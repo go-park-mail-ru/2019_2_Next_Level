@@ -28,6 +28,7 @@ type Server struct {
 
 // Init : gets MailSender and IncomingQueue channels
 func (s *Server) Init(pre, next post.ChanPair, args ...interface{}) error {
+	s.resultChannel = make(chan worker.EmailNil, 100)
 	// process the only iteration
 	if len(args) == 1 {
 		if res, ok := args[0].(IncomingSmtpInerface); ok {
@@ -38,7 +39,7 @@ func (s *Server) Init(pre, next post.ChanPair, args ...interface{}) error {
 	} else {
 		s.smtpServer = s.NewDefaultSMTP(post.Conf.ListenPort, "0.0.0.0")
 	}
-	s.resultChannel = make(chan worker.EmailNil, 100)
+	//s.resultChannel = make(chan worker.EmailNil, 100)
 	s.quitChan = make(chan interface{}, 5)
 	s.worker = worker.Worker{OutChannel: s.resultChannel}
 
@@ -97,7 +98,7 @@ func (s *Server) Send() {
 		email := pack.(post.Email)
 		//s.incomingQueueChan.In <- email
 		fmt.Println("GOing to send a message")
-		sender := NewSMTPSender(post.Conf.Login, post.Conf.Password, post.Conf.Host, post.Conf.Port)
+		sender := NewSMTPSender(post.Conf.Login, post.Conf.Password, post.Conf.Host, post.Conf.Port, s.resultChannel)
 		err := sender.Send(email.From, []string{email.To}, email.Subject, []byte(email.Body))
 		if err != nil {
 			log.Log().E("Cannot send email: ", err)
