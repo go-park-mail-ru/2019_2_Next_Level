@@ -28,6 +28,7 @@ func (s *SMTPSender) Send(from string, to []string, subject string, body []byte)
 	msg := composeMimeMail(to[0], from, subject, string(body))
 
 	mx, err := getMXRecord(to[0])
+	fmt.Println("MX: ", mx)
 	if err != nil {
 		return err
 	}
@@ -50,8 +51,10 @@ func getMXRecord(to string) (mx string, err error) {
 
 	var mxs []*net.MX
 	mxs, err = net.LookupMX(domain)
+	fmt.Println("Domain: ", domain)
 
 	if err != nil || len(mxs) == 0 {
+		fmt.Println("Error 1: ", err)
 		return
 	}
 	host := mxs[0].Host

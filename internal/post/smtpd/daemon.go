@@ -96,6 +96,7 @@ func (s *Server) Send() {
 	for pack := range s.mailSenderChan.Out {
 		email := pack.(post.Email)
 		//s.incomingQueueChan.In <- email
+		fmt.Println("GOing to send a message")
 		sender := NewSMTPSender(post.Conf.Login, post.Conf.Password, post.Conf.Host, post.Conf.Port)
 		err := sender.Send(email.From, []string{email.To}, email.Subject, []byte(email.Body))
 		if err != nil {

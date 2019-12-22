@@ -1,7 +1,0 @@
-version: '3'
-
-services:
-  post:
-    image: 2019_2_next_level/post
-    volumes: 
-      - conf:/config/
