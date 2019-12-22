@@ -17,7 +17,7 @@
         "PrivateDir": "private",
         "SelfURL": "http://84.201.143.48/",
         "DefaultAvatar": "no-avatar.svg",
-        "PostServiceHost": "nlmail.hldns.ru",
+        "PostServiceHost": "localhost",
         "PostServiceSendPort" : "2000",
         "HostName": "localhost:4000",
         "Protocol": "http"
