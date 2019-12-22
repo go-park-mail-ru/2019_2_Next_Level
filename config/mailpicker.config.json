@@ -1,6 +1,6 @@
 {
-    "RemotePort": "2002",
-    "RemoteHost": "nlmail.hldns.ru",
+    "RemotePort": "2001",
+    "RemoteHost": "mail.nl-mail.ru",
     "remoteCheckTimeout": 100 ,
     "pickerWorkerCount": 5,
     "cleanerWorkerCount": 1,
