@@ -101,7 +101,7 @@ func (u *MailBoxUsecase) FindMessages(login, request string) ([]int64, error) {
 func (u *MailBoxUsecase) PrepareMessage(from model.Email) (*model.Email, error) {
 	fromLogin :=from.From
 	from.From =from.From+"@"+"mail.nl-mail.ru"
-	name, avatar, err := u.repo.GetUserData(fromLogin)
+	_, avatar, err := u.repo.GetUserData(fromLogin)
 	if err != nil {
 		return &from, err
 	}
@@ -109,7 +109,8 @@ func (u *MailBoxUsecase) PrepareMessage(from model.Email) (*model.Email, error) 
 		avatar = config.Conf.HttpConfig.DefaultAvatar
 	}
 	new := gomail.NewMessage()
-	new.SetHeader("From", from.From, name)
+	//new.SetHeader("From", from.From, name)
+	new.SetHeader("From", from.From)
 	new.SetHeader("To", from.To)
 	new.SetHeader("Subject", from.Header.Subject)
 	new.SetBody("text/plain", from.Body)

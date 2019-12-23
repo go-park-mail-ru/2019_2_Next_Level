@@ -21,6 +21,7 @@ type Email struct {
 	}
 	Id int
 	IsRead bool
+	Direction string
 }
 
 func (e *Email) SetFrom(from string) {

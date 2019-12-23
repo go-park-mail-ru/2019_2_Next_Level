@@ -262,6 +262,8 @@ func easyjson7feca409Decode20192NextLevelInternalServerapiServerMailBoxModels2(i
 			out.Id = MailID(in.Int64())
 		case "from":
 			(out.From).UnmarshalEasyJSON(in)
+		case "to":
+			(out.To).UnmarshalEasyJSON(in)
 		case "subject":
 			out.Subject = string(in.String())
 		case "content":
@@ -295,6 +297,8 @@ func easyjson7feca409Decode20192NextLevelInternalServerapiServerMailBoxModels2(i
 			out.Folder = string(in.String())
 		case "date":
 			out.Date = string(in.String())
+		case "direction":
+			out.Direction = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -318,6 +322,11 @@ func easyjson7feca409Encode20192NextLevelInternalServerapiServerMailBoxModels2(o
 		const prefix string = ",\"from\":"
 		out.RawString(prefix)
 		(in.From).MarshalEasyJSON(out)
+	}
+	{
+		const prefix string = ",\"to\":"
+		out.RawString(prefix)
+		(in.To).MarshalEasyJSON(out)
 	}
 	{
 		const prefix string = ",\"subject\":"
@@ -357,6 +366,11 @@ func easyjson7feca409Encode20192NextLevelInternalServerapiServerMailBoxModels2(o
 		const prefix string = ",\"date\":"
 		out.RawString(prefix)
 		out.String(string(in.Date))
+	}
+	{
+		const prefix string = ",\"direction\":"
+		out.RawString(prefix)
+		out.String(string(in.Direction))
 	}
 	out.RawByte('}')
 }

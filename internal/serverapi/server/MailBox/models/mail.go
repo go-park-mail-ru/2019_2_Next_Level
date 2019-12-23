@@ -29,14 +29,16 @@ func (m MailToSend) ToMain() model.Email {
 
 
 type MailToGet struct {
-	Id MailID`json:"id"`
-	From Sender `json:"from"`
-	Subject string `json:"subject"`
-	Content string `json:"content"`
+	Id 		MailID	`json:"id"`
+	From 	Sender 	`json:"from"`
+	To 		Sender 	`json:"to"`
+	Subject string 	`json:"subject"`
+	Content string 	`json:"content"`
 	Replies []MailID`json:"replies,omitempty"`
-	Read bool `json:"read"`
-	Folder string `json:"folder"`
-	Date string `json:"date"`
+	Read 	bool 	`json:"read"`
+	Folder 	string 	`json:"folder"`
+	Date 	string 	`json:"date"`
+	Direction string `json:"direction"`
 }
 func (m MailToGet) FromMain(from *model.Email) MailToGet {
 	m.Id = MailID(0)
@@ -47,6 +49,8 @@ func (m MailToGet) FromMain(from *model.Email) MailToGet {
 	m.Id = MailID(from.Id)
 	m.Read = from.IsRead
 	m.Date = from.Header.WhenReceived.Format(time.RFC3339)
+	m.Direction = from.Direction
+	m.To = Sender{Name: "", Email: from.To}
 	return m
 }
 

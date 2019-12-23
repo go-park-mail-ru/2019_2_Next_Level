@@ -71,7 +71,7 @@ func (r *PostgresRepository) GetEmailByCode(login string, code interface{}) ([]m
 	for _, id := range ids {
 		var mail model.Email
 		var when string
-		err := r.DB.QueryRow(query, id).Scan(&mail.From, &mail.To, &when, &mail.Header.Subject, &mail.Body, &mail.IsRead)
+		err := r.DB.QueryRow(query, id).Scan(&mail.From, &mail.To, &when, &mail.Header.Subject, &mail.Body, &mail.IsRead, &mail.Direction)
 		if err != nil {
 			return mails, e.Error{}.SetError(err)
 		}
@@ -95,7 +95,7 @@ func (r *PostgresRepository) GetEmailList(login string, folder string, sort inte
 		mail := model.Email{}
 		var when string
 
-		if err := row.Scan(&mail.Id, &mail.From, &mail.To, &when, &mail.Header.Subject, &mail.Body, &mail.IsRead); err != nil {
+		if err := row.Scan(&mail.Id, &mail.From, &mail.To, &when, &mail.Header.Subject, &mail.Body, &mail.IsRead, &mail.Direction); err != nil {
 			return list, e.Error{}.SetError(err)
 		}
 

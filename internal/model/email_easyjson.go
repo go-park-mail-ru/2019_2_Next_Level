@@ -37,18 +37,20 @@ func easyjsonFc263e4eDecode20192NextLevelInternalModel(in *jlexer.Lexer, out *Em
 			continue
 		}
 		switch key {
-		case "From":
+		case "from":
 			out.From = string(in.String())
-		case "To":
+		case "to":
 			out.To = string(in.String())
-		case "Body":
+		case "body":
 			out.Body = string(in.String())
-		case "Header":
+		case "header":
 			easyjsonFc263e4eDecode(in, &out.Header)
-		case "Id":
+		case "id":
 			out.Id = int(in.Int())
-		case "IsRead":
+		case "isRead":
 			out.IsRead = bool(in.Bool())
+		case "direction":
+			out.Direction = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -64,34 +66,39 @@ func easyjsonFc263e4eEncode20192NextLevelInternalModel(out *jwriter.Writer, in E
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"From\":"
+		const prefix string = ",\"from\":"
 		out.RawString(prefix[1:])
 		out.String(string(in.From))
 	}
 	{
-		const prefix string = ",\"To\":"
+		const prefix string = ",\"to\":"
 		out.RawString(prefix)
 		out.String(string(in.To))
 	}
 	{
-		const prefix string = ",\"Body\":"
+		const prefix string = ",\"body\":"
 		out.RawString(prefix)
 		out.String(string(in.Body))
 	}
 	{
-		const prefix string = ",\"Header\":"
+		const prefix string = ",\"header\":"
 		out.RawString(prefix)
 		easyjsonFc263e4eEncode(out, in.Header)
 	}
 	{
-		const prefix string = ",\"Id\":"
+		const prefix string = ",\"id\":"
 		out.RawString(prefix)
 		out.Int(int(in.Id))
 	}
 	{
-		const prefix string = ",\"IsRead\":"
+		const prefix string = ",\"isRead\":"
 		out.RawString(prefix)
 		out.Bool(bool(in.IsRead))
+	}
+	{
+		const prefix string = ",\"direction\":"
+		out.RawString(prefix)
+		out.String(string(in.Direction))
 	}
 	out.RawByte('}')
 }
@@ -144,9 +151,9 @@ func easyjsonFc263e4eDecode(in *jlexer.Lexer, out *struct {
 			continue
 		}
 		switch key {
-		case "From":
+		case "from":
 			out.From = string(in.String())
-		case "To":
+		case "to":
 			if in.IsNull() {
 				in.Skip()
 				out.To = nil
@@ -169,9 +176,9 @@ func easyjsonFc263e4eDecode(in *jlexer.Lexer, out *struct {
 				}
 				in.Delim(']')
 			}
-		case "Subject":
+		case "subject":
 			out.Subject = string(in.String())
-		case "ReplyTo":
+		case "replyTo":
 			if in.IsNull() {
 				in.Skip()
 				out.ReplyTo = nil
@@ -194,7 +201,7 @@ func easyjsonFc263e4eDecode(in *jlexer.Lexer, out *struct {
 				}
 				in.Delim(']')
 			}
-		case "WhenReceived":
+		case "whenReceived":
 			if data := in.Raw(); in.Ok() {
 				in.AddError((out.WhenReceived).UnmarshalJSON(data))
 			}
@@ -219,12 +226,12 @@ func easyjsonFc263e4eEncode(out *jwriter.Writer, in struct {
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"From\":"
+		const prefix string = ",\"from\":"
 		out.RawString(prefix[1:])
 		out.String(string(in.From))
 	}
 	{
-		const prefix string = ",\"To\":"
+		const prefix string = ",\"to\":"
 		out.RawString(prefix)
 		if in.To == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
 			out.RawString("null")
@@ -240,12 +247,12 @@ func easyjsonFc263e4eEncode(out *jwriter.Writer, in struct {
 		}
 	}
 	{
-		const prefix string = ",\"Subject\":"
+		const prefix string = ",\"subject\":"
 		out.RawString(prefix)
 		out.String(string(in.Subject))
 	}
 	{
-		const prefix string = ",\"ReplyTo\":"
+		const prefix string = ",\"replyTo\":"
 		out.RawString(prefix)
 		if in.ReplyTo == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
 			out.RawString("null")
@@ -261,7 +268,7 @@ func easyjsonFc263e4eEncode(out *jwriter.Writer, in struct {
 		}
 	}
 	{
-		const prefix string = ",\"WhenReceived\":"
+		const prefix string = ",\"whenReceived\":"
 		out.RawString(prefix)
 		out.Raw((in.WhenReceived).MarshalJSON())
 	}

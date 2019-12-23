@@ -216,9 +216,9 @@ CREATE OR REPLACE FUNCTION receiver_own() RETURNS trigger AS $receiver_own$
         if NEW.email LIKE '%nl-mail.ru' then
             NEW.email = (SELECT substr(NEW.email, 0, position('@' in NEW.email)));
         end if;
-        if NEW.email in (SELECT login FROM Users) then
-            UPDATE Message SET owner=NEW.email WHERE id=NEW.mailid;
-        end if;
+--         if NEW.email in (SELECT login FROM Users) then
+--             UPDATE Message SET owner=NEW.email WHERE id=NEW.mailid;
+--         end if;
         return NEW;
     END
 $receiver_own$ LANGUAGE plpgsql;
