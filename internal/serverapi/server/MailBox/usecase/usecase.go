@@ -110,7 +110,7 @@ func (u *MailBoxUsecase) PrepareMessage(from model.Email) (*model.Email, error) 
 	}
 	new := gomail.NewMessage()
 	//new.SetHeader("From", from.From, name)
-	new.SetHeader("From", name, "<"+from.From+">")
+	new.SetHeader("From", name + " <"+from.From+">")
 	new.SetHeader("To", from.To)
 	new.SetHeader("Subject", from.Header.Subject)
 	new.SetBody("text/plain", from.Body)
