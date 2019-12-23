@@ -15,4 +15,5 @@ type MailRepository interface {
 	DeleteFolder(login string, foldername string) error
 	ChangeMailFolder(login string, foldername string, mailid []models.MailID) error
 	FindMessages(login, request string) ([]int64, error)
+	GetUserData(login string) (string, string, error)
 }

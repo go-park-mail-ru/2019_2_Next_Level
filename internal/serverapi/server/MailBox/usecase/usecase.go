@@ -8,7 +8,9 @@ import (
 	mailbox "2019_2_Next_Level/internal/serverapi/server/MailBox"
 	"2019_2_Next_Level/internal/serverapi/server/MailBox/models"
 	e "2019_2_Next_Level/pkg/Error"
+	"bytes"
 	"github.com/microcosm-cc/bluemonday"
+	gomail "gopkg.in/gomail.v2"
 	"strconv"
 )
 
@@ -26,13 +28,18 @@ func NewMailBoxUsecase(repo mailbox.MailRepository, smtp postinterface.IPostInte
 	usecase.smtpPort = smtp
 	return &usecase
 }
+
 func (u *MailBoxUsecase) SendMail(email *model.Email) error 	{
 	//email.From = email.From+"@"+config.Conf.HttpConfig.HostName
 	//email.From = email.From+"@"+"nlmail.hldns.ru"
-	email.From = email.From+"@"+"mail.nl-mail.ru"
+	//email.From = email.From+"@"+"mail.nl-mail.ru"
 	login, host := email.Split(email.To)
 	if host==""{
 		email.To = login + "@"+config.Conf.HttpConfig.HostName
+	}
+	email, err := u.PrepareMessage(email)
+	if err != nil {
+		return err
 	}
 	postEmail := post.Email{
 		From: email.From,
@@ -89,4 +96,34 @@ func (u *MailBoxUsecase) DeleteFolder(login string, foldername string) error {
 
 func (u *MailBoxUsecase) FindMessages(login, request string) ([]int64, error) {
 	return u.repo.FindMessages(login, request)
+}
+
+func (u *MailBoxUsecase) PrepareMessage(from *model.Email) (*model.Email, error) {
+	fromLogin :=from.From
+	from.From =from.From+"@"+"mail.nl-mail.ru"
+	name, avatar, err := u.repo.GetUserData(fromLogin)
+	if err != nil {
+		return from, err
+	}
+	if avatar=="" {
+		avatar = config.Conf.HttpConfig.DefaultAvatar
+	}
+	new := gomail.NewMessage()
+	new.SetHeader("From", from.From, name)
+	new.SetHeader("To", from.To)
+	new.SetHeader("Subject", from.Header.Subject)
+	new.SetBody("text/plain", from.Body)
+
+	path := config.Conf.HttpConfig.RootDir + "/" + config.Conf.HttpConfig.StaticDir
+	if path[len(path)-1] != '/' {
+		path = path + "/"
+	}
+	path += config.Conf.HttpConfig.AvatarDir+ "/"
+	path += avatar
+	new.Attach(path)
+
+	var bodyWriter bytes.Buffer
+	new.WriteTo(&bodyWriter)
+	from.Body = bodyWriter.String()
+	return from, nil
 }

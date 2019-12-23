@@ -45,7 +45,6 @@ func (r *PostgresRepository) init() error {
 	}
 	return nil
 }
-
 // UserExists : checks if the user exists
 func (r *PostgresRepository) UserExists(login string) bool {
 	query := `SELECT COUNT(login)>0 FROM users WHERE login=$1`

@@ -224,3 +224,18 @@ func (r *PostgresRepository) FindMessages(login, request string) ([]int64, error
 	}
 	return list, nil
 }
+
+
+func (r *PostgresRepository) GetUserData(login string) (string, string, error) {
+	query := `SELECT firstname, secondname, avatar FROM users WHERE login=$1`
+	row := r.DB.QueryRow(query, login)
+	if row == nil {
+		return "", "", e.Error{}.SetString("Empty row")
+	}
+	var name1, name2, avatar string
+	err := row.Scan(&name1, &name2, &avatar)
+	if err != nil {
+		return "", "", err
+	}
+	return name1 + " " + name2, avatar, nil
+}
