@@ -14,8 +14,8 @@ const(
 
 	queryMarkMessage =  `UPDATE Message SET %s WHERE id=$1`
 
-	queryWriteMessage = `INSERT INTO Message (sender, subject, body, direction, folder) VALUES
-							($1, $2, $3, $4, $5)
+	queryWriteMessage = `INSERT INTO Message (sender, subject, body, direction, folder, owner) VALUES
+							($1, $2, $3, $4, $5, $6)
 						RETURNING id;`
 
 	queryInflateReceivers = `INSERT INTO Receiver (mailId, email) VALUES`

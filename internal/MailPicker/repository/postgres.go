@@ -63,13 +63,13 @@ func (r *PostgresRepository) UserExists(login string) bool {
 // AddEmail : Inserts the new email to database
 func (r *PostgresRepository) AddEmail(email *model.Email) error {
 	task := func() error {
-		saveMessage, err := r.DB.Prepare(`INSERT INTO Message (sender, time, body, subject) VALUES ($1, $2, $3, $4) RETURNING id;`)
+		saveMessage, err := r.DB.Prepare(`INSERT INTO Message (sender, time, body, subject, owner) VALUES ($1, $2, $3, $4, $5) RETURNING id;`)
 		if err != nil {
 			return err
 		}
 		var id int
 		whenReceived := sqlTools.FormatDate(sqlTools.BDPostgres, email.Header.WhenReceived)
-		err = saveMessage.QueryRow(email.From, whenReceived, email.Body, email.Header.Subject).Scan(&id)
+		err = saveMessage.QueryRow(email.From, whenReceived, email.Body, email.Header.Subject, email.To).Scan(&id)
 		if err != nil {
 			return err
 		}

@@ -144,7 +144,7 @@ func (r *PostgresRepository) PutSentMessage(email model.Email) error {
 
 		var id int
 		from, _ := email.Split(email.From)
-		err = saveMessage.QueryRow(from, email.Header.Subject, email.Body, "out", "sent").Scan(&id)
+		err = saveMessage.QueryRow(from, email.Header.Subject, email.Body, "out", "sent", from).Scan(&id)
 		if err != nil {
 			return err
 		}
