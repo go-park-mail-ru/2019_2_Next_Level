@@ -32,7 +32,8 @@ create table if not exists Users
 create table if not exists Session
 (
     login CITEXT NOT NULL REFERENCES Users (login) ON DELETE CASCADE,
-    token uuid NOT NULL
+    token uuid NOT NULL,
+    expires date NOT NULL DEFAULT NOW() + INTERVAL '1 DAY'
 );
 
 create table if not exists Folder (

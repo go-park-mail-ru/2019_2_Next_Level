@@ -1,0 +1,1501 @@
+--
+-- PostgreSQL database dump
+--
+
+SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+--
+-- Name: citext; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION citext; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION citext IS 'data type for case-insensitive character strings';
+
+
+SET search_path = public, pg_catalog;
+
+--
+-- Name: mail_direction; Type: TYPE; Schema: public; Owner: go
+--
+
+CREATE TYPE mail_direction AS ENUM (
+    'in',
+    'out'
+);
+
+
+ALTER TYPE public.mail_direction OWNER TO go;
+
+--
+-- Name: sex_type; Type: TYPE; Schema: public; Owner: go
+--
+
+CREATE TYPE sex_type AS ENUM (
+    'male',
+    'female'
+);
+
+
+ALTER TYPE public.sex_type OWNER TO go;
+
+--
+-- Name: user_role; Type: TYPE; Schema: public; Owner: go
+--
+
+CREATE TYPE user_role AS ENUM (
+    'common',
+    'support',
+    'admin'
+);
+
+
+ALTER TYPE public.user_role OWNER TO go;
+
+--
+-- Name: folder_counter(); Type: FUNCTION; Schema: public; Owner: go
+--
+
+CREATE FUNCTION folder_counter() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        if tg_op='INSERT' OR tg_op='UPDATE' then
+            UPDATE Folder SET count=count+1 WHERE owner=NEW.owner AND name=NEW.folder;
+        end if;
+        if tg_op='DELETE' OR tg_op='UPDATE' then
+            UPDATE Folder SET count=count-1 WHERE owner=OLD.owner AND name=OLD.folder;
+            RETURN OLD;
+        end if;
+        RETURN NEW;
+    END
+$$;
+
+
+ALTER FUNCTION public.folder_counter() OWNER TO go;
+
+--
+-- Name: get_chat_field(citext); Type: FUNCTION; Schema: public; Owner: go
+--
+
+CREATE FUNCTION get_chat_field(userid_ citext) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+        role_ user_role;
+    BEGIN
+        role_ := (SELECT role FROM Users WHERE login=userid_);
+        IF role_='common' then
+            RETURN 'userNick';
+        ELSE
+            RETURN 'supportNick';
+        end if;
+
+    end;
+$$;
+
+
+ALTER FUNCTION public.get_chat_field(userid_ citext) OWNER TO go;
+
+--
+-- Name: message_delete(); Type: FUNCTION; Schema: public; Owner: go
+--
+
+CREATE FUNCTION message_delete() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        if OLD.isRead=NEW.isRead AND OLD.isMarked=NEW.isMarked AND OLD.folder=NEW.folder AND NEW.folder='trash' then
+            -- значит пытались удалить из корзины
+            DELETE FROM Message WHERE id=NEW.id;
+            return null;
+        end if;
+        return NEW;
+    END
+$$;
+
+
+ALTER FUNCTION public.message_delete() OWNER TO go;
+
+--
+-- Name: message_owner(); Type: FUNCTION; Schema: public; Owner: go
+--
+
+CREATE FUNCTION message_owner() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        if NEW.owner IS NULL then
+            if NEW.sender IN (SELECT login FROM Users) then
+                NEW.owner = NEW.sender;
+            else
+                NEW.owner = (SELECT email FROM receiver WHERE mailid=NEW.id LIMIT 1);
+            end if;
+            RETURN NEW;
+        end if;
+        RETURN NEW;
+    END
+$$;
+
+
+ALTER FUNCTION public.message_owner() OWNER TO go;
+
+--
+-- Name: on_remove_folder(); Type: FUNCTION; Schema: public; Owner: go
+--
+
+CREATE FUNCTION on_remove_folder() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    begin
+        UPDATE Message SET folder=CASE(direction)
+                                    WHEN 'in' THEN 'inbox'
+                                    WHEN 'out'THEN 'sent'
+                                    END
+                    WHERE id in (SELECT id from Message where owner=OLD.owner AND folder=OLD.name);
+        RAISE NOTICE 'Remove';
+        return old;
+    end
+$$;
+
+
+ALTER FUNCTION public.on_remove_folder() OWNER TO go;
+
+--
+-- Name: receiver_own(); Type: FUNCTION; Schema: public; Owner: go
+--
+
+CREATE FUNCTION receiver_own() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        if NEW.email LIKE '%nl-mail.ru' then
+            NEW.email = (SELECT substr(NEW.email, 0, position('@' in NEW.email)));
+        end if;
+        if NEW.email in (SELECT login FROM Users) then
+            UPDATE Message SET owner=NEW.email WHERE id=NEW.mailid;
+        end if;
+        return NEW;
+    END
+$$;
+
+
+ALTER FUNCTION public.receiver_own() OWNER TO go;
+
+--
+-- Name: user_changed(); Type: FUNCTION; Schema: public; Owner: go
+--
+
+CREATE FUNCTION user_changed() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        IF NEW.avatar='' then
+            NEW.avatar=OLD.avatar;
+        end if;
+        RETURN NEW;
+    END
+$$;
+
+
+ALTER FUNCTION public.user_changed() OWNER TO go;
+
+--
+-- Name: user_created(); Type: FUNCTION; Schema: public; Owner: go
+--
+
+CREATE FUNCTION user_created() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        INSERT INTO Folder (name, owner, isSystem) VALUES
+            ('inbox', NEW.login, true),
+            ('sent', NEW.login, true),
+            ('proceed', NEW.login, true),
+            ('spam', NEW.login, true),
+            ('trash', NEW.login, true);
+        RETURN NEW;
+    END
+$$;
+
+
+ALTER FUNCTION public.user_created() OWNER TO go;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- Name: chat; Type: TABLE; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE TABLE chat (
+    id bigint NOT NULL,
+    usernick citext NOT NULL,
+    supportnick citext NOT NULL,
+    startdate timestamp with time zone DEFAULT now() NOT NULL,
+    isopen boolean DEFAULT true NOT NULL,
+    theme text DEFAULT ''::text NOT NULL
+);
+
+
+ALTER TABLE public.chat OWNER TO go;
+
+--
+-- Name: chat_id_seq; Type: SEQUENCE; Schema: public; Owner: go
+--
+
+CREATE SEQUENCE chat_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.chat_id_seq OWNER TO go;
+
+--
+-- Name: chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: go
+--
+
+ALTER SEQUENCE chat_id_seq OWNED BY chat.id;
+
+
+--
+-- Name: chatmessage; Type: TABLE; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE TABLE chatmessage (
+    id bigint NOT NULL,
+    chatid bigint NOT NULL,
+    sent timestamp with time zone DEFAULT now() NOT NULL,
+    wasread boolean DEFAULT false NOT NULL,
+    body text DEFAULT ''::text NOT NULL,
+    author citext NOT NULL
+);
+
+
+ALTER TABLE public.chatmessage OWNER TO go;
+
+--
+-- Name: chatmessage_chatid_seq; Type: SEQUENCE; Schema: public; Owner: go
+--
+
+CREATE SEQUENCE chatmessage_chatid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.chatmessage_chatid_seq OWNER TO go;
+
+--
+-- Name: chatmessage_chatid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: go
+--
+
+ALTER SEQUENCE chatmessage_chatid_seq OWNED BY chatmessage.chatid;
+
+
+--
+-- Name: chatmessage_id_seq; Type: SEQUENCE; Schema: public; Owner: go
+--
+
+CREATE SEQUENCE chatmessage_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.chatmessage_id_seq OWNER TO go;
+
+--
+-- Name: chatmessage_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: go
+--
+
+ALTER SEQUENCE chatmessage_id_seq OWNED BY chatmessage.id;
+
+
+--
+-- Name: folder; Type: TABLE; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE TABLE folder (
+    id bigint NOT NULL,
+    name text DEFAULT 'inbox'::text NOT NULL,
+    owner citext NOT NULL,
+    count integer DEFAULT 0,
+    issystem boolean DEFAULT false NOT NULL
+);
+
+
+ALTER TABLE public.folder OWNER TO go;
+
+--
+-- Name: folder_id_seq; Type: SEQUENCE; Schema: public; Owner: go
+--
+
+CREATE SEQUENCE folder_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.folder_id_seq OWNER TO go;
+
+--
+-- Name: folder_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: go
+--
+
+ALTER SEQUENCE folder_id_seq OWNED BY folder.id;
+
+
+--
+-- Name: message; Type: TABLE; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE TABLE message (
+    id bigint NOT NULL,
+    owner citext,
+    sender citext NOT NULL,
+    subject text DEFAULT ''::text NOT NULL,
+    body text DEFAULT ''::text NOT NULL,
+    direction mail_direction DEFAULT 'in'::mail_direction NOT NULL,
+    "time" timestamp with time zone DEFAULT now() NOT NULL,
+    folder text DEFAULT 'inbox'::text NOT NULL,
+    isread boolean DEFAULT false,
+    ismarked boolean DEFAULT false
+);
+
+
+ALTER TABLE public.message OWNER TO go;
+
+--
+-- Name: message_id_seq; Type: SEQUENCE; Schema: public; Owner: go
+--
+
+CREATE SEQUENCE message_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.message_id_seq OWNER TO go;
+
+--
+-- Name: message_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: go
+--
+
+ALTER SEQUENCE message_id_seq OWNED BY message.id;
+
+
+--
+-- Name: receiver; Type: TABLE; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE TABLE receiver (
+    id bigint NOT NULL,
+    mailid bigint,
+    email citext NOT NULL
+);
+
+
+ALTER TABLE public.receiver OWNER TO go;
+
+--
+-- Name: receiver_id_seq; Type: SEQUENCE; Schema: public; Owner: go
+--
+
+CREATE SEQUENCE receiver_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.receiver_id_seq OWNER TO go;
+
+--
+-- Name: receiver_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: go
+--
+
+ALTER SEQUENCE receiver_id_seq OWNED BY receiver.id;
+
+
+--
+-- Name: session; Type: TABLE; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE TABLE session (
+    login citext NOT NULL,
+    token uuid NOT NULL
+);
+
+
+ALTER TABLE public.session OWNER TO go;
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE TABLE users (
+    login citext NOT NULL,
+    password bytea NOT NULL,
+    sault bytea NOT NULL,
+    firstname text DEFAULT ''::text NOT NULL,
+    secondname text DEFAULT ''::text NOT NULL,
+    sex sex_type DEFAULT 'male'::sex_type NOT NULL,
+    avatar text DEFAULT 'default.png'::text NOT NULL,
+    birthdate date DEFAULT now() NOT NULL,
+    role user_role DEFAULT 'common'::user_role NOT NULL
+);
+
+
+ALTER TABLE public.users OWNER TO go;
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY chat ALTER COLUMN id SET DEFAULT nextval('chat_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY chatmessage ALTER COLUMN id SET DEFAULT nextval('chatmessage_id_seq'::regclass);
+
+
+--
+-- Name: chatid; Type: DEFAULT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY chatmessage ALTER COLUMN chatid SET DEFAULT nextval('chatmessage_chatid_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY folder ALTER COLUMN id SET DEFAULT nextval('folder_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY message ALTER COLUMN id SET DEFAULT nextval('message_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY receiver ALTER COLUMN id SET DEFAULT nextval('receiver_id_seq'::regclass);
+
+
+--
+-- Data for Name: chat; Type: TABLE DATA; Schema: public; Owner: go
+--
+
+COPY chat (id, usernick, supportnick, startdate, isopen, theme) FROM stdin;
+\.
+
+
+--
+-- Name: chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: go
+--
+
+SELECT pg_catalog.setval('chat_id_seq', 1, false);
+
+
+--
+-- Data for Name: chatmessage; Type: TABLE DATA; Schema: public; Owner: go
+--
+
+COPY chatmessage (id, chatid, sent, wasread, body, author) FROM stdin;
+\.
+
+
+--
+-- Name: chatmessage_chatid_seq; Type: SEQUENCE SET; Schema: public; Owner: go
+--
+
+SELECT pg_catalog.setval('chatmessage_chatid_seq', 1, false);
+
+
+--
+-- Name: chatmessage_id_seq; Type: SEQUENCE SET; Schema: public; Owner: go
+--
+
+SELECT pg_catalog.setval('chatmessage_id_seq', 1, false);
+
+
+--
+-- Data for Name: folder; Type: TABLE DATA; Schema: public; Owner: go
+--
+
+COPY folder (id, name, owner, count, issystem) FROM stdin;
+101	inbox	drujininii	0	t
+29	Pidor	ZelDen	0	f
+103	proceed	drujininii	0	t
+104	spam	drujininii	0	t
+105	trash	drujininii	0	t
+102	sent	drujininii	1	t
+111	inbox	fuck	0	t
+113	proceed	fuck	0	t
+114	spam	fuck	0	t
+115	trash	fuck	0	t
+112	sent	fuck	0	t
+6	inbox	testtest	12	t
+50	Test	andreykochnov	1	f
+82	test	rvasily	0	f
+98	fvdv	testtest	0	f
+84	testfsdf	rvasily	0	f
+100	lolkek	yury.baykov	1	f
+1	inbox	admin	0	t
+3	proceed	admin	0	t
+4	spam	admin	0	t
+5	trash	admin	0	t
+2	sent	admin	1	t
+52	inbox	fuckfuck	0	t
+54	proceed	fuckfuck	0	t
+55	spam	fuckfuck	0	t
+56	trash	fuckfuck	0	t
+53	sent	fuckfuck	1	t
+57	inbox	ivan	0	t
+19	inbox	abcde	0	t
+21	proceed	abcde	0	t
+22	spam	abcde	0	t
+23	trash	abcde	0	t
+24	inbox	ZelDen	0	t
+25	sent	ZelDen	0	t
+26	proceed	ZelDen	0	t
+27	spam	ZelDen	0	t
+28	trash	ZelDen	0	t
+30	inbox	abcdef	0	t
+31	sent	abcdef	0	t
+32	proceed	abcdef	0	t
+33	spam	abcdef	0	t
+34	trash	abcdef	0	t
+37	proceed	aaaaaaa	0	t
+38	spam	aaaaaaa	0	t
+59	proceed	ivan	0	t
+60	spam	ivan	0	t
+61	trash	ivan	0	t
+58	sent	ivan	1	t
+62	inbox	vileven	0	t
+64	proceed	vileven	0	t
+65	spam	vileven	0	t
+77	inbox	rvasily	1	t
+89	proceed	qwerty	0	t
+36	sent	aaaaaaa	0	t
+35	inbox	aaaaaaa	1	t
+39	trash	aaaaaaa	0	t
+9	spam	testtest	2	t
+13	inbox	vileven11	0	t
+15	proceed	vileven11	0	t
+16	spam	vileven11	0	t
+17	trash	vileven11	0	t
+88	sent	qwerty	1	t
+40	inbox	dnlipko	0	t
+14	sent	vileven11	1	t
+41	sent	dnlipko	0	t
+42	proceed	dnlipko	0	t
+43	spam	dnlipko	0	t
+44	trash	dnlipko	0	t
+48	spam	andreykochnov	0	t
+87	inbox	qwerty	0	t
+91	trash	qwerty	0	t
+90	spam	qwerty	1	t
+66	trash	vileven	1	t
+63	sent	vileven	1	t
+94	sent	yury.baykov	0	t
+69	proceed	sdhxjdbbdj	0	t
+46	sent	andreykochnov	0	t
+70	spam	sdhxjdbbdj	0	t
+47	proceed	andreykochnov	0	t
+71	trash	sdhxjdbbdj	0	t
+49	trash	andreykochnov	0	t
+45	inbox	andreykochnov	0	t
+68	sent	sdhxjdbbdj	1	t
+67	inbox	sdhxjdbbdj	1	t
+72	inbox	jvnjkfdvn	0	t
+20	sent	abcde	3	t
+73	sent	jvnjkfdvn	0	t
+74	proceed	jvnjkfdvn	0	t
+75	spam	jvnjkfdvn	0	t
+76	trash	jvnjkfdvn	0	t
+79	proceed	rvasily	0	t
+80	spam	rvasily	0	t
+81	trash	rvasily	0	t
+95	proceed	yury.baykov	0	t
+96	spam	yury.baykov	0	t
+78	sent	rvasily	0	t
+97	trash	yury.baykov	0	t
+10	trash	testtest	7	t
+93	inbox	yury.baykov	0	t
+7	sent	testtest	33	t
+108	proceed	fuckfuckqdwqd	0	t
+109	spam	fuckfuckqdwqd	0	t
+110	trash	fuckfuckqdwqd	0	t
+106	inbox	fuckfuckqdwqd	1	t
+107	sent	fuckfuckqdwqd	2	t
+8	proceed	testtest	55	t
+\.
+
+
+--
+-- Name: folder_id_seq; Type: SEQUENCE SET; Schema: public; Owner: go
+--
+
+SELECT pg_catalog.setval('folder_id_seq', 115, true);
+
+
+--
+-- Data for Name: message; Type: TABLE DATA; Schema: public; Owner: go
+--
+
+COPY message (id, owner, sender, subject, body, direction, "time", folder, isread, ismarked) FROM stdin;
+1	\N	aa@mail.ru	Test message	Test Body	in	2019-12-12 21:34:30.340653+00	inbox	f	f
+2	admin	admin	Test outcoming	Test body	out	2019-12-12 21:34:30.340653+00	sent	f	f
+168	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;matthew;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 20:48:33+00	inbox	f	f
+177	testtest	testtest	ewd	wede	out	2019-12-22 22:27:39.970499+00	sent	f	f
+178	testtest	testtest	DIEDIEDIE	asdasd	out	2019-12-22 22:28:03.78477+00	sent	f	f
+210	testtest	testtest	FUCK	d	out	2019-12-23 11:05:37.648483+00	sent	f	f
+213	testtest	testtest	LOCAL-1	LOCAL-1	out	2019-12-23 11:09:05.591231+00	sent	f	f
+216	testtest	testtest	FFF	Mime-Version: 1.0\r\nDate: Mon, 23 Dec 2019 15:09:44 +0300\r\nFrom: testtest@mail.nl-mail.ru, Testicw Testow\r\nTo: andreykochnov@yandex.ru\r\nSubject: FFF\r\nContent-Type: multipart/mixed;\r\n boundary=73f2dea983bc6cece56bf70263208f13fdc557c7500f78479a9cec936545\r\n\r\n--73f2dea983bc6cece56bf70263208f13fdc557c7500f78479a9cec936545\r\nContent-Transfer-Encoding: quoted-printable\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nHi\r\n--73f2dea983bc6cece56bf70263208f13fdc557c7500f78479a9cec936545\r\nContent-Disposition: attachment; filename="74657374746573743a323031392d31322d31372032333a30343a34362e313435353638363639202b30333030204d534b206d3d2b33312e333833323735383139da39a3ee5e6b4b0d3255bfef95601890afd80709.png"\r\nContent-Transfer-Encoding: base64\r\nContent-Type: image/png; name="74657374746573743a323031392d31322d31372032333a30343a34362e313435353638363639202b30333030204d534b206d3d2b33312e333833323735383139da39a3ee5e6b4b0d3255bfef95601890afd80709.png"\r\n\r\n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\r\nTkSuQmCC\r\n--73f2dea983bc6cece56bf70263208f13fdc557c7500f78479a9cec936545--\r\n	out	2019-12-23 12:09:44.414029+00	sent	f	f
+222	testtest	fuckfuckqdwqd@mail.nl-mail.ru	Local100	BodyBodyBodyy\n\n	in	2019-12-23 15:32:09+00	inbox	t	f
+225	testtest	fuckfuckqdwqd@mail.nl-mail.ru	FUCKFUCKFUCK	DDD\n\n	in	2019-12-23 15:37:10+00	inbox	f	f
+230	testtest	fuckfuckqdwqd@mail.nl-mail.ru	frfrefrefr	vdfvf\n\n	in	2019-12-23 15:50:30+00	inbox	f	f
+233	testtest	fuckfuckqdwqd@mail.nl-mail.ru	Lecal1	Local\n\n	in	2019-12-23 15:53:41+00	inbox	f	f
+64	testtest	testtest	wewef	ука	out	2019-12-12 23:27:29.940382+00	sent	f	f
+65	testtest	testtest	ewfr	wef	out	2019-12-12 23:31:17.033534+00	sent	f	f
+66	testtest	testtest	fewf	wefwef	out	2019-12-12 23:32:06.364658+00	sent	f	f
+67	\N	andreykochnov@yandex.ru		<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-13 02:48:19+00	inbox	f	f
+61	testtest	aa@mail.ru	Test Message #48	Test body #480	in	2019-12-12 22:07:49.765162+00	trash	f	f
+10	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	trash	f	f
+52	testtest	aa@mail.ru	Test Message #39	Test body #390	in	2019-12-12 22:07:49.765162+00	trash	f	f
+4	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	proceed	f	f
+60	testtest	aa@mail.ru	Test Message #47	Test body #470	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+5	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	proceed	f	f
+9	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	proceed	f	f
+14	testtest	aa@mail.ru	Test Message #1	Test body #10	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+42	testtest	aa@mail.ru	Test Message #29	Test body #290	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+21	testtest	aa@mail.ru	Test Message #8	Test body #80	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+29	testtest	aa@mail.ru	Test Message #16	Test body #160	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+30	testtest	aa@mail.ru	Test Message #17	Test body #170	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+63	testtest	testtest	wedew	Hello	out	2019-12-12 23:25:27.547494+00	proceed	f	f
+169	drujininii	drujininii	XSS	wfwef	out	2019-12-22 19:47:55.046275+00	sent	f	f
+170	testtest	testtest	dewd	dwede	out	2019-12-22 20:07:01.77322+00	sent	t	f
+179	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;zxcvbn;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 02:03:41+00	inbox	f	f
+181	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;nicolas;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 03:35:35+00	inbox	f	f
+183	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;purple;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 05:01:44+00	inbox	f	f
+190	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;pakistan;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 07:19:45+00	inbox	f	f
+192	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;cookie;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 07:55:25+00	inbox	f	f
+199	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;gwerty123;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 10:06:05+00	inbox	f	f
+201	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;pepper;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 11:00:04+00	inbox	f	f
+203	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;caroline;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 11:33:56+00	inbox	f	f
+13	testtest	aa@mail.ru	Test Message #0	Test body #0	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+34	testtest	aa@mail.ru	Test Message #21	Test body #210	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+28	testtest	aa@mail.ru	Test Message #15	Test body #150	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+35	testtest	aa@mail.ru	Test Message #22	Test body #220	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+39	testtest	aa@mail.ru	Test Message #26	Test body #260	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+211	testtest	andreykochnov@yandex.ru	dew	<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-23 14:07:00+00	inbox	t	f
+217	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;tennis;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 15:17:24+00	inbox	f	f
+235	testtest	fuck	AAAAAAA	Jj	out	2019-12-23 13:07:39.654048+00	sent	f	f
+171	testtest	testtest	ss	ddd	out	2019-12-22 21:04:35.271213+00	sent	f	f
+180	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;michael1;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 03:02:37+00	inbox	f	f
+182	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;ferrari;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 04:13:25+00	inbox	f	f
+82	testtest	andreykochnov@yandex.ru		<div>dwed</div><div> </div><div>15.12.2019, 21:24, "testtest@mail.nl-mail.ru" &lt;testtest@mail.nl-mail.ru&gt;:</div><blockquote>edewdew</blockquote><div> </div><div> </div><div>-------------</div><div>At your servise,</div><div>Andrew K.</div><div> </div>\n\n\n	in	2019-12-15 21:24:52+00	inbox	t	f
+104	\N	infouhs0001333@gmail.com	193.109.79.141	<HTML><HEAD><TITLE></TITLE>\n</HEAD>\n<BODY bgcolor=#FFFFFF leftmargin=5 topmargin=5 rightmargin=5 bottommargin=5>\n<FONT size=2 color=#000000 face="Arial">\n<DIV>\n760 United Nations Plaza,</DIV>\n<DIV>\nNew York, New York 10017,</DIV>\n<DIV>\nUnited States</DIV>\n<DIV>\nTel.(212) 963 4409</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nHow are you today? Hope all is well with you and your family. You cannot understand why this email came to you. We had a meeting for a month which ended last week with the United Nations Board of Trustees.</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nThis email to you. Have you been scammed in any part of the world today? The United Nations have agreed to compensate you with the sum of US$2, 850.000.00 (Two Million, Eight Hundred and Fifty Thousand U.S. Dollars Only) So you have to indicate the amount lost in the hands of fraudster, and also use the remaining balance as a contribution to promote commercial, economic, poverty eradication and social development of your community.</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nThis includes all payments to foreign contractors, inheritance and Lottery who have not received their Lottery / Inheritance payment, and people that have had an unfinished transaction or international Lottery payment that failed due to government problems, etc.</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nYou are advised to contact Mrs. Evelyn Anita, which is responsible for the payment of compensation through our payment center in United State Of America who is our representative, contact her immediately for your U.N. compensation of US$2,850.000.00.</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nContact Mrs. Evelyn Anita immediately for your compensation payment as soon as you receive this message today, you must send your full name and phone number and your correct mailing address along with this reference number: Ref: UNCPUS/NSA/850, very important.</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nHoping to hear from you as soon as you receive the compensation funds.</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nContact Person: Mrs. Evelyn Anita</DIV>\n<DIV>\nEmail: dmandrewaa2@gmail.com</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nBest regards,</DIV>\n<DIV>\n&nbsp;</DIV>\n<DIV>\nMr. Antonio Guterres</DIV>\n<DIV>\nUnited Nations Secretary General</DIV>\n</FONT>\n</BODY></HTML>\n\n\n	in	2019-12-17 16:10:19+00	inbox	f	f
+85	testtest	andreykochnov@yandex.ru	Hi and Die	<div>Hello</div><div> </div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div> </div>\n\n\n	in	2019-12-16 04:32:44+00	spam	f	f
+68	vileven11	vileven11	Привет!	Привет мир	out	2019-12-13 14:26:12.852608+00	sent	t	f
+69	\N	andreykochnov@yandex.ru		<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-13 19:54:03+00	inbox	f	f
+70	\N	andreykochnov@yandex.ru		<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-13 19:54:55+00	inbox	f	f
+71	testtest	testtest	Die, please	12345	out	2019-12-13 18:27:29.210636+00	sent	f	f
+72	testtest	testtest	12345	12345	out	2019-12-15 15:33:00.62926+00	sent	f	f
+73	testtest	testtest	12	123	out	2019-12-15 15:40:16.511674+00	sent	f	f
+74	\N	andreykochnov@yandex.ru		<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-15 18:53:35+00	inbox	f	f
+75	testtest	testtest	1234	wed	out	2019-12-15 16:29:34.151526+00	sent	f	f
+76	testtest	testtest	wedwe	wed	out	2019-12-15 16:37:45.84301+00	sent	f	f
+77	testtest	testtest	12345	dewded	out	2019-12-15 16:53:38.864546+00	sent	f	f
+79	\N	andreykochnov@yandex.ru		<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-15 20:48:16+00	inbox	f	f
+80	\N	andreykochnov@yandex.ru		<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-15 20:48:49+00	inbox	f	f
+87	testtest	testtest	12345	e333r	out	2019-12-16 07:16:33.741279+00	sent	f	f
+89	testtest	testtest	Sjdjjd	Frhjddjjs	out	2019-12-16 10:01:21.51072+00	sent	f	f
+88	testtest	andreykochnov@yandex.ru	aaaaaaa	<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-16 10:17:07+00	trash	f	f
+83	testtest	andreykochnov@yandex.ru		<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-15 23:42:18+00	spam	f	f
+78	testtest	testtest	12345	sdcd	out	2019-12-15 17:32:48.787699+00	sent	f	f
+84	testtest	andreykochnov@yandex.ru	Test	<div>Hi</div><div> </div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div> </div>\n\n\n	in	2019-12-15 23:53:21+00	trash	t	f
+147	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;dragon;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 06:10:26+00	inbox	f	f
+101	vileven	vileven	3121	3213123123\n	out	2019-12-16 15:45:26.041594+00	trash	t	f
+102	testtest	testtest	test	hello	out	2019-12-16 15:46:28.02111+00	sent	f	f
+103	\N	spameri@tiscali.it	193.109.79.141	t_Smtp.LocalIP\n\n\n	in	2019-12-17 12:20:55+00	inbox	f	f
+148	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;monkey;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 06:35:04+00	inbox	f	f
+90	aaaaaaa	aaaaaaa	Jjjn	Jjj	out	2019-12-16 10:32:56.871231+00	inbox	f	f
+149	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;malia13;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 07:00:19+00	inbox	f	f
+86	testtest	testtest	csdc	sdcd	out	2019-12-16 01:33:01.783822+00	trash	f	f
+81	testtest	testtest	12345	edewdew	out	2019-12-15 18:24:34.339986+00	trash	t	f
+150	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;jennifer;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 07:08:40+00	inbox	f	f
+151	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;princess;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 07:43:03+00	inbox	f	f
+92	andreykochnov	andreykochnov	Letter	<h1>Hi</>	out	2019-12-16 12:09:56.151867+00	Test	f	f
+93	\N	smtp2001soho@yahoo.com	7534df112cn206:193.109.79.141<177.43.210.8>	\n\n\n	in	0001-01-01 00:00:00+00	inbox	f	f
+94	abcde	abcde	ferfrfrefr	refref	out	2019-12-16 14:19:41.088784+00	sent	f	f
+95	abcde	abcde	fref	укак	out	2019-12-16 14:21:10.141859+00	sent	f	f
+96	abcde	abcde	12345	fdvf	out	2019-12-16 14:21:55.582234+00	sent	f	f
+97	testtest	testtest	Test	Прошу выслать ипотечные документы в чат	out	2019-12-16 14:26:06.571964+00	sent	f	f
+98	fuckfuck	fuckfuck	1223	wf	out	2019-12-16 14:27:49.571931+00	sent	f	f
+99	ivan	ivan	12345	sd	out	2019-12-16 15:40:44.1391+00	sent	f	f
+100	vileven	vileven	Привет!	ghbdtn	out	2019-12-16 15:45:09.149826+00	sent	f	f
+105	\N	infouhs0000002@gmail.com	193.109.79.141	760 United Nations Plaza,\nNew York, New York 10017,\nUnited States\nTel.(212) 963 4409\n\nHow are you today? Hope all is well with you and your family. You cannot understand why this email came to you. We had a meeting for a month which ended last week with the United Nations Board of Trustees.\n\nThis email to you. Have you been scammed in any part of the world today? The United Nations have agreed to compensate you with the sum of US$2, 850.000.00 (Two Million, Eight Hundred and Fifty Thousand U.S. Dollars Only) So you have to indicate the amount lost in the hands of fraudster, and also use the remaining balance as a contribution to promote commercial, economic, poverty eradication and social development of your community.\n\nThis includes all payments to foreign contractors, inheritance and Lottery who have not received their Lottery / Inheritance payment, and people that have had an unfinished transaction or international Lottery payment that failed due to government problems, etc.\n\nYou are advised to contact Mrs. Evelyn Anita, which is responsible for the payment of compensation through our payment center in United State Of America who is our representative, contact her immediately for your U.N. compensation of US$2,850.000.00.\n\nContact Mrs. Evelyn Anita immediately for your compensation payment as soon as you receive this message today, you must send your full name and phone number and your correct mailing address along with this reference number: Ref: UNCPUS/NSA/850, very important.\n\nHoping to hear from you as soon as you receive the compensation funds.\n\nContact Person: Mrs. Evelyn Anita\nEmail: dmandrewaa2@gmail.com\n\nBest regards,\n\nMr. Antonio Guterres\nUnited Nations Secretary General\n\n\n	in	2019-12-18 01:34:49+00	inbox	f	f
+106	testtest	testtest	N	N	out	2019-12-18 09:49:24.62775+00	sent	f	f
+108	sdhxjdbbdj	sdhxjdbbdj	Kdbjsnd	Nsjjdn	out	2019-12-18 14:44:25.550554+00	sent	f	f
+109	sdhxjdbbdj	andreykochnov@yandex.ru	Fuck	\n<HTML><BODY><p style="margin-top: 0px;" dir="ltr"></p> \n<div id="mail-app-auto-default-signature">\n <p dir="ltr">--<br> Отправлено из Mail.ru для Android</p>\n</div></BODY></HTML>\n	in	2019-12-18 17:45:21+00	inbox	f	f
+172	testtest	testtest	cd	sdc	out	2019-12-22 21:51:21.021772+00	sent	f	f
+174	testtest	testtest	Test1	asdas	out	2019-12-22 21:52:08.373701+00	sent	f	f
+184	\N	spameri@tiscali.it	193.109.79.141	t_Smtp.LocalIP\n\n\n	in	2019-12-22 18:20:58+00	inbox	f	f
+186	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;India123;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 05:47:42+00	inbox	f	f
+188	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;amanda;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 06:40:00+00	inbox	f	f
+195	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;friends;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 08:48:29+00	inbox	f	f
+110	rvasily	rvasily	nl mail test	compose	out	2019-12-18 15:31:14.237486+00	inbox	f	f
+197	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;victoria;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 09:38:24+00	inbox	f	f
+204	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;angel;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 11:51:10+00	inbox	f	f
+206	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;butterfly;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 12:37:27+00	inbox	f	f
+208	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;slipknot;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 13:15:38+00	inbox	f	f
+212	testtest	andreykochnov@yandex.ru	FUCK	<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-23 14:08:04+00	inbox	t	f
+218	testtest	testtest	FUCKFUCKFUCKFUCKFUCK	У лукоморья дуб зелёный	out	2019-12-23 12:27:11.4898+00	sent	f	f
+219	testtest	testtest	cdscsdcds	sвсывс	out	2019-12-23 12:27:52.886894+00	sent	f	f
+224	testtest	fuckfuckqdwqd	FUCKFUCKFUCK	DDD	out	2019-12-23 12:37:10.60229+00	sent	f	f
+226	fuckfuckqdwqd	fuckfuckqdwqd	sdc	sdcd	out	2019-12-23 12:41:19.082731+00	sent	t	f
+227	fuckfuckqdwqd	testtest	WWW	w	out	2019-12-23 12:43:40.383188+00	sent	f	f
+229	testtest	fuckfuckqdwqd	frfrefrefr	vdfvf	out	2019-12-23 12:50:30.821882+00	sent	f	f
+236	testtest	fuck@mail.nl-mail.ru	AAAAAAA	Jj\n\n	in	2019-12-23 16:07:39+00	inbox	t	f
+107	\N	infouhs0000002@gmail.com	193.109.79.141	760 United Nations Plaza,\nNew York, New York 10017,\nUnited States\nTel.(212) 963 4409\n\nHow are you today? Hope all is well with you and your family. You cannot understand why this email came to you. We had a meeting for a month which ended last week with the United Nations Board of Trustees.\n\nThis email to you. Have you been scammed in any part of the world today? The United Nations have agreed to compensate you with the sum of US$2, 850.000.00 (Two Million, Eight Hundred and Fifty Thousand U.S. Dollars Only) So you have to indicate the amount lost in the hands of fraudster, and also use the remaining balance as a contribution to promote commercial, economic, poverty eradication and social development of your community.\n\nThis includes all payments to foreign contractors, inheritance and Lottery who have not received their Lottery / Inheritance payment, and people that have had an unfinished transaction or international Lottery payment that failed due to government problems, etc.\n\nYou are advised to contact Mrs. Evelyn Anita, which is responsible for the payment of compensation through our payment center in United State Of America who is our representative, contact her immediately for your U.N. compensation of US$2,850.000.00.\n\nContact Mrs. Evelyn Anita immediately for your compensation payment as soon as you receive this message today, you must send your full name and phone number and your correct mailing address along with this reference number: Ref: UNCPUS/NSA/850, very important.\n\nHoping to hear from you as soon as you receive the compensation funds.\n\nContact Person: Mrs. Evelyn Anita\nEmail: dmandrewaa2@gmail.com\n\nBest regards,\n\nMr. Antonio Guterres\nUnited Nations Secretary General\n\n\n	in	2019-12-18 02:26:48+00	inbox	f	f
+111	\N	spameri@tiscali.it	193.109.79.141	t_Smtp.LocalIP\n\n\n	in	2019-12-20 06:38:23+00	inbox	f	f
+112	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;ryan;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 17:45:47+00	inbox	f	f
+113	qwerty	qwerty	Qwer	Jkn	out	2019-12-21 15:08:50.886386+00	sent	f	f
+118	yury.baykov	y.baykov@corp.mail.ru	efrr	\n<HTML><BODY><div>\n<div>ewf</div>\n\n<div>&nbsp;</div>\n\n<div data-signature-widget="container">\n<div data-signature-widget="content">\n<div>--<br>\nЮрий Байков</div>\n</div>\n</div>\n</div>\n</BODY></HTML>\n	in	2019-12-21 19:30:07+00	lolkek	f	f
+119	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;shadow;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 19:47:24+00	inbox	f	f
+114	qwerty	ivanov.vanya.111@mail.ru	Re: Qwer	\n<HTML><BODY><p style="margin-top: 0px;" dir="ltr">Die please</p> \n<div id="mail-app-auto-default-signature">\n <p dir="ltr">--<br> Отправлено из Mail.ru для Android</p>\n</div>суббота, 21 декабря 2019г., 18:08 +03:00 от <a href="mailto:qwerty@mail.nl-mail.ru">qwerty@mail.nl-mail.ru</a>:<br><br><blockquote id="mail-app-auto-quote" style="border-left:1px solid #005FF9; margin:0px 0px 0px 10px; padding:0px 0px 0px 10px;" cite="15769409310259754246">\n\n\n\n\n\n\n<div class="js-helper js-readmsg-msg">\n\t<style type="text/css"></style>\n \t<div >\n\t\t<base target="_self" href="https://e.mail.ru/" />\n\t\t\n            <div id="style_15769409310259754246_BODY"><div class="class_1576972101">Jkn</div></div>\n            \n        \n\t\t<base target="_self" href="https://e.mail.ru/" />\n\t</div>\n\n\t\n</div>\n\n\n</blockquote></BODY></HTML>\n	in	2019-12-21 18:09:19+00	spam	t	f
+115	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;martin;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 18:40:31+00	inbox	f	f
+120	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;jessica;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 20:18:40+00	inbox	f	f
+116	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;galliv;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 19:07:15+00	inbox	f	f
+117	testtest	testtest	scd	sdc	out	2019-12-21 16:24:39.191385+00	sent	f	f
+121	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;info2002;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 20:26:00+00	inbox	f	f
+122	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;target123;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 20:53:13+00	inbox	f	f
+123	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;killer;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 21:35:44+00	inbox	f	f
+124	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;andrea;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 22:03:20+00	inbox	f	f
+125	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;Password;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 22:34:44+00	inbox	f	f
+126	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;trustno1;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 23:09:52+00	inbox	f	f
+127	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;jordan;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 23:29:48+00	inbox	f	f
+128	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;michael;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-21 23:48:04+00	inbox	f	f
+129	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;azerty;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 00:29:10+00	inbox	f	f
+140	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;go2tical;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 03:48:37+00	inbox	f	f
+130	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;info2001;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 00:42:30+00	inbox	f	f
+131	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;loulou;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 00:40:06+00	inbox	f	f
+132	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;michelle;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 00:58:39+00	inbox	f	f
+133	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;starwars;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 01:16:16+00	inbox	f	f
+134	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;master;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 01:47:06+00	inbox	f	f
+135	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;zxcvbnm;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 02:06:41+00	inbox	f	f
+136	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;info2006;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 02:29:12+00	inbox	f	f
+137	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;samsung;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 02:44:38+00	inbox	f	f
+138	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;doudou;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 03:11:50+00	inbox	f	f
+139	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;sunshine;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 03:20:44+00	inbox	f	f
+141	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;baseball;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 04:18:53+00	inbox	f	f
+142	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;charlie;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 04:31:14+00	inbox	f	f
+143	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;1qaz2wsx3edc;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 04:53:21+00	inbox	f	f
+144	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;hunter;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 05:30:32+00	inbox	f	f
+145	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;soccer;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 05:46:21+00	inbox	f	f
+146	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;info2009;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 06:03:36+00	inbox	f	f
+152	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;PIRUKIDI;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 08:01:48+00	inbox	f	f
+154	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;59trick;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 09:03:45+00	inbox	f	f
+156	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;daniel;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 09:31:22+00	inbox	f	f
+158	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;thomas;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 10:32:46+00	inbox	f	f
+160	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;24crow;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 10:53:00+00	inbox	f	f
+162	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;info2008;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 12:26:20+00	inbox	f	f
+173	testtest	andreykochnov@yandex.ru	Re: cd	<div><br /></div><div><br /></div><div>23.12.2019, 00:51, "testtest@mail.nl-mail.ru" &lt;testtest@mail.nl-mail.ru&gt;:</div><blockquote>sdc</blockquote><div><br /></div><div><br /></div><div>-------------</div><div>At your servise,</div><div>Andrew K.</div><div><br /></div>\n\n\n	in	2019-12-23 00:51:43+00	inbox	t	f
+176	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;iloveyou1;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 01:07:56+00	inbox	f	f
+185	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;princess1;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 05:24:54+00	inbox	f	f
+187	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;snoopy;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 06:01:48+00	inbox	f	f
+194	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;chelsea;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 08:34:00+00	inbox	f	f
+196	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;789456;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 09:20:53+00	inbox	f	f
+198	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;india123;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 09:59:33+00	inbox	f	f
+205	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;tigger;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 12:20:52+00	inbox	f	f
+207	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;letmein;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 12:51:03+00	inbox	f	f
+215	testtest	testtest@mail.nl-mail.ru	FFFFFFF	12345	in	2019-12-23 15:08:50+00	inbox	t	f
+220	testtest	testtest@mail.nl-mail.ru	cdscsdcds	sвсывс\n\n	in	2019-12-23 15:27:52+00	inbox	f	f
+223	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;sandra;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 15:35:37+00	inbox	f	f
+228	fuckfuckqdwqd	testtest@mail.nl-mail.ru	WWW	w\n\n	in	2019-12-23 15:43:40+00	inbox	f	f
+231	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;ginger;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 15:50:33+00	inbox	f	f
+234	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;football1;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 15:59:25+00	inbox	f	f
+153	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;superman;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 08:25:23+00	inbox	f	f
+155	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;minecraft;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 09:26:15+00	inbox	f	f
+157	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;59mile;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 09:56:06+00	inbox	f	f
+159	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;info2005;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 10:54:08+00	inbox	f	f
+161	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;30media;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 11:02:54+00	inbox	f	f
+163	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;info2004;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 16:22:58+00	inbox	f	f
+164	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;!;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 18:32:39+00	inbox	f	f
+165	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;1g2w3e4r;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 18:58:58+00	inbox	f	f
+166	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;123qweasd;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 19:31:58+00	inbox	f	f
+167	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;00000;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-22 19:41:14+00	inbox	f	f
+49	testtest	aa@mail.ru	Test Message #36	Test body #360	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+59	testtest	aa@mail.ru	Test Message #46	Test body #460	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+58	testtest	aa@mail.ru	Test Message #45	Test body #450	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+48	testtest	aa@mail.ru	Test Message #35	Test body #350	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+17	testtest	aa@mail.ru	Test Message #4	Test body #40	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+18	testtest	aa@mail.ru	Test Message #5	Test body #50	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+47	testtest	aa@mail.ru	Test Message #34	Test body #340	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+57	testtest	aa@mail.ru	Test Message #44	Test body #440	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+41	testtest	aa@mail.ru	Test Message #28	Test body #280	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+56	testtest	aa@mail.ru	Test Message #43	Test body #430	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+55	testtest	aa@mail.ru	Test Message #42	Test body #420	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+54	testtest	aa@mail.ru	Test Message #41	Test body #410	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+53	testtest	aa@mail.ru	Test Message #40	Test body #400	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+51	testtest	aa@mail.ru	Test Message #38	Test body #380	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+50	testtest	aa@mail.ru	Test Message #37	Test body #370	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+3	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	proceed	f	f
+24	testtest	aa@mail.ru	Test Message #11	Test body #110	in	2019-12-12 22:07:49.765162+00	proceed	t	f
+46	testtest	aa@mail.ru	Test Message #33	Test body #330	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+25	testtest	aa@mail.ru	Test Message #12	Test body #120	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+45	testtest	aa@mail.ru	Test Message #32	Test body #320	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+44	testtest	aa@mail.ru	Test Message #31	Test body #310	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+43	testtest	aa@mail.ru	Test Message #30	Test body #300	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+27	testtest	aa@mail.ru	Test Message #14	Test body #140	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+31	testtest	aa@mail.ru	Test Message #18	Test body #180	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+32	testtest	aa@mail.ru	Test Message #19	Test body #190	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+37	testtest	aa@mail.ru	Test Message #24	Test body #240	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+11	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	proceed	f	f
+7	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	proceed	f	f
+12	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	proceed	f	f
+19	testtest	aa@mail.ru	Test Message #6	Test body #60	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+15	testtest	aa@mail.ru	Test Message #2	Test body #20	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+8	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 21:58:11.932947+00	proceed	f	f
+62	testtest	aa@mail.ru	Test Message #49	Test body #490	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+22	testtest	aa@mail.ru	Test Message #9	Test body #90	in	2019-12-12 22:07:49.765162+00	proceed	t	f
+33	testtest	aa@mail.ru	Test Message #20	Test body #200	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+36	testtest	aa@mail.ru	Test Message #23	Test body #230	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+23	testtest	aa@mail.ru	Test Message #10	Test body #100	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+26	testtest	aa@mail.ru	Test Message #13	Test body #130	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+40	testtest	aa@mail.ru	Test Message #27	Test body #270	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+38	testtest	aa@mail.ru	Test Message #25	Test body #250	in	2019-12-12 22:07:49.765162+00	proceed	f	f
+200	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;batman;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 10:28:25+00	inbox	f	f
+175	testtest	andreykochnov@yandex.ru	DIE	<div><br /></div><div><br /></div><div>------------------------------------------</div><div>С уважением,</div><div>Андрей К.</div><div><br /></div>\n\n\n	in	2019-12-23 00:55:42+00	inbox	t	f
+189	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;diamond;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 06:52:36+00	inbox	f	f
+191	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;metallica;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 07:31:17+00	inbox	f	f
+193	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;mother;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 08:15:54+00	inbox	f	f
+202	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;zag12wsx;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 11:09:37+00	inbox	f	f
+209	\N	info@nl-mail.ru	info@nl-mail.ru;info@nl-mail.ru;junior;mail.nl-mail.ru;25;0;PLAIN	\n	in	2019-12-23 13:24:58+00	inbox	f	f
+214	testtest	testtest	FFFFFFF	Mime-Version: 1.0\r\nDate: Mon, 23 Dec 2019 15:08:50 +0300\r\nFrom: testtest@mail.nl-mail.ru, Testicw Testow\r\nTo: testtest@mail.nl-mail.ru\r\nSubject: FFFFFFF\r\nContent-Type: multipart/mixed;\r\n boundary=673115f0b8265e68cca11fa5a694f4a995172a45d57c24cefca0ed158072\r\n\r\n--673115f0b8265e68cca11fa5a694f4a995172a45d57c24cefca0ed158072\r\nContent-Transfer-Encoding: quoted-printable\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n12345\r\n--673115f0b8265e68cca11fa5a694f4a995172a45d57c24cefca0ed158072\r\nContent-Disposition: attachment; filename="74657374746573743a323031392d31322d31372032333a30343a34362e313435353638363639202b30333030204d534b206d3d2b33312e333833323735383139da39a3ee5e6b4b0d3255bfef95601890afd80709.png"\r\nContent-Transfer-Encoding: base64\r\nContent-Type: image/png; name="74657374746573743a323031392d31322d31372032333a30343a34362e313435353638363639202b30333030204d534b206d3d2b33312e333833323735383139da39a3ee5e6b4b0d3255bfef95601890afd80709.png"\r\n\r\niVBORw0KGgoAAAANSUhEUgAAA0gAAAJ2CAIAAADqgjXlAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAA\r\nB3RJTUUH4wsdDgwYPOCHjwAAACR0RVh0U29mdHdhcmUATUFUTEFCLCBUaGUgTWF0aFdvcmtzLCBJ\r\nbmMuPFjdGAAAACJ0RVh0Q3JlYXRpb24gVGltZQAyOS1Ob3YtMjAxOSAxNzoxMjoyM39GA1EAACAA\r\nSURBVHic7N15fFN1vv/xL11TSoemQCFsTUlBqDisEXQEAnqpC4jLVYuDtHhBfsg4zB2cGXV0StUZ\r\nr+OgXActKCOFGQV1FHeFqxJEQA07atlCU5CWNSkCNnT9/XH0GNMtSdOck3Nez4d/pCfpyeekBd5+\r\nl8/p0NDQIAAAABD9YpQuAAAAAOFBsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAA\r\naATBDgAAQCMIdgAAABpBsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAA\r\nQCMIdgAAABpBsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMIdgAA\r\nABpBsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMIdgAAABpBsAMA\r\nANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMIdgAAABpBsAMAANAIgh0A\r\nAIBGEOwAAAA0gmAHAACgEQQ7oL1s3Lhx0qRJkyZNevLJJ/2e2rt376QffPnll4qUBwDQnjilCwA0\r\nq7y8/N133xVCdOnSxe+pOXPm2O126fEf/vCHCBcGANAqRuyASFu1apWc6gAACCOCHRBR586du/fe\r\ne5WuAgCgTUzFAhG1YMGC8vLyxsePHDkiD+ONGDEiOzvb99l//vOf0gOTyXTVVVdJjz///PP9+/c3\r\n90ZZWVmXXXbZ+vXrv/nmGyHEL37xi379+jV+u+7du0+cOFEIsWnTpkOHDjV3tgEDBowaNUoIUVZW\r\n9sknnwghzGbzmDFjWr3e6urqV1999eOPP/7uu+86duw4YcKEW265JSEhwe8SLrvssqysLOlgRUXF\r\nhx9+6HexQoj169e///77R48eFUJIp7r55pvlUwkhamtr161bd/bs2dra2vr6et8yxo4dm5GR0bi8\r\nnTt37tmzR3p8yy23GAwG6bH8gQ8ZMuTnP/95gDXs37//888/F0LYbDaj0bhy5cotW7bExMRMmTLl\r\npptu8nvrlk/V+JM5d+7cu+++e+7cuezsbK/XK/1YmyT/sIQQR48e/de//iWt4xw2bNgtt9zSp08f\r\n+ZWBFyy/0vcXqbq6+uWXX5Ye33HHHfKLW/6hy7+TzRVvNBoDfK+WP6XLLrsskI8a0JoGAO1j9erV\r\n0p+y6dOnS0d27dol/9Hr3Lmz9OCTTz5paGhYs2aN/NQ111zje57PPvtMfuqqq66Sj8+dO7eFP9oz\r\nZ85saGh49NFHpS+nTZvme84HHnhAOv7AAw9IR6ZPn97C2ebOnet3Ubm5ua1+Al988UXfvn39TmU2\r\nm/ft2+d3CcuWLZO/6//+7//8Lraurm7KlCmNq+rfv395ebn0mh07dvTo0aO5+levXt1kheXl5Uaj\r\nUXrNH/7wB+ngX/7yF+lIenr6sWPHAq/hmWeekQ4+9dRTvjFaCDFhwoSzZ88Gfiq/T+b8+fP9+/eX\r\nfxbXXXddc1cqfvrDSk5O9n0qMTHxhRdekC8/wIJ9X7ly5Ur54IMPPii/PvAfeqvFB/5eLX9KAX7U\r\ngMYwFQtEzuzZs6UHN954o9Vqbe5l69atO3nypPzlqlWrQn5HOa69+uqrtbW18vFXX31VepCXlxfy\r\nyVtWUVFx7bXXHj58WAjRr1+/G2+8sXfv3kIIl8t1/fXX+42oteyJJ5548803hRBdu3bNzc29+eab\r\npVh84MCBBQsWSK+ZOXPmsWPHhBD9+/efOXPm3Llz586de9FFF7V8ZpPJtGzZMunx3/72t507d+7d\r\nu7ewsFA6smLFiu7duwdeg+y+++47dOjQ2LFjbTabdOTjjz+eNWtWCKeSPPvsswcOHIiNjZ02bZo8\r\nGteyTZs25ebmnj9/XghxzTXX3HzzzYmJiRcuXLjzzjs/+OCDoApu0u7dux977DG/g2H8obf6Xo01\r\n/pRC+KiBqKd0sgQ0y2/ETg4QycnJ33zzjTzJ2HjETgjxzDPPSCepq6vr2rWrfLzJETvf4a6VK1dK\r\nB6URu4aGhgkTJkhHXnvtNemIPHA4YsQI+RvlCOg7uCWPnYQwYnfPPfdIr5wyZUpdXV1DQ0NVVdWQ\r\nIUOkg//617+au4TGI3YPPPDAJZdckpiYePjwYenIxx9/LL1GGt2sq6uTPyL5Nc1dVGMzZ86UXjZk\r\nyJBhw4ZJj+fNm+f7mlZr8P24hBDvv/++dHDt2rWxsbHSQWnUKpBT+X0yl1xyiRBi/vz5fpWfPXtW\r\nelnXrl39nrr88sulp4qLi6UjW7dulSqRf+4BFtzQaMSurq5O/lFKpJcF8kNvtfgA3yuQTymQjxrQ\r\nGEbsgEjweDz33Xef9Pihhx7q1atXc69MTEwUQrz44ovSlx988MGpU6eEEOnp6aG99Z133ik9kEfp\r\nXnvtNelBy9OvbSS/y8MPPxwTEyOEMBgM//jHP9asWeNyuX75y1/6vrikpOTDH2zbts3vVH/+8593\r\n79793XffSevDamtrpc9ECLFv3z4hRExMTHx8vHQkhGGh//3f/5Wm8Hbt2rVjxw4hxMUXX/w///M/\r\nQdXg65prrrn66qulxxMnTrz++uulx+vWrQv2VEKIDz74QFoIGPjPy+PxbN68WQiRnJwsD8qOGDFC\r\nWk+5bds23yHhVgtu7PHHH5f+90D6dZUF9UMPUHPv5afJTynYjxrQADZPAJHwxz/+UfoXZciQIS03\r\nrrv++utfffXVzZs3Hzp0qF+/flLC69ev36BBg6SueMG67bbb5syZc/bs2ddee626ujohIUFahB4b\r\nGxvaP7SSzZs3T506VXocExMjrUm/7bbbpH/Oa2tr5T0igwcPlr9rxIgRI0aMaHy2hQsXLly4sIW3\r\nq66uXrNmzQcffPD1119v27ZNHqLzer3Sg1/+8pfFxcVCiCuuuGLixIlJSUlCCGkNfqs6duz4yiuv\r\njBw5UjptYmLi6tWr5Y0Ugdfge5m+X44aNUoakZVSY1CnWrhw4cGDB4UQd911l+82jpbJF15fXy//\r\nmIQQX331lfTA4XBce+21gRfs6+DBg9Js9bx581588cULFy5Ix4P9oQeiuffy08KnFPhHDWgDwQ5o\r\ndzt27JC3Xj7//PMtv/iWW2554403ampqXnzxxfnz50vDbPn5+QFmlMbi4uKmT5/+zDPP1NTUrFmz\r\nZsiQIdJYxbXXXtu4c3LgDh8+LC2lki1btuzpp5/esGFDQkKC77CZFPXaYsuWLTfddJO0hE4IYTab\r\nL7/88pdeekkI0a1bN+ng3//+97Nnz77xxhvffPPNCy+8EOxb9OrVq0uXLidOnGhLDTJ5Z4xEnkyX\r\nljkGdaqSkhIhRHJycs+ePQO/HPnzr6qqkmfPfUlr7wIs2M+MGTMuXLhgNpsfffRReWhZ/HSstO0/\r\n9Jbfy09zn1JQHzWgDUzFAu1OTnVz585tYc+EJDk5WZoIW7Vq1auvvlpTUyPaPGcqt4d47bXXmuxP\r\nEYIJEyZ88skndrt97dq1L730krRG/rPPPluyZIkQIiEhQV6nVVFRIX/X0aNH169fX11d7Xe2+fPn\r\n/98P/OZA6+vrc3NzpX+b//KXvxw7dqy0tLSoqEh6Vv7nuVOnTkVFRfLHm5+f//bbb8vrC1s1a9Ys\r\nOdVduHDh9ttv9y0ywBpk8sCYRP4F6N69e7CneuKJJ/70pz+dP39+wYIFDz30UICXIwe1/v37f9IU\r\neZNEqwX7nXnJkiWffvqpEKKoqKhTp06+TwX7Q29VC+/lp8lPKdiPGtAGgh0QIT169JD7aLRs2rRp\r\nQoiSkpKHH35YCGGz2ZrswRa4UaNGXXzxxUKIN954QxoC7Ny588033+z7mmCXpqWnp48ZM2bcuHET\r\nJ06cOnXq/PnzpePyCjl59k1e2yeEePbZZydMmJCYmPj73//e92yDBg266gd+03a7d++WhgYvvfTS\r\n+++/X4oavo1jZLm5uVJrmNzc3OXLl0+aNEmKm636xz/+Ie2d7NmzpzTks2fPHnlNZFA1SD744INz\r\n587JX8oL9kePHh3sqYxGY2FhobSl47HHHmuhc6GvUaNGSYsOXS5Xdnb2mB+sWbPm8OHDtbW1foO1\r\nLRTsd2Zp6d7tt98ur8nzFdQPvVUtv5evJj+lYD9qQBsIdkCEPPnkkz/72c8CeeWkSZOk9mNSx+Cw\r\nbHGQxudqamqksZnbb79dniz78ssvN2zYII/ZSKvTglJfX//2229Lj+W2cHfddZf04MEHH1y8ePGH\r\nH364ePFieSHd7bffHuDJ5aGaHTt2SKnxyJEjckSQg85zzz0nxZH09PTFixcHXvzBgwf/+7//W3r8\r\n/PPPy3PlTz311Pr164OqQXbs2LHrrrtu06ZNu3fvvuOOO6QBsK5du06aNCnYU0l+97vfCSHq6uoe\r\neeSRQC4qLi5O2jNRU1OTm5t75MiR+vr6xx577Kmnnpo2bVrj36gWCm588vT09KeffrrJ9w3XDz2Q\r\n92rM71MK7aMGop7S23IBzfJd2zRhwgS/Z5trd/Luu+82NDTIW1kTExOrqqoafmjrGkK7E8mxY8fk\r\naTIhxObNm+WnbrzxRvl4bGysb+PWFtqdxMfHp/xA3pGanJxcUlIif3tzrWjlswXY7uTSSy+Vy+vc\r\nubN0IVL2TUxMbGhoKC8vT0lJkV7j29W21XYndXV18snz8/Olg9KIqRCiZ8+ebrc7wBp8Py6/JWt+\r\nNQRyqsafjNlslo7s2rVLrr+FdifHjh1rblne2rVrgyq44aeNUXy7lsir8QL/obdafODv1eqnFMhH\r\nDWgMI3ZAu4uPj1+6dGlQ3yLvZLztttsab88MQffu3eVdkP369ZPvtuQrNjb2r3/9q8lkCuSENTU1\r\nZ39QX1/ftWvXadOmffHFFwMHDpRf88Ybb/zpT3+SI5cQomvXrn/5y1+CGlGTznPFFVcIIerq6s6c\r\nOTNgwAC73S7l0QsXLmzYsGHWrFlSSpgwYUJQawcfeeSRL774QgjRo0ePJ598Ujq4aNEiqblMeXm5\r\n3FO61Rp8Tztt2rSFCxfK7Tl69uz52muv3XbbbSGcSiYPK8qz3i3r3r371q1bb7zxRt9Af/HFF9vt\r\ndqnpSeAF+7ruuuta3kwdrh96IO/VmN+nFNpHDUS1Dg0NDUrXACASbrrpJmlc8OGHH/Zdhl9fX3/8\r\n+PHy8vJLLrmkPW6gWV9fv2PHjpMnT/bu3du3C0awDh48eOjQIbPZPGDAgDCWF8Yann32WWkMae7c\r\nuYsXL66trbXb7Z07d25yx0zELqe2tnbTpk1VVVWXXHKJXwPFoAoOSrh+6GGhht8cIGJodwLowsaN\r\nG+XZXt/GZkKImJgYk8kU4EBdCGJiYkJuY+YrKytLutG7goKqIS4uTp5wb+Op2iIuLm7cuHEBvrKF\r\ngoMSrh96WKjhNweIGIIdoGXV1dWXXnppUlKStF1UCDFlyhT+kQMArSLYAVqWkJCwd+9euV9/3759\r\n5T5eAADtYY0doHFSW6+4uLixY8fefPPNHTt2VLoizTp06NDu3buFEP369Qv89l8KirqCAbSKYAcA\r\nAKARtDsBAADQCIIdAACARrB5Ijzq6+ulm7X7iomJkTvyAwAAtDeCXXi89NJLGzdu9DtotVpnzpyp\r\nSD0AAECHCHbhcerUqbi4uNGjR/selO9aCAAAEAEEu/A4cODAwIEDg7pJJQAAQHixeSIMTp06VVtb\r\n2353ZAIAAAgEI3ZhcOTIESGExWI5cODAN998k5iY2KdPnz59+ihdFwAA0BeCXRiUlpYKIV5++WWP\r\nxyMfHD16dF5eXkwMY6IAACBCCHZhcOLECSFEnz59fv3rX6enpx8+fPjll1/+7LPPkpOTb7311ha+\r\nceHChfv3749UmQAA6MuAAQPmz5+vdBWR1YA227dv32effeZ7pKqqav78+XPmzDl//nwL33jXXXe1\r\nc2mRxhVFBe1dFFcUFbR3UVyR+mnvilrFRGEYDBgwYNSoUb5HDAZDdnZ2XV3dwYMHlaoKAADoDcGu\r\nvUj3nGhoaFC6EAAAoBcEu7aqra3929/+tnTpUr/jZ8+eFUL06NFDiaLUxeX2utxeu9PT+ksBAEAb\r\nsHmireLi4txut9PpPH78ePfu3aWD5eXle/bsycjIkI/okN3pWeE4VuyoMKcZzEaDy+OVjuePNBXk\r\nZCpbGwAAmkSwC4Nbb721qKjoqaeemjJlSmpqqtvtXrNmTXx8/PTp05UuLdImTZokhHC5vTNWf+3y\r\nePNHmhoWTpCflcbtNjgrM/+8OVrinXRFGqO9i+KKooL2Loorggp1YBFYWOzYseOVV15xu93Sl717\r\n977jjjtavVfs7NmzG8/hRju70zNjdUnLuU1KfkKI5bnZ5jRDBKsDAOiIJv+dbRkjduExbNiwYcOG\r\nHTt2zOPxmEym1NRUpStSRrGjonBd6fo5w1uOa+Y0w/q7hxeuLR1ftL3VFwMAgACxeSKcevToMWjQ\r\nID2nuhWOitI/Xh5gUCvIyVw/Z/j4ou3sqwAAICwIdggPu9NTuK50/d3Dg/ouc5ph/ZzhhWtLyXYA\r\nALQdwQ5h4HJ7xz+7Y3nuoBC+15xmWJ6bTbYDAKDtCHYIgxmrv15/9zCbxRjat0vZbsbqEpfbG97C\r\nAADQFYId2qpwbak5LSnkVCcxpxkKJmaOL9oerqoAANAhgh3axO70LFhXGtokrJ98qyl/pGnG6pK2\r\nnwoAAH0i2KFNCteWrr97WLjOlmc1udxVhWtLw3VCAAB0hWCH0BU7KoQQbZyE9SUttrM7PWykAAAg\r\nBAQ7hK5wXWnYbwtmTjPkWZmQBQAgFAQ7hKjYUWGzGMM4XCfLt5psFiMTsgAABItghxAVrivNs/Zo\r\np5MXTMxkQhYAgGAR7BCK9huukzAhCwBACAh2CEW7DtdJ8q0ms9HAhCwAAIEj2CFoxY4Ks9HQfsN1\r\nsuW52cVbK7gdBQAAASLYIWgrHBV5VlME3sicZsgfaSpcx6AdAAABIdghOHanx+6szI9IsBNC5FlN\r\n7KIAACBABDsEZ4XjWFhuIBYg6R6yrLQDACAQBDsER9oPG8l3lEYHGbQDAKBVBDsEodhRkW81mdMM\r\nEX7fgpxMWp8AANAqgh2CsMFZ2d5dTppksxjNRoN0a1oAANAcgh0CZXd6Ij8PK1uem832WAAAWkaw\r\nQ6BWOI5FbDNsY+Y0A4N2AAC0jGCHQNmdnoKJmQoWwKAdAAAtI9ghIMWOCpfbG/ltE77MaQabxcgu\r\nCgAAmkOwQ0A2RLApcQsKJmbS9wQAgOYQ7BAQxedhJdKgHf2KAQBoEsEOrVPDPKysYGJm8Va2UAAA\r\n0ASCHVqnknlYCdtjAQBoDsEOrVPJPKyM7bEAADSJYIdW2J0e9czDShi0AwCgSQQ7tELZvsTNKcjJ\r\nZNAOAAA/BDu0wu70KHJ/2JZJd4+l9QkAAL4IdmiFy+1V6v6wLcuzmuh7AgCAL4IdWlLsqFDhPKxE\r\nipsM2gEAICPYoSUbnJXjLKlKV9E0c5qBQTsAAHwR7NCSYkeFOudhJTaL0eXxMmgHAICEYIdmFTsq\r\nzGkGVTU68SPdYWyF45jShQAAoAoEOzRrg7NSzcN1koKJmYzYAQAgIdihWepsdOKHZsUAAMgIdmiW\r\nahud+KFZMQAAEoIdmqbmRid+aFYMAICEYIemqbnRSWP0PQEAQBDs0By70xMV87AS+p4AACAIdmiO\r\ny+1Vc6MTP/Q9AQBAEOzQpChaYCej7wkAAAQ7NCG6FthJpL4nZDsAgJ4R7NCE6FpgJyvIyWQLBQBA\r\nzwh2aEJ0LbCTmY1JbKEAAOgZwQ7+onGBncScZsgfaWILBQBAtwh28BeNC+xkeVYTI3YAAN0i2MFf\r\nlC6wk3DrWACAnhHs4C9KF9jJCnIyVxDsAAC6RLDDT0TvAjsZWygAALpFsMNPlLm9SpfQVmyhAADo\r\nFsEOP+HyeKN354SMLRQAAH0i2OEnih0V0btzQsZdKAAA+kSww4+kJBTVOydk3IUCAKBDBDv8yOX2\r\nRvvOCZnZmGR3VjJoBwDQFYIdfhTVrYn9mNMM+Va2UAAA9IVghx9FdWvixgomZjJiBwDQFYIdfhTt\r\nrYn9sIUCAKA3BDt8r9hRYdPKPKwsz2piCwUAQD8IdviROS1J6RLCzGYxujxR33IZAIAAEezwPS3t\r\nnJBJs7EM2gEAdIJgh+9pbOeErCAns3hrhdJVAAAQCQS78Dtz5szOnTvPnj2rdCHB0djOCZnZmMQW\r\nCgCAThDswu+5554rKir65ptvlC4kCMWOCs20JvZjTjPYLEYa2gEA9IBgF2bvv//+wYMHla4iaGVu\r\nLe8wyLOaGLEDAOgBwS6cjhw58tZbb3Xq1EnpQoLm8ni1t3NCRkM7AIBOEOzCpqam5vnnn7dYLCNH\r\njlS6lqBpdeeEjIZ2AAA9INiFzb///e9vv/125syZShcSCq3unJDR0A4AoAdxShegEbt377bb7Xfe\r\neWdqanATmrNnz/b9ctKkSZMnTw5raa3T8M4JmdzQriAnU+laAADt4u23337nnXeUrkJhBLswOHv2\r\n7MqVK0eMGDFq1Khgv3fp0qXtUVJQtL1zQlaQkzljdQnBDgC0avLkyX6DI36jJ3rAVGwYrFixIjY2\r\n9pe//KXShYRI2zsnZGZjksvtZQsFAEDDCHZt9cknn+zZs2f69OnJyclK1xIize+ckJjTDAsmZtLQ\r\nDgCgYUzFttXu3buFEE8//bTf8UWLFgkhnnzySfUHPs3vnJDlWU3ji7YrXQUAAO2FYNdW2dnZnTt3\r\n9j3idDorKioGDx6cmpoaF6f2T7jYUWHTwTysRG5op4cRSgCADqk9dqjfhAkT/I6sWrWqoqLiqquu\r\nGjRokCIlBcuclqR0CZGTZzWtcBwj2AEANIk1dnq3wVmph50TMpvFyP4JAIBWEez0Tm/zktxeDACg\r\nYQS78Js6derSpUujZR5WPzsnZNxeDACgVQQ7XbM7PXpLdeKH24u59NGWGQCgKwQ7XXO5vbqah5VI\r\ns7ErHBVKFwIAQJgR7HRtg7PSbNTdiJ0QoiAns3grwQ4AoDUEO73L0N9UrOD2YgAAjSLY6ZretsTK\r\npNuLbThYqXQhAACEE8FO13S4JVY2LiuV2VgAgMYQ7PRLVzcTa8xmMdLQDgCgMQQ7XdPVzcQas1mM\r\nKxzHlK4CAICwIdjpl95uJtZYntXEiB0AQEsIdvpFpuH2YgAAjSHY6Zc+uxP74fZiAAAtIdjpmm63\r\nxMqk24spXQUAAOFBsNOpYkdFvtWkdBXKYzYWAKAlBDvoHbOxAADNINjpFFtiZczGAgA0g2CnU7q9\r\nmVhj0mxssYO7UAAAoh7BTqdcbsaoflSQk7mCYAcAiH4EO/1iS6zMbEyyOyvZQgEAiHYEOz1iS6wf\r\nc5oh32racLBS6UIAAGgTgh0ghBB51h7FW5mNBQBEN4KdHrEltjGzMYmGdgCAaEew0yO708MCOz/m\r\nNIPNYmQ2FgAQ1Qh2euRye83GJKWrUJ1xWanMxgIAohrBTqcYsWvMZjEyGwsAiGoEO90pdlTYWGDX\r\nDJvFuMJxTOkqAAAIEcFOj8xpzMM2Lc9qYsQOABC9CHa6w5bYFki3FyPbAQCiFMFOd1zuKqVLULU8\r\nq4nZWABAlCLY6Y7L47VZjEpXoV42i5EROwBAlCLY6Y7L7WVLbAuYjQUARC+Cnb7QmjgQeVZT4dpS\r\npasAACBoBDt9cbmZh22dzWJ0ebxKVwEAQNAIdvpS5vaajYzYtYLZWABAlCLY6YvL481gKjYAzMYC\r\nAKIRwU5f7E4PU7GBYDYWABCNCHb64nITVgIizcYWOyqULgQAgCAQ7HSHXbEBKsjJXEGwAwBEFYKd\r\njhQ7KmzcTCxgZmOS3VnJFgoAQBQh2OmLOS1J6RKihjnNYLOkbjhYqXQhAAAEimCnIxucleMYsQtG\r\nQU5m8VZmYwEAUYNgBzTLbExyub3MxgIAogXBTkfodRIsc5oh32piNhYAEC0IdjricnvZEhusPGsP\r\nZmMBANGCYKcXpLrQ2CxGbi8GAIgWBDu9YB42ZDaLkdlYAEBUINgBrcizmpiNBQBEBYKdXtDrJGTS\r\n7cWYjQUAqB/BDmidzWJc4TimdBUAALSCYKcXrLFrizyriRE7AID6Eez0gl2xbcFsLAAgKhDsdIFU\r\n13bMxgIA1I9gpwvMw7Yds7EAAPUj2AEBYTYWAKB+BDtdoNdJWORZTYVrS5WuAgCAZhHsdMHlrlK6\r\nBC2wWYwuj1fpKgAAaBbBThdcHi9r7NqO2VgAgMoR7HSBXbHhwmwsAEDNCHbaR6oLI2ZjAQBqRrDT\r\nPnqdhJE0G1vsqFC6EAAAmkCwA4JTkJO5gmAHAFAlgp320eskvMzGJLuzki0UAAAVItgBwTGnGWyW\r\n1A0HK5UuBAAAfwQ77WONXdgV5GQWb2U2FgCgOgQ77WNXbNiZjUkut5fZWACA2hDswqa6unr37t3b\r\ntm0rLVVRnzOXm94c4WdOM+RbTczGAgDUJk7pAjRiy5Ytq1atunDhgvSlyWSaPXu2yWRStirx/Tws\r\nOyfCL8/aY8bqkoKcTKULAQDgR4zYhUFJSUlxcXF6evr999+/ePHiWbNmnTlzZtGiRXLOU5Y5LUnp\r\nEjTIZjFyezEAgNoQ7MLgvffei4mJmTt3rtlsjo+PHzly5PXXX19ZWbl7926lSxNlbq/ZyAK7dmGz\r\nGFc4jildBQAAPyLYhcEVV1xx9dVXG40/7jyVHp88eVK5or7n8ngz2DnRPvKsJkbsAACqwhq7MBg1\r\napTfkS+//FII0b9/fyXK+Qm705Nn7aF0Fdok3V6MbjIAAPUg2IVTRUXF0aNHN2/e/NVXX1155ZVq\r\nCHZCCLORNXbtRZqNJdgBAFSCYBdO69at27x5sxDCaDRmZga0X3L27Nm+X06aNGny5MlhLIkmdu0q\r\nz2oaX7Rd6SoAAEII8fbbb7/zzjtKV6Ewgl04/ed//uf06dOPHz++evXqZcuW1azuJwAAIABJREFU\r\nnThx4rrrrmv5W5YuXdp+9didHlJdu2I2FgDUY/LkyX6DI36jJ3rA5olwSk5O7tChQ48ePebOnZuS\r\nkvLuu+/W19crWI/L7SVwtLc8q6lwrYpaUgMA9Ixg1y7i4+MHDBhQV1d38OBBBcso47YT7c9mMbo8\r\nfM4AAFUg2LVVbW3t/fff/8wzz/gdr66uFkKkpip51weXxzuO2060M3k2VulCAAAg2LVZXFycwWD4\r\n8ssvT5w4IR8sLy//6quvunfvnp6ermBtiAxmYwEAKkGwC4Nbbrmlvr7+ySef/Oyzz0pKSjZu3Pjk\r\nk0926NBh2rRpyhbGov7IYDYWAKAS7IoNg+zs7HvuuefFF19cvny5dKR379533313v379lC2MXieR\r\nIc3GFjsq8q0mpWsBAOgawS48Bg8e/Nhjjx0/ftztdvfs2bNz585KV4SIKsjJLFxbSrADACiLqdhw\r\n6t69+6BBg1SS6uxOj42dE5FiNibZnZVsoQAAKItgp1kut9ecxs3EIsScZsi3mjYcrFS6EACArhHs\r\nNKvM7TUbWWAXOXnWHsVbK5SuAgCgawQ7zXJ5vBnsnIggm8VIQzsAgLIIdprlclexJTbCbBbjCscx\r\npasAAOgXwU6zXB6v2cgau4jKs5oYsQMAKIhgp1k0sYs8bi8GAFAWwU6bXG5uhKCMPKuJ2VgAgFII\r\ndtpEEzul2CxGRuwAAEoh2GkWTewUwWwsAEBBBDttoomdgvKspsK1pUpXAQDQI4KdNtHETkE2i9Hl\r\nYY0jAEABBDttoomdgqTZ2GIHd6EAAEQawU6baGKnrIKczBUEOwBAxBHstIkmdsoyG5Pszkq2UAAA\r\nIoxgp0GkOsWZ0wz5VtOGg5VKFwIA0BeCnQbZnR62xCouz9qjeCuzsQCAiCLYaRNN7BRnsxhpaAcA\r\niDCC3Y+8Xo20qKCJnUrYLEZuLwYAiKQ4pQuItMcee2zVqlXV1dW+B2tqarxe7/Hjx2tra5UqLIxc\r\nHu847iemAnlW0/ii7UpXAQDQEX0Fu9TU1DNnzjT3rNFojGQx7cflrsqz9lC6Cvx4ezGbRSO/WgAA\r\nldPRVOyWLVvOnDmTkpJSUlLyxRdfCCFeeukll8v1yiuvxMfHp6SkuN1upWsMD5rYqQe3FwMARJKO\r\ngt0999wjhHA6nQMHDrRarcnJyY899lhGRsYtt9xSXV199uzZ3/zmN0rXGB60O1EPbi8GAIgkHQU7\r\nr9ebmJjYrVs36ctu3bodP35cfnbhwoXPPvusQqWFk8tNjFARbi8GAIgkHQU7g+Eng1jp6eknTpyQ\r\nv7zhhhtqamp8o16Usjs9NnZOqElBTmbhOmZjAQCRoKNgN3369AsXLpw+fVr6csaMGUKIiorvh1Kk\r\n/bDa6HhCEztVMRuTXG4vDe0AABGgo2A3depUIUR2dvbRo0eFENdcc40Q4t5775WevfXWW4UQXbp0\r\nUa7A8KCJndqY0wwLJmbS0A4AEAE6CnbdunWbPn36iRMnevfuXVtbm5GR0bNnz5deeulnP/tZQkLC\r\nrl27Lrrook6dOildZlu5PN4Mdk6oTJ7VxIgdACACdBTshBArVqx47bXXhgwZEhcXJ4Q4evRo7969\r\nz549W1NT07dv37179ypdYBi43FVKlwB/ckM7pQsBAGicvoKdEOKmm27auXOn/OWRI0dOnTp16tSp\r\nsrIyBasKI5fHSztcFaKhHQAgAvR154kmSevqTp486XtQ7ooSdWhip042i5G9sQCA9qa7EbvmXHPN\r\nNek+jhw5onRF0BQa2gEAIkBHI3YOh2P8+PHNPXv+/PnY2NgtW7ZIX/bp0ydSdYUTTezUrCAns3Bt\r\nab7VpHQhAADN0lGwEz+ktxZeYLVaI1ZMe3C5vTSxUy2zMcnurLQ7PSyCBAC0E91NxVZUVNQ2ZcSI\r\nEUqXFgZl3E9MxcxphnyracPBSqULAQBolu6Cnba5PN5xTMWqWMHEzOKtLLMDALQXgh0QOTS0AwC0\r\nK4KdprB+S/1oaAcAaD+6C3aTJk0aN27c559/vn///tOnTytdDnTHZjG6PCyFBAC0C33tihVCfPHF\r\nF0KI0aNHS18mJiYOGDDg9ddfV7SosKE7sfrJDe3oewIACDsdjdhZrdaGhoa6urrz58+fOHHC6XS+\r\n9NJL/fr127NnT//+/bdt26Z0gW1FqosWBTmZK+hUDABoBzoKdpKYmJiOHTt269atX79+U6dO/frr\r\nrxsaGlauXCmEqKurG/mDaLzzBAvsooXc0E7pQgAAWqO7YNekO+6449JLL42Njd35A6UrgpaZ0wwL\r\nJmaucBxTuhAAgNboKNg5HI7HH3/8u+++a/LZzz//3LdfcTTeUqzM7TUbmYqNDnlWEyN2AICw01Gw\r\nE0Lcd999ycnJAwYMkO8JqyUujzeDNXZRgoZ2AID2oKNgZ7Valy1b1qNHjwMHDlx++eUJCQk33HBD\r\nNK6la47LXcXmiShCQzsAQNjpKNgJIf7rv/6roqLi2LFj8+bNS0hIePPNN/v27dutW7fHHnvs3Llz\r\nSlfXVi6P12xMUroKBEpqaOfi9r4AgPDRV7CTdO/efdGiRefOnXM6nWPHjvV4PA888EBKSorFYonq\r\nKVranUQXaTaWvicAgDDSY7CT9evXb8OGDU6nMycnRwhx6NChyy+/3GAwPPTQQ0qXFjQGfqJRQU5m\r\n8VaCHQAgbPQb7CoqKmbMmNGpUyez2bx27Vqj0fjwww8//PDDKSkpjz76aPfu3ZUuMDguT5XNkqp0\r\nFQiOzWJkCwUAIIx0F+w8Hk9hYWH37t179uxZXFx8/vz5CRMmuFwut9v90EMPPfTQQydPnszNzT1x\r\n4kRhYaHSxQbB5faa01hgF33yrCYa2gEAwkVHwe7QoUMZGRlpaWkLFiw4ceJE375933zzzYaGho8+\r\n+igjI8P3lY888ogQ4r333lOo0lCUMRUbnWwWIyN2AIBw0VGwO3369OHDh5OTk+fPn3/q1KmysrLr\r\nr7++yVd6vd5+/fpF10o7l8c7jqnYKCRtoShmCwUAIBzilC4gchITEw8cOJCVldXqKwcPHux0OiNQ\r\nEiCEKMjJnLG6JN9qUroQAEDU09GI3YULF2644YaTJ08qXUi7sDs9NotR6SoQCrMxiS0UAICw0FGw\r\nE0J89dVXSpcA+DOnGWwWI1soAABtp69gp2F0J45qeVYTI3YAgLYj2GkBqS7asYUCABAWugt26enp\r\nHZoRFxetW0nsTo/ZSLCLbgU5mdxeDADQRtEaZUKWnJzc3FMxMVEcc+lOHO3MxiSXx8smGABAW+gu\r\n2JWWlnbr1k3pKsKszO1lxC7amdMM+SNNKxzHCHYAgJBF8RgVZC6PN4M1dtGPLRQAgDYi2GmBy12l\r\ndAkIA7ZQAADaSF/BbvTo0UqX0C5cHi/zd9rAFgoAQFvoKNhZrdYtW7Zob4GdEMLl9ipdAsJD3kKh\r\ndCEAgKiko80TDofj+uuvb+EFMTExR48eDfn8tbW1e/fu9Xq98fHxAwcOTExMDPlUIaCPnTawhQIA\r\n0BY6CnZCiGPHWrprU2xsbMhn3rRp0yuvvOL1euVTTZkyJScnJ+QTBs7u9JDqtCTPahpftF3pKgAA\r\nUUlHwc5qtfbu3fubb77p3Lnz9u3b09PTw3XmnTt3rly5MiMj45ZbbjGbzeXl5a+++urrr7+emJho\r\ns9nC9S7NcblZYKcp8haKfKtJ6VoAAFFGR2vshBBHjhx54YUXzpw5Y7FYHnjggU6NhHba9957LzY2\r\ndt68ef3794+Pj8/IyLjnnnuSkpLWrVsX3vqhEwU5mYXrSpWuAgAQffQV7IQQM2bMqKmpmTJlyt//\r\n/veOHTuuX7++7efs0KFDdna27z0tEhMTs7KyTp8+3faTt2qDs5LuxBpjsxjNRgNbKAAAwdJdsBNC\r\nxMXFvfHGG7t27UpISJgwYcKYMWPktXGhuf/++3/1q1/5HmloaCgrKzMYIpS36E6sPXlW0wpHS0tC\r\nAQBoTI/BTvLzn/+8srJywYIFn376aVJS0pNPPhnGk3/00UfffvvtFVdcEcZzNsflrmLzhPbYLEZG\r\n7AAAwerQ0NCgdA2Rs3PnzsYHz5w5c+ONN3o8nh49elRUhKE37FdfffXMM8+kpqY++OCDHTt2bOGV\r\ns2fP9jsyadKkyZMnB/V2mX/evH7OcLKd9sxYXWI2GgpyMpUuBACiw9tvv/3OO+/4HVy6dKkixShF\r\nR7tiHQ7HpZde2sILTp482fZ32blz5/PPP9+xY8d58+a1nOokbf+Fc7m9pDpNyrP2mLG6hGAHAAGa\r\nPHmy3+BI4wEUzdNRsBNCtDw3GhPT1onp999//4033ujSpcv8+fO7dOnSxrNB5+QtFLSzAQAESEfB\r\nzmq1bty4sf3Ov3Llyk2bNvXr1+/uu+9OSUlpvzfyZXd6bJbUyLwXIi/PaipcW2q7m2AHAAiIfjdP\r\nhNfSpUs3bdo0bNiw3/72txFLdeL7edikiL0dIsxmMdqdleyiAAAESEcjdqKZzRO+hg4dGsJp33vv\r\nve3bt1ut1pkzZ4ZUF9A0c5phwcRMbh0LAAiQjoJdq5snYmNja2trgz3t2bNn3333XSFEdXX1smXL\r\n/J6988472750rwV0J9Y8bh0LAAicjoKdpIX9E6ElsP3790txcNeuXY2fzc/Pb9dgJ+hOrHXcOhYA\r\nEDjdBbvXX3+9W7duYTzhiBEjFOyRY3d68qw9lHp3REZBTuaM1SUEOwBAq9g8EfXMRjZPaBy3jgUA\r\nBIhgF93oTqwTUt8TpasAAKgdwS6KudxepUtAhNgsRpfHy6AdAKBlultjt3fv3tOnT/sdjIuLS0lJ\r\n6d69uyIlhczlqaI7sU6Y0ww2i5G+JwCAluku2I0dO7a5p+65556nn346ksW0Ed2JdaVgYiZ9TwAA\r\nLdNXsBsxYkSTx2tra3ft2vX3v/89uoJdGVOxekLfEwBAq3QU7KxW69atW5t79uc///mePXuqq6sT\r\nEhIiWVVbuDzecUzF6gl9TwAALWPzxPeysrL69esXRakOOkTfEwBAywh233v99dedTqfSVQTH7vTQ\r\n60Rv6HsCAGiBjqZihRAbN25s+QVjxoyJTCXhQndivbFZjIXrSu1OD9tjAQCN6SjYORyOFrbECiFi\r\nY2Olu75GC7oT65A5zVAwMZO+JwCAJuko2EnefPPN8N4rVil0J9YtadCOWA8AaEx3we6yyy7TSLCj\r\nO7FeSc2KC9eVLs8dpHQtAAB1YfNEtKI7sZ4VTMxkbywAoDGCXbSiO7Geyc2KlS4EAKAuBLtoRXdi\r\nnSvIySxcR98TAMBP6G6N3Y4dO9LT05t7dujQoZEsBgiZ3KyY7bEAAJnugl1OTk5zT0VXuxO705Nn\r\n7aF0FVCSdIex0j9ernQhAAC10Fews9lsLTwbExNlE9N0J9Y5Bu0AAH50FOysVuv69euVriJsaGMG\r\n8cMdxmx3E+wAAEKweSJK0Z0YEpvF6PJ4aX0CAJDoaMTO4XDMmjWrhRfExMRs3749YvW0Bd2JIeEO\r\nYwAAXzoKdkKIXbt2tfBsbGxsxCppI7oTQybdhYKVdgAAobdgJ/nDH/4wffr0hIQEpQsJHd2JITOn\r\nGfJHmhi0AwAIXa2xs1qtTzzxRNeuXR9//PGLL7540qRJ586dy/oppWsMFN2J4SvParI7Pay8BADo\r\nKNgJIe69996TJ09+880306dPd7lcw4YNS0hIuOmmm44cOaJ0aUDozGkGaUJW6UIAAArTV7CT9OrV\r\na8WKFV6vd9++fQMHDlyzZk3fvn27detWUFCgdGmBYkEV/BRMzGRvLABAj8FONmDAgN27d7vd7jlz\r\n5pw6derPf/6z0hUBIZIG7WasLlG6EACAkvQb7L799tslS5ZkZGSkpaUVFRUlJyffdNNNShcVKLoT\r\nozEG7QAAugt2Ho9n0aJFffr06dy585w5c06fPn377be7XK5z58698sorSlcXEFIdmmROM5iNhmJH\r\nhdKFAAAUo6N2Jw6H44YbbigvLxdCpKSkTJs27dFHH83IyFC6rqC5PFVmI8EOTViemz2+aHu+1aR0\r\nIQAAZego2AkhysvLL7nkkkcffbRv375CCI/H4/H8ZOpq6NChCpUWBLoToznyoB3ZDgD0SV/BTgix\r\nZ8+eKVOmNPlUbGxsbW1thOsJAd2J0QIG7QBAz3QU7KxW6yeffKJ0FWFAd2K0gEE7ANAzHQU7IcSY\r\nMWOULgFodwU5mTNWlxDsAECHdLcrtjnffffdI488onQVAaE7MVpmsxjZHgsA+kSwE2VlZUOHDk1O\r\nTi4sLFS6FiA8CnIyucMYAOiQfoNdbW3ts88+261bN7PZvGvXLiFEly5dlC4qIPSxQ6sYtAMAfdJj\r\nsDty5Mh//Md/xMfHz50799SpU0KIa665xuVyHT9+XOnSWkeqQ4AYtAMAHdJXsHv55Zd79erVt2/f\r\nDz/8UDry5ptvNjQ0vPfee9HSqdju9NCdGIFg0A4AdEgXwe748eNTp07t0KFDbm5ueXl5cnLy7373\r\nuzVr1gghhg0bpnR1QaM7MQK0PDebQTsA0BWNB7sPP/wwIyOjR48eq1evFkIMGzbswIED586d++tf\r\n/xotK+r8lLm9jNghQNw9FgD0RuPBbtasWYcPH+7Xr9+bb75ZU1Ozffv2rKwspYtqE5fHm8EaOwSM\r\nQTsA0BWNBzvJ0aNH77vvvm3btildCBBp5jSDzWKcsbpE6UIAAJGg8WD31VdfPfXUUykpKSUlJaNH\r\nj+7QocOVV15ZVlamdF2hozsxglUwMdPu9ChdBQAgEjQe7Dp27Pib3/zm5MmTLpdr8uTJQoiPP/7Y\r\nbDanpqb+6U9/Uro6IBIYtAMA/dB4sJNlZGS89dZbDQ0N77//ft++fc+cOWO324UQo0ePXrx48Xff\r\nfad0gYGijx1CIA3audxepQsBALQvvQQ72dVXX11WVnbq1Kn58+cnJyeXl5ffc889ycnJFotFbm6n\r\nWqQ6hEYatGMXBQBonu6CnaRLly5/+9vfzp07t2/fvksuuUQIcejQoauvvlrpulpBd2KETBq0Y7Ed\r\nAGibToOdbMCAAbt3766qqlq6dGm3bt2ULqd1dCdGaMxphoKJmSscx5QuBADQjvQe7CQGg+Guu+6q\r\nqFB7H1e6E6MtbBYjg3YAoG0Eu2hCd2K0hTRoV7iWlXYAoFkEu2jiclcpXQKim9QEkUE7ANAqgl00\r\ncXm8dCdGW5jTDAU5mfS0AwCtIthFE/qQoe1sFqPZaCh2qH1FKQAgBAS7KEMfO7Td8txsetoBgCYR\r\n7KKG3ekh1SEsuMkYAGgVwS5quNwssEPYcJMxANAkgh2gR9+3PmFCFgC0hWAXNehOjPCiXzEAaA/B\r\nLmrQnRjhZU4zLM8dxEo7ANASgl3UcLmr2DyB8KL1CQBoDMEuarg8XrMxSekqoDW0PgEALSHYRQ2X\r\n28uIHcKO1icAoCUEO0DvCiZmutxV7KIAAA0g2IVfSUnJqVOnwntOu9Njs6SG95yAxJxmyLOaCtcy\r\nIQsAUY9gF2b79u1btGjRvn37wntal9trTmOBHdpLvtUkhGAXBQBEO4JdOO3fv7+oqEjpKoBQsIsC\r\nADSAYBcetbW177777lNPPVVTU9Me59/grKQ7MdqVOc2QP9LELgoAiGoEu/BYsmTJW2+9NXjw4Nzc\r\n3HZ6C7oTo73lWU3ciwIAohrBLjx69+49b968uXPnpqSktMf57U4PvU7Q3qQbyDJoBwDRK07pAjTi\r\nhhtuCO0bZ8+e7fvlpEmTJk+e3OQr6U6MCMi3mlY4KgrXlhbkZCpdCwAE5+23337nnXeUrkJhBDuF\r\nLV26NJCX0Z0YEbM8N3t80fY8q4lfOQDRZfLkyX6DI36jJ3rAVGwUINUhkn6YkP1a6UIAAEEj2EUB\r\nu9PDllhEEm3tACBKEeyiA92JEWFSWzuX26t0IQCAIBDsokCZ28uIHSJMamtHy2IAiC4Euyjg8nhp\r\nYofIy7OaXO4qJmQBIIoQ7KKAy12ldAnQI3OagQlZAIguBLso4PJ4bRaj0lVAj5iQBYDoQrALs6FD\r\nhy5duvQXv/hFGM9JuxMoiAlZAIgiBDsALWFCFgCiCMFO7exOj82SqnQV0DVaFgNAtCDYqZ3L7aWJ\r\nHRQnrfIsXMtiOwBQNYIdgNZJE7LFWyvsTo/StQAAmkWwU7sNzspxTMVCBX6YkC1RuhAAQLMIdgAC\r\nlW812SxGJmQBQLUIdmpnd3poYgf1KJiYaXd6mJAFAHUi2AEIgrTYbsbqErqfAIAKEezUju7EUBvp\r\ndhR0PwEAFSLYqZrd6SHVQYUKcjIF3U8AQH0IdqrmcnOXWKjU8txsFtsBgNoQ7ACEgsV2AKBCBDtV\r\n2+CsNBuZioVKcasxAFAbgp3aZbDGDiqWbzWZ05JYbAcAKkGwUzWa2EH9pM52xY4KpQsBABDsALSN\r\ntNiucF0pi+0AQHEEO1WjiR2igrTYbnzRdqULAQC9I9ipF03sEEXyrab8kabxz5LtAEBJBDv1ookd\r\noktBTqbNYmQjBQAoiGAHIGzyrCa700O2AwClEOzUa4OzcpwlVekqgCBIGym4IwUAKIVgByCcuCMF\r\nACiIYKdeNLFDlJI3yZLtACDC4pQuAM2i1wmiV77VJIQYX7S99I+XK10LAOgII3YA2oXUAGXG6hKl\r\nCwEAHSHYqZTd6bGxcwJRriAn02w0kO0AIGIIdirlcnvNaUlKVwG0VZ7VZDYaaIACAJFBsFOpMrfX\r\nbGSBHaKeOc1AczsAiBiCnUq5PN4Mdk5AE+TmdmQ7AGhvBDuV4kax0BKyHQBEBsFOvcxG1thBO8h2\r\nABABBDuVookdtIdsBwDtjWCnRszDQqvIdgDQrgh2auRye7mZGLSKbAcA7Ydgp0Zl3GETmka2A4B2\r\nQrBTI5fHO47bTkDTpGxXvLWCbAcAYUSwUyPW2EEPzGmG9XOGM24HAGFEsFMpep1AD6RxOyEE2Q4A\r\nwoJgp0b0OoF+SPccE0LMWF2idC0AEPUIdqpjd3psLLCDnpjTDAU5mWajIfPPm13sHAKANiDYqY7L\r\n7TWnMQ8L3SnIycwfaRpftJ1sBwAhI9ipzgZnpdnIPCz0qCAnc3nuoPFF24sdFUrXAgBRiWCnRhks\r\nsINe2SzG9XOGr3DQBgUAQkGwUx2708NtJ6Bn0lZZl8dLtgOAYBHsVIctsYA5zVAwMVMIwXYKAAgK\r\nwU5d+DcMkEhbZaXtFAzdAUCACHbqYnd68q0mpasA1KIgJ3P9nOHceQwAAkSwU5cyRuyAn5LuPCaY\r\nlgWAABDs1MXl8Y6jOzHwU0zLAkCACHbqwpZYoDlMywJAqwh26sKWWKAFvtOyNDEGgMYIdipid3qU\r\nLgFQO2ladv2c4YXrShm6AwA/BDsVcbm9bIkFAuE7dEe8AwAZwU5FuEssEDh56K54a8WM1SVsmAUA\r\nQbBTFbvTw11igaBIQ3dmo4ENswAgCHZqw5ZYIFjy0J1gUwUA3SPYqQhbYoGQ+W6qyPzzZrYiAdAn\r\ngp1aFDsq2DkBtJE0M5s/0lS4tpSFdwB0iGCnFuycAMJCGrpbnpstL7wj3gHQD4KdWrBzAggj34V3\r\nxDsA+kGwUwuX28vOCSC8iHcA9IZgpwrFjgqbJZWdE0B78It3M1aXsLUCgFYR7NTCnJakdAmAlsnx\r\nzmw0zFhdQmMUAJoUp3QBEEKIDc7KcZZUpasAtE+Kd3lWk93pWeGoKFxXmj/SlGc1MV4OQBsYsQub\r\nhoaGkpKSrVu3lpSUNDQ0BPW9xY4KFtgBEWNOM+RbTevvHr5+znCXx8v8LADNYMQuPFwu13PPPXf6\r\n9Gnpyy5dusyZM6dPnz6BfK/UwY4BAyDyzGmG5bmDXG6v3ekpXFs6w1OSP9I0LiuV/9ECEKUYsQuD\r\n7777bvHixdXV1ffcc8/ixYv/3//7f9XV1YsXL/Z6A9p/xzwsoCzfATwhhLQCr3BtKWN4AKIOwS4M\r\n1q9ff/bs2alTpw4ePDg+Pn7YsGHTpk2rrKz8+OOPA/l2u9PD8ACgBvIGi+W5g1we7/hnd5DwAEQX\r\npmLDYPv27fHx8cOHD5ePDB06ND4+ftu2bddee23L31vsqDAbDczDAuphTjOY0ww2i7FgYqbLU7XC\r\ncax4dYkQwmYx5ll78L9hANSMYNdWDQ0N5eXlWVlZHTp08D2elZW1b9++hoYGv+N+CteVLs8d1M41\r\nAgiFnPCEEC63d4WjQlqHZzYabBYjS/EAqBBTsW114cKF+vr6lJQUv+MdO3asr6+vqalp4XvtiZdK\r\n/0IIIVwul3ycxzzmsdoef38L2mvT1s8Znmc1uTzeGUvtmX/ePGN1SbGjwneuVj0185jHUf3Y5fa2\r\n/b+zHZKFznQItjEH/Jw6deqPf/zjqFGj7rzzTt/jy5YtczgcDz74YHN7Y11u78+vvWPqkDTpy1Wr\r\nVk2dOnXSpEmTJ0/OzMwsLS2VjvOYxzxW7eP120rsTs8GZ6V9+17RubvZaDCnJRU/+t/r31wl/Q+b\r\nSurkscYed+hs8jvu8lQJIcbbxq+3r5eOj58ydfny5dLjGTNmSI/L3N4FhQsWFCyQjsuPXR5vcXFx\r\nfn6+dPwnj1//wGYbJz222zc0fuzyeF0ul9lslo43+Ti0W/mFsEjp9KnTjQ/ufug/dLXeiWDXVmfO\r\nnPn973/fXLB76KGHevfu3dz3zp49e+nSpe1fI4B253J7XZ6qDQcr7U6P3VlpTjNIOW+cJVWez4VW\r\n+QUXKWb5HS/zf82PX7rcVc091fjkoqnEYzY2OtLU3Ywav0yW0Uz0aTUSmY2t3zZJwVylw39nWWPX\r\nVklJSUKI2tpav+N1dXVCiPT0dAVqAhBxP265EJlCCKk3nhBig7NyhaNqvHOHX9QzG5N0NYqgKr5R\r\nyS+ENRm/fIOXnLp8T+L3o/TNT74B6yfHjQY5S41rdK9w37TE7wmCQrBrq4SEhNjY2LNnz/odP3v2\r\nbGxsbEJCgiJVAVCWOc2Qn2YSQuRbTeKHEOAb9aRRPSGEnPak7yLwNSfnQ69jAAAceklEQVTANOYT\r\nvKp8jzSXw+SwJScw3/gl/Vx8gxeRCypHsAuDzMzMQ4cO+W6AbWhoOHToUGZmprKFAVAJKQH4Rj3R\r\nKO0JIVY4qlwer8vt9c18wmd0xzdeqD9VNBnFRGBpTDpoNhrszkr5iM/lN5vG5H7vedYePzyV5Pft\r\ngIYR7MJg+PDhBw8e/PTTT8eMGSMd+fTTT+vq6nw72wGAnybTnkSKPi5PlZyN5OQnfjoE1fLgU+On\r\nQuC35Eu0uCas1YEx0VQak5OrnMbED4GMNAYEhWAXBmPHjrXb7S+//HJNTY3JZKqoqHjttdfS09PH\r\njh2rdGkAopJZHp+zfH/EL/nJWpig9FUW0rZESeN7HvrGL8HsJKAmBLswiI+P/+1vf7ts2bKXX35Z\r\nOpKVlTVr1qz4+HhlCwOgeT8ZFZMfW5p+MQDNI9iFh9Fo/N3vfnfmzJny8nKTyZSa6v8/uAAAAO2N\r\nYBdOnTt37ty5s9JVAAAAneKWYgAAABpBsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDY\r\nAQAAaATBDgAAQCMIdgAAABpBsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATB\r\nDgAAQCMIdgAAABpBsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMI\r\ndgAAABpBsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMIdgAAABpB\r\nsAMAANAIgh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMIdgAAABpBsAMAANAI\r\ngh0AAIBGEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMIdgAAABpBsAMAANAIgh0AAIBG\r\nEOwAAAA0gmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMIdgAAABpBsAMAANAIgh0AAIBGEOwAAAA0\r\ngmAHAACgEQQ7AAAAjSDYAQAAaATBDgAAQCMIdu2ipKTk1KlTSlehgLffflvpEsJMe1cktHhRXFFU\r\n0N5FcUVQIYJd+O3bt2/RokX79u1TuhAFvPPOO0qXEGbauyKhxYviiqKC9i6KK4IKEezCbP/+/UVF\r\nRUpXAQAA9ChO6QK0o7a2du3ate+8805MDHEZAAAogAgSNkuWLHnrrbcGDx6cm5urdC0AAECPGLEL\r\nm969e0+YMCE7O3vnzp1K1wIAAPSoQ0NDg9I1aM3OnTuLioqmT5/+i1/8ouVXLly4cP/+/ZGpCgAA\r\nvRkwYMD8+fOVriKiGLFTkt5+2wAAQLsi2AWnoaGhrq7O90hcHJ8hAABQBUJJcLZt2/b888/7Hlm6\r\ndKlSxQAAAPgi2AXHaDQOGzZM6SoAAACaQLALjsVisVgsSlcBAADQBPrYAQAAaATBDgAAQCMIdgAA\r\nABpBg2IAAACNYMQOAABAIwh2AAAAGkGwAwAA0AiCHQAAgEYQ7AAAADSCO08ooKGhYe/evefPn09O\r\nTh44cGCHDh2UrihQbam8pKSkW7duXbt2bb/yQhPCRdXW1u7du9fr9cbHxw8cODAxMTECdQYuhCuq\r\nrq7eu3dvTU1NWlpaZmZmBIoMSlt+8c6cOVNaWmqxWFJSUtqvwhAEe1H19fU1NTV+B2NiYuLj49ut\r\nxuCE9mMqLy8/fvx4hw4dMjMzO3fu3N5FBiWoK7pw4UJzT8XHx8fEqGUYJYQfU319/ddff+31eg0G\r\nQ3Z2tnquRRLy3+EXLlxQ5994bUSwizSXy/Xcc8+dPn1a+rJLly5z5szp06ePslUFoi2V79u3b9Gi\r\nRdOnT1dbsAvhojZt2vTKK694vV7py9jY2ClTpuTk5LR7rYEJ4Yq2bNmyatUq+Z8lk8k0e/Zsk8nU\r\n7rUGpo1/ZJ577rmDBw/+5je/GTRoULvVGLQQLuqll17auHGj30Gr1Tpz5sz2qjIYIVzRt99++8IL\r\nL5SUlEhfxsTEXH311VOmTGn3WgMT7BX9+te/bu4p9fz6hfBj+vrrr5cvX/7tt99KX/7sZz+bMWNG\r\ndnZ2u9camBCuyOFwvPjii1VVVdKXvXr1mjVrlnr+xmu72AULFihdg4589913jz/+eF1d3ezZs6dP\r\nn963b9+dO3du3bp1zJgxcXGqDtltqXz//v1FRUW1tbVDhgzp27dvZAoORAgXtXPnzn/84x/SXwS3\r\n33770KFDKyoqNm3alJKSYjabI1t+E0K4opKSkiVLlvTs2XPu3Lm5ubm9evVyOBwOh2Ps2LFq+J1s\r\n4x+Z999/f/PmzUKI0aNHd+vWrf3rDUhoF/Xxxx9XVlZefvnlfX1kZWVlZGREsvgmhXBF9fX1f/3r\r\nX8vKym699dY5c+aMGjWqoqJiy5YtXbp0UcP/6IZwRZWVlX1/ymg0Hj9+vEuXLpMnT05ISIjwJTQW\r\nwkWdOnXqiSeeSExMvOuuu6ZPnz5o0KCdO3du2rRp5MiRnTp1inD9jYVwRV9++eWSJUs6dep05513\r\n5uXlDRw4cPv27Rs3bhw1apTBYIhw/e2EYBdR69at27NnT35+/tChQ2NjY00mU3p6+qeffpqYmNi/\r\nf3+lq2tJaJXX1ta+//77K1eubGhoqK+vV1uwC+GiXnjhhXPnzj300EM9evSIjY1NTU0dMWKE3W4/\r\nfPjwlVdeGeH6GwvhilauXOnxeO6//36TyRQbG9uzZ8/ExMStW7f26tWrV69eEa6/sbb8kTly5Miy\r\nZcuSk5Orq6tVFexCu6h//vOfAwcOnDVr1hAfakh1IqQrstvtW7ZsufXWWydMmBAbG9upU6fBgwd/\r\n9NFHbrd7zJgxEa6/sRCuaEgjn3zyyZkzZ37729+qZKYihIv6+OOPS0pKpk2bNnTo0JiYmC5duqSl\r\npTkcjvj4eDUM2oVwRUVFRefPn7/33nsHDBgQGxvbtWvXIUOGrF279sKFC5dcckmE628n6pop17zt\r\n27fHx8cPHz5cPjJ06ND4+Pht27YpWFUgQqt8yZIlb7311uDBg3Nzc9u/xqCFcFEdOnTIzs5OTk6W\r\njyQmJmZlZckTAcoK4YquuOKKq6++2mg0ykekxydPnmzXUgMU8h+Zmpqa559/3mKxjBw5sp1rDFoI\r\nF3Xq1Kna2lrVzhaFcEUOhyMlJWX8+PHykZSUlHnz5t18883tW2tg2v539Xvvvbd///4pU6b07t27\r\nfWoMWggXJf3N5js4J42nyjOzygr2impqasrLyy+66CLfH0rXrl2zsrKkoX1tINhFTkNDQ3l5eWZm\r\npt/SzqysrPLycjXf2y3kynv37j1v3ry5c+eqbd26CPWi7r///l/96ld+5ykrK1PDGH5oVzRq1Ci/\r\nVU1ffvmlEEINQ8ht+SPz73//+9tvv1XJ+jNfoV3UkSNHhBAWi+XAgQPr16/fvHmzdEQNQriihoaG\r\n0tJSaZ27tDC/pKSkvr7+oosuuuiiiyJVeLPa/nf16dOn33333d69e0+cOLHdygxOaBclDcvt379f\r\nPrJjxw4hhBo2HIRwRefOnRNCNP73KDk5uaamRiVpte2UX0OjHxcuXKivr2/8K9WxY0dpv5saFmE0\r\nKeTKb7jhhvavLkTh+nF89NFH33777VVXXdUONQanjVdUUVFx9OjRzZs3f/XVV1deeaUagl3IV7R7\r\n92673X7nnXempqa2f5nBCe2iSktLhRAvv/yyx+ORD44ePfr/t3fvQU1c3wPAD4QQIVAMYKAUEGNK\r\necRRdLRK1VKGqcVnrcU6UKOtFhGLllY7FXHaPxy0Wh+tWgbLIFJRQIu1FjtAxwqCiIjylAhokQIS\r\nnsUgInns94/7+2W2QRAWIZt4Pn/J5e56TjZZTnbvvbtmzRq9T1FkkFFra6tGo7G0tMzNzT179iyZ\r\nuGNhYfHBBx/MmTNnjOIe2MhPDr/99ptKpWLJ1UeCWVIzZ86sqKi4ePGiXC6XSCQymaywsHD69Olv\r\nvvnmmEQ9GAYZkc7//vuvTrtcLgeAxsbGl156adTiHTtY2I0d8l2h/4hOcl6Wy+VsGDL8VIYb+SCe\r\nS1KVlZXp6el2dnaLFi0ajSCHZYQZZWVlkZsRAoGADV/HgWlGCoUiKSlpxowZr7/++hgEOVzMkmpp\r\naQEAFxeXzZs3C4XC+vr61NTUa9eu8fn8lStXjn7Ug2GQUVtbGwCUlZVdvXo1MDDQxcVFoVBcuHAh\r\nMTGRy+Xq/e75CD9KLS0t165dE4vFbBiFpsU4qenTp9fW1hYXF5P7mwKB4I033mDDKl0MMjIzMxOJ\r\nRNXV1VVVVdp5yhUVFU1NTQCg0WhGPegxgYXd2Bl8uSk2fE4GYriRD2LkSZWUlPz000+WlpZbtmyx\r\ntLR8fqExNMKM3n//falUKpfLU1JS4uPjW1pa9F6tMsvoxIkTHA4nJCRkdIIaKWZJ+fv7+/j4aEtV\r\nkUgUGRkZHR19+fLlxYsX6/ftxyAjcpuss7MzIiJCIpGQRi8vrx07dqSnp+u9sBvhRyknJwcA/P39\r\nn2dMI8Ysqdzc3OTkZG9v782bNzs4OMjl8jNnzhw+fHjVqlX08ZF6wSyjlStX7tu378iRI/PmzXNz\r\nc6urq8vJySH/0PvF7+fFSNIwCBYWFgCgUql02tVqNQAIhUI9xDQ0hhv5IEaY1B9//BEbG2tjY7N9\r\n+3YHB4dRCnJYRpgRn883MTFxdHQkYyIzMjL0/v2VQUa5ubnl5eVSqZQ+wYVVmB0md3d3nQuQZKlY\r\ntVpdW1s7OpEOFYOMyJ9kW1tbbVUHAAKBYOrUqe3t7Xof6jSSjxJFUYWFhdbW1vQR/WzAICmKotLT\r\n0wUCQVhYGDnLOTg4hIeHOzg4nDt3zhDPDwAwadKkzz77zNHR8a+//jp+/LhMJouIiCDX9uzs7EY5\r\n5DGCV+zGjrm5OYfDUSgUOu0KhYLD4bB2gB0YcuSDGElSSUlJ+fn5IpEoPDycPfNCntdh4nK57u7u\r\nxcXFtbW17u7uzzvMYWCQUVlZGQD88MMPOu2HDh0CgAMHDui94HuOnyZSHul93hWDjEQiEQD0X0+H\r\nTEKSy+X6Heo0kmNUU1OjUCjmzp3LtlsZDJJqaWl5/PjxlClT6L81NTUVi8X5+fl37tzR76rLjA+T\r\nu7v7zp07lUolRVGk25UrV0xNTdmzItIIYWE3piZNmnTv3j2KorSfeYqi7t27x5IhTYMw3MgHwSyp\r\nuLi4mzdv+vj4rFu3jj1PcyKGm5FKpdq5c6ezs/OmTZvo7X19fQDAhpkHw83Iy8tL57FUd+/effDg\r\ngUQiGT9+PBuWXAZGh+nQoUPW1tYbNmygt5M/aY6OjqMd8DMNNyMzMzNbW1uZTEbfBADIA13YcFZh\r\nfMYjD9Jg54pow02K3OInF8DoSAsbHqXI4DCVlZVpNBqyKgpp0Wg05eXlIpGIbbU4Y3grdkxNnz5d\r\npVLl5eVpW/Ly8tRqNdsu2vdnuJEPgkFSFy9evHnz5syZM8PCwthW1cHwMzIzMxs3blxFRQUZm080\r\nNTVVVlY6ODiw4Sb7cDPy9/df/V9k+YyAgIDVq1ez4U8RMDpMHR0dJSUlZO4e0dTUVF5ePnHiRDaM\r\nBGDwUZo9e7ZSqaRv0t7eXlpaKhaL2VB/Mz7jNTQ0AICHh8foxsfIcJOytrYWCoUlJSX0udg9PT0y\r\nmcza2poN9TeDw5SbmxsXF9fV1aVtyczMVCqVvr6+oxvrGMInT4wpFxeXGzdu3LhxY9y4cb29veXl\r\n5WfOnLG3t5dKpRwOR9/RDeaZkdfU1ERFRd29e3f27Nn9N29ubr5x4wbbnjwx3KQUCkVsbKxGo5kw\r\nYUJpaenN/5o2bZrev/AxOExCofDatWslJSVWVlYKhUImkyUmJqpUqtDQUDaMOBnhGw8AKioq6urq\r\nWPXkCQZJ2dnZFRUVlZSU8Pn87u7u6urq48ePA0B4eDgbFmhgkJGrqyvZhKIolUpVV1eXkJDQ29sb\r\nGhrKhkvFjN94ycnJZmZmS5Ys0VPgg2F8frh586alpWV3d3ddXd2JEydaW1ulUikbnkzDICNra+uC\r\nggKZTDZ+/Pj29vYrV65kZGS8+uqr7FxFnxn9fzF6oXC53M8//zw+Pj41NZW0iMXiTz75hIXXfnQY\r\nbuSDGG5S1dXVZKBuaWlp/9+uXbtW75OqGBwmLy+viIiI5ORkUigAgLOzc3h4OBkFpXf4xiOmTZsW\r\nFhaWlpaWmJhIWpydnVevXs2SpxowyMjS0vKrr746efLkhQsXSIudnV1ERAQbnrkMI3jj9fb26ndk\r\n6iAYJCWRSLZs2ZKcnHzixAnSYmtrGxoaOmPGjLGI+FkYZOTp6bl27dqzZ88ePXoUAExNTefNmxcU\r\nFDRGEY8JE70PvH0xdXV1NTU1vfzyy2z4bjoshhv5IIwvKQYZyeXyjo4OJycnnTFqLGF8xwgYJdXc\r\n3NzZ2cna14FBRr29vX///bdAIGDDYMH+8I1HkPODra0tG2799zfcjCiKqqur6+vrmzx5Mhtu/T9f\r\nWNghhBBCCBkJnDyBEEIIIWQksLBDCCGEEDISWNghhBBCCBkJLOwQQgghhIwEFnYIIYQQQkYCCzuE\r\nEEIIISOBhR1CCCGEkJHAwg4hhBBCyEhgYYcQQgghZCSwsEMIsYtcLh9Kt8LCQhMTk+Li4tGOZ8wU\r\nFRUtXrz4wIEDQ+yfnJw8fvz4+/fvj2pUCCHDgoUdQogtHj58+NFHH23cuPGZPfv6+oKDg4ODg1ny\r\nMPLnorW1NSMjo7S0dIj9Q0JCRCLRxx9/PKpRIYQMCxZ2CCG2KC0tTUxMHErP3bt3379/PyYmZpQj\r\nYrv9+/dfunTp9OnT+g4EIcQWWNghhAxMZ2fn/v37g4KCJk6cqO9Y9Oytt97y8fGJiorSaDT6jgUh\r\nxApm+g4AIYQAAPLz87OysgCgvr7+559/dnNzmzdv3lN7/vjjjwqFYs2aNfTGhw8fnjp1qqCgQKVS\r\nTZgwYfHixQEBATobdnZ2JicnFxUVqVQqDw8PcitTp49cLk9NTS0uLiZ9pFKpTvkol8tPnz5969Yt\r\nlUrl7u4eEhIiFovpHQoLC6urq99++21TU9P4+Pjbt2+bmpouXLgwKCjI1PQ/36Vv376dkJDw4MED\r\nBweH0NDQ/pkOJanQ0NCNGzeePn06JCTkqS8XQujFQiGEEAtIpVL6qWnVqlUD9RSJRBYWFmq1WttS\r\nVVUlFAoBgMfj8fl8sgd/f/8nT55o+2RmZgoEAnofDodz9OhR+p7T0tLIr3g8Ho/HI/9IS0vTdkhK\r\nStJuSzpwOJyYmBj6TjZt2gQAe/bsIf+dlq+vLz2effv2kXYej8fhcDgcDnkFpFLp0JOiKKqpqQkA\r\nAgMDh/dyI4SMFBZ2CCFWUCqVly5dAoBly5Y9efJEqVQ+tVtVVRXpQ2+cP38+AGgrsIaGBl9fXwD4\r\n/vvvtVtZWFjw+fykpCRSEV6/ft3V1RUAzp07R/rcunULAPh8/qlTp0if8+fP8/l8Ho9XX19PUdTl\r\ny5cBwMbGJiUlhXTIzs52cnICgLi4OG0wpLDjcrlSqbSuro6iqKtXrzo7OwNAbGws6ZOZmQkATk5O\r\neXl5FEU9evQoMjKSlG7awu6ZSWm5urpyOJyBXjGE0AsFCzuEEFvk5uYCwPLlywfpc/LkSQD44osv\r\n6I1cLtfGxobecvXq1eXLl2sLqaCgIJ3yi/r/GtHT05P8uGrVqv59vvnmGwDYtWsXRVGzZs2iV1pE\r\neXk5ANjb22uvIJLCbvbs2fRuCQkJABAcHEx+nDt3LgBkZ2fT+wQGBtILu2cmpUWyy8jI0H2xEEIv\r\nHpw8gRAyJPn5+QDg4+NDbxSLxV1dXeHh4UVFRaRlzpw56enpYWFhAKDRaH799VcOh7N+/Xr6Vh4e\r\nHj4+PlVVVbW1tQBw/vx5Doejs3rIp59+2tHRsWPHjt7e3uvXr9vY2JAqSksikfj5+bW1teXk5NDb\r\n3333XfqPr7zyCgA8fvwYAPr6+goKCmxsbHQGzOmEN3hSdOSeb3t7+wCvGULoBYKTJxBChqSrqwsA\r\nLCws6I3ffffde++9FxsbGxsba29vHxAQsHTp0hUrVpibmwNAZ2enUqnkcrlLly7V2duDBw8AQCaT\r\nOTk5PX782N7e3szsP2dFOzs78g9yNZHcHtXh5uYGAM3NzfRGcp9Xiz5tori4WK1Wk4t2dDpr8g2e\r\nVP8NZTJZ/9gQQi8avGKHEDIkZF0PnemlCxcurKio2LZt22uvvdbW1paSkhIcHDxx4sQ///wTAMgF\r\nOZ2pDMSMGTMWLVpkZ2dHdqtT1dGpVKqBOpBGnQVHdCKkI7Vp/11pi8ihJEXH4XC0u0UIveDwih1C\r\nyJCMGzcOAJRKpU67WCzeu3fv3r17//nnn6ysrGPHjl2/fn316tWNjY3e3t5kw99//32g3fb19QHA\r\no0ePnvorc3NzMvuhsbGxf4fu7m4A0E5cfSayPEpDQ4NOe/+WQZKiF46dnZ0A4OHhMcQAEEJGDK/Y\r\nIYQMCbnvSX+ebGNj45dffnnkyBHyo4uLy7p16woKCoRCYXNzc09Pj5WVlVAorK+v7/9Y1a1bt379\r\n9dft7e3m5uZubm4KhUKnT05ODo/HW7lypUQi4XK5xcXFpIrS0mg0eXl5AODl5TXEFMRisUAgKCkp\r\naW1tpbcXFBQMPSn6hmQCh4ODwxADQAgZMSzsEEJsMWHCBABQKBSD9Jk6dSoAaOcTAIClpeWBAwei\r\no6PpdVJ3d7dCoeByuZaWlgBAlv8l81W1UlNT9+/fn5CQQO7SkmXkoqOj6X0OHz4MAEuWLDE1NV2/\r\nfr1ard66dSu9w+7duxsaGmbNmuXu7j70TENDQ9VqdVRUlLbl4cOH33777bCS0iJlrqen59ADQAgZ\r\nLX1Py0UIof/z5MkTcl5atmzZnj17ntpHoVBwOBxvb29647Zt2wDAzc3t4MGD586di4uLmzJlCgBE\r\nR0drtyItPj4+8fHxv/zyy5YtW8jQNO0qIdo+AQEBKSkpKSkpCxYsAID58+eTDm1tbeR6oZ+f36lT\r\np1JSUlasWAEAAoGgqqpKGwwpH1NSUugRZmdnA20lF4VCQeqwRYsWpaWlxcXFeXp6kru92uVOnpkU\r\noVareTyeo6Mjs9ccIWRksLBDCLHIrl27SL3l5uY2UJ8lS5YAQENDA70xKiqKPlVWIBCQxee0Ojo6\r\n1q5dy+VytX28vb0zMzPpfdra2qRSKQkAAMgKKQqFQtuhpaXlww8/1HYAgMDAwJqaGvpOhlLYkV0t\r\nW7aMHkxlZSW9sBtKUhRFkVWdIyMjB3q5EEIvFBOKokZ+2Q8hhJ4XjUbT09Njbm7ef10PIisra8GC\r\nBTExMdu3b9fZsKysrKmpydXVVSKRPHVblUpVUFDw6NEjb29vFxeXp/bp6+vLzc3VaDR+fn5PjUHb\r\nwdfX18rKapj5/Ud7e3tRUZFIJBroTu4zk9qwYcOxY8fu3LkzrHvBCCFjhYUdQsjwTJs2raenp7q6\r\nWt+B6Fl3d7ejo+M777xz9uxZfceCEGIFnDyBEDI8Bw8erKmpOXPmjL4D0bPDhw/39vbu2bNH34Eg\r\nhNgCr9ghhAzSmjVrioqKKioqBlkK2Lh1dnZOnjw5MjJy586d+o4FIcQWHPKIa4QQMix+fn6VlZWO\r\njo4DDZUzetnZ2VZWVjExMSYmJvqOBSHEFnjFDiGEEELISLygtzAQQgghhIwPFnYIIYQQQkYCCzuE\r\nEEIIISOBhR1CCCGEkJHAwg4hhBBCyEhgYYcQQgghZCSwsEMIIYQQMhL/A4B19JoBb3YIAAAAAElF\r\nTkSuQmCC\r\n--673115f0b8265e68cca11fa5a694f4a995172a45d57c24cefca0ed158072--\r\n	out	2019-12-23 12:08:50.120225+00	sent	t	f
+221	testtest	fuckfuckqdwqd	Local100	BodyBodyBodyy	out	2019-12-23 12:32:09.977291+00	sent	f	f
+232	testtest	fuckfuckqdwqd	Lecal1	Local	out	2019-12-23 12:53:41.411249+00	sent	f	f
+\.
+
+
+--
+-- Name: message_id_seq; Type: SEQUENCE SET; Schema: public; Owner: go
+--
+
+SELECT pg_catalog.setval('message_id_seq', 237, true);
+
+
+--
+-- Data for Name: receiver; Type: TABLE DATA; Schema: public; Owner: go
+--
+
+COPY receiver (id, mailid, email) FROM stdin;
+1	1	admin
+2	2	aa@mail.ru
+13	3	testtest
+14	4	testtest
+15	5	testtest
+17	7	testtest
+18	8	testtest
+19	9	testtest
+20	10	testtest
+21	11	testtest
+22	12	testtest
+23	13	testtest
+24	14	testtest
+25	15	testtest
+27	17	testtest
+28	18	testtest
+29	19	testtest
+31	21	testtest
+32	22	testtest
+33	23	testtest
+34	24	testtest
+35	25	testtest
+36	26	testtest
+37	27	testtest
+38	28	testtest
+39	29	testtest
+40	30	testtest
+41	31	testtest
+42	32	testtest
+43	33	testtest
+44	34	testtest
+45	35	testtest
+46	36	testtest
+47	37	testtest
+48	38	testtest
+49	39	testtest
+50	40	testtest
+51	41	testtest
+52	42	testtest
+53	43	testtest
+54	44	testtest
+55	45	testtest
+56	46	testtest
+57	47	testtest
+58	48	testtest
+59	49	testtest
+60	50	testtest
+61	51	testtest
+62	52	testtest
+63	53	testtest
+64	54	testtest
+65	55	testtest
+66	56	testtest
+67	57	testtest
+68	58	testtest
+69	59	testtest
+70	60	testtest
+71	61	testtest
+72	62	testtest
+73	63	andreykochnov@yandex.ru
+74	64	andreykochnov@yandex.ru
+75	65	ivanov.vanya.111@mail.ru
+76	66	andreykochnov@yandex.ru
+77	67	testtest
+78	68	s.volodin@corp.mail.ru
+79	69	testtest
+80	70	testtest
+81	71	andreykochnov@yandex.ru
+82	72	andreykochnov@yandex.ru
+83	73	andreykochnov@yandex.ru
+84	74	testtest
+85	75	andreykochnov@yandex.ru
+86	76	andreykochnov@yandex.ru
+87	77	andreykochnov@yandex.ru
+88	78	andreykochnov@yandex.ru
+89	79	testtest
+90	80	testtest
+91	81	andreykochnov@yandex.ru
+92	82	testtest
+93	83	testtest
+94	84	testtest
+95	85	testtest
+96	86	ivanov.vanya.111@mail.ru
+97	87	andreykochnov@yandex.ru
+98	88	testtest
+99	89	ivanov.vanya.111@mail.ru
+100	90	ivanov.vanya.111@mail.ru
+102	92	andreykochnov@yandex.ru
+103	93	galina
+104	94	ivanov.vanya.111@mail.ri
+105	95	andreykochnov@yandex.ru
+106	96	ivanov.vanya.111@mail.ru
+107	97	lipko_dima@mail.ru
+108	98	ivanov.vanya.111@mail.ru
+109	99	ivanov.vanya.111@mail.ru
+110	100	s.volodin@corp.mail.ru
+111	101	s.volodin@corp.mail.ru
+112	102	d.dorofeev@corp.mail.ru
+113	103	spameri
+114	104	vinebrother
+115	105	patricber45
+116	106	ivanov.vanya.111@mail.ru
+117	107	patricber45
+118	108	andreykochnov@yandex.ru
+119	109	sdhxjdbbdj
+120	110	v.romanov@corp.mail.ru
+121	111	spameri
+122	112	ru2
+123	113	ivanov.vanya.111@mail.ru
+124	114	qwerty
+125	115	ru2
+126	116	ru2
+127	117	ivanov.vanya.111@mail.ru
+128	118	yury.baykov
+129	119	ru2
+130	120	ru2
+131	121	wh2
+132	122	ru2
+133	123	ru2
+134	124	ru2
+135	125	ru2
+136	126	ru2
+137	127	ru2
+138	128	ru2
+139	129	ru2
+140	130	wh2
+141	131	ru2
+142	132	ru2
+143	133	ru2
+144	134	ru2
+145	135	ru2
+146	136	wh2
+147	137	ru2
+148	138	ru2
+150	140	ru2
+152	142	ru2
+154	144	ru2
+156	146	wh2
+158	148	ru2
+160	150	ru2
+162	152	ru2
+164	154	ru2
+166	156	ru2
+168	158	ru2
+170	160	ru2
+172	162	wh2
+149	139	ru2
+151	141	ru2
+153	143	ru2
+155	145	ru2
+157	147	ru2
+159	149	ru2
+161	151	ru2
+163	153	ru2
+165	155	ru2
+167	157	ru2
+169	159	wh2
+171	161	ru2
+173	163	wh2
+174	164	ru2
+175	165	ru2
+176	166	ru2
+177	167	ru2
+178	168	ru2
+179	169	drujininii@yandex.ru
+180	170	testtest
+181	171	andreykochnov@yandex.ru
+182	172	andreykochnov@yandex.ru
+183	173	testtest
+184	174	testtest
+185	175	testtest
+186	176	ru2
+187	177	andreykochnov@yandex.ru
+188	178	testtest
+189	179	ru2
+190	180	ru2
+191	181	ru2
+192	182	ru2
+193	183	ru2
+194	184	spameri
+195	185	ru2
+196	186	ru2
+197	187	ru2
+198	188	ru2
+199	189	ru2
+200	190	ru2
+201	191	ru2
+202	192	ru2
+203	193	ru2
+204	194	ru2
+205	195	ru2
+206	196	ru2
+207	197	ru2
+208	198	ru2
+209	199	ru2
+210	200	ru2
+211	201	ru2
+212	202	ru2
+213	203	ru2
+214	204	ru2
+215	205	ru2
+216	206	ru2
+217	207	ru2
+218	208	ru2
+219	209	ru2
+220	210	andreykochnov@yandex.ru
+221	211	testtest
+222	212	testtest
+223	213	testtest
+224	215	testtest
+225	214	testtest
+226	216	andreykochnov@yandex.ru
+227	217	ru2
+228	218	andreykochnov@yandex.ru
+229	219	testtest
+230	220	testtest
+231	221	testtest
+232	222	testtest
+233	223	ru2
+234	225	testtest
+235	224	testtest
+236	226	andreykochnov@yandex.ru
+237	227	fuckfuckqdwqd
+238	228	fuckfuckqdwqd
+239	229	testtest
+240	230	testtest
+241	231	ru2
+242	232	testtest
+243	233	testtest
+244	234	ru2
+245	235	testtest
+246	236	testtest
+\.
+
+
+--
+-- Name: receiver_id_seq; Type: SEQUENCE SET; Schema: public; Owner: go
+--
+
+SELECT pg_catalog.setval('receiver_id_seq', 246, true);
+
+
+--
+-- Data for Name: session; Type: TABLE DATA; Schema: public; Owner: go
+--
+
+COPY session (login, token) FROM stdin;
+vileven11	793e3db5-1db4-11ea-a07e-d00d1a0acfc3
+testtest	dfb8640d-1f29-11ea-97ae-d00d1a0acfc3
+testtest	2c664cc7-1f76-11ea-8e90-d00d1a0acfc3
+testtest	f3d87be9-1f7d-11ea-a0e0-d00d1a0acfc3
+testtest	4e539cb9-1f82-11ea-a0e0-d00d1a0acfc3
+testtest	dd6ab799-1f87-11ea-a0e0-d00d1a0acfc3
+testtest	de44b1bf-1f87-11ea-a0e0-d00d1a0acfc3
+testtest	e3db8117-1f87-11ea-a0e0-d00d1a0acfc3
+testtest	eddf5fd8-1f87-11ea-a0e0-d00d1a0acfc3
+testtest	ee8c6666-1f87-11ea-a0e0-d00d1a0acfc3
+testtest	f313fc20-1f87-11ea-a0e0-d00d1a0acfc3
+testtest	0ff37f01-1f88-11ea-a0e0-d00d1a0acfc3
+testtest	287e55ab-1f88-11ea-a0e0-d00d1a0acfc3
+testtest	82d1b5c5-1f88-11ea-a0e0-d00d1a0acfc3
+testtest	adb8c506-1f88-11ea-a0e0-d00d1a0acfc3
+testtest	c40e347d-1f88-11ea-a0e0-d00d1a0acfc3
+testtest	aae883de-1f95-11ea-a0e0-d00d1a0acfc3
+testtest	a37b8e3f-1fa1-11ea-9815-d00d1a0acfc3
+testtest	887d1630-1fa4-11ea-9815-d00d1a0acfc3
+testtest	9ee91431-1fa4-11ea-9815-d00d1a0acfc3
+testtest	a18af4f4-1fa4-11ea-9815-d00d1a0acfc3
+testtest	7cbfce8b-1fa7-11ea-9815-d00d1a0acfc3
+testtest	8443afd1-1fa7-11ea-9815-d00d1a0acfc3
+testtest	ae2c6771-1fa7-11ea-9815-d00d1a0acfc3
+testtest	c003d1a1-1fa7-11ea-9815-d00d1a0acfc3
+testtest	fe2b93d3-1fa7-11ea-9815-d00d1a0acfc3
+testtest	9371ea31-1fd5-11ea-9815-d00d1a0acfc3
+testtest	9c0eaf48-1fd5-11ea-9815-d00d1a0acfc3
+testtest	a1661825-1fd5-11ea-9815-d00d1a0acfc3
+testtest	ecd1217f-1fd5-11ea-9815-d00d1a0acfc3
+testtest	edf26ba1-1fd5-11ea-9815-d00d1a0acfc3
+testtest	0d48b5cd-1fd6-11ea-9815-d00d1a0acfc3
+testtest	15779ec0-1fd6-11ea-9815-d00d1a0acfc3
+testtest	233f7193-1fd6-11ea-9815-d00d1a0acfc3
+testtest	25e36f7c-1fd6-11ea-9815-d00d1a0acfc3
+testtest	269d63bb-1fd6-11ea-9815-d00d1a0acfc3
+testtest	26b74e45-1fd6-11ea-9815-d00d1a0acfc3
+testtest	559d3acb-1fd7-11ea-9815-d00d1a0acfc3
+testtest	fef7a02c-1fdc-11ea-9815-d00d1a0acfc3
+testtest	01d519e9-1fe1-11ea-9815-d00d1a0acfc3
+testtest	ee2b7fc5-1fe1-11ea-9815-d00d1a0acfc3
+abcde	6b26d14a-1fe2-11ea-9815-d00d1a0acfc3
+ZelDen	403dfc0d-1feb-11ea-9815-d00d1a0acfc3
+testtest	18863510-1fec-11ea-9815-d00d1a0acfc3
+abcdef	b56d81a0-1fec-11ea-9815-d00d1a0acfc3
+aaaaaaa	e1a70101-1fec-11ea-9815-d00d1a0acfc3
+dnlipko	7794148d-1ffb-11ea-b00a-d00d1a0acfc3
+andreykochnov	79ecc62d-1ffc-11ea-b00a-d00d1a0acfc3
+fuckfuck	2febda06-2010-11ea-b00a-d00d1a0acfc3
+testtest	6c03768a-2011-11ea-b00a-d00d1a0acfc3
+ivan	1593c8b6-201a-11ea-b00a-d00d1a0acfc3
+vileven	00e8bce5-201b-11ea-b00a-d00d1a0acfc3
+testtest	f45dfa1e-20f3-11ea-aae8-d00d1a0acfc3
+testtest	fe5805af-2163-11ea-8bd8-d00d1a0acfc3
+sdhxjdbbdj	bf6c6e85-21a4-11ea-8bd8-d00d1a0acfc3
+jvnjkfdvn	2983a2a2-21a9-11ea-8bd8-d00d1a0acfc3
+rvasily	565f426a-21ab-11ea-8bd8-d00d1a0acfc3
+testtest	9f113f93-21ab-11ea-8bd8-d00d1a0acfc3
+testtest	ede98baa-21c2-11ea-8bd8-d00d1a0acfc3
+testtest	476d13c2-2318-11ea-8bd8-d00d1a0acfc3
+testtest	42512de4-2364-11ea-8bd8-d00d1a0acfc3
+testtest	e6cab34d-2401-11ea-bb72-d00d1a0acfc3
+qwerty	b0ac56f5-2403-11ea-96ef-d00d1a0acfc3
+testtest	d8258d3e-2406-11ea-96ef-d00d1a0acfc3
+yury.baykov	d44a8f29-240e-11ea-96ef-d00d1a0acfc3
+testtest	daa925dd-24a6-11ea-96ef-d00d1a0acfc3
+drujininii	a73dc02e-24f3-11ea-81b2-d00d1a0acfc3
+testtest	a049c806-24fe-11ea-9c5e-d00d1a0acfc3
+testtest	482a67bd-2508-11ea-9a0e-d00d1a0acfc3
+testtest	f5020775-2573-11ea-ab92-d00d1a0acfc3
+fuckfuckqdwqd	f8395883-257f-11ea-9a59-d00d1a0acfc3
+testtest	1a1447ff-2585-11ea-96f6-d00d1a0acfc3
+fuck	2568c752-2585-11ea-96f6-d00d1a0acfc3
+\.
+
+
+--
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: go
+--
+
+COPY users (login, password, sault, firstname, secondname, sex, avatar, birthdate, role) FROM stdin;
+admin	\\x77656465776465	\\x776564657764657764	Ian	Ivanov	male	default.png	2019-12-12	common
+ivan	\\xf70b86f7ba075fb3ab5cf6649503a4e18d22cff83d238612796e0c4c4b2b88ff	\\x6976616ed41d8cd98f00b204e9800998ecf8427e	Next	Level	male		2019-12-16	common
+testtest	\\xfd98305e6651077398a25e4f18909e882eb66e64a0ebd7d8f1a7ebde346e397a	\\x7465737474657374d41d8cd98f00b204e9800998ecf8427e	Testicw	Testow	male	74657374746573743a323031392d31322d31372032333a30343a34362e313435353638363639202b30333030204d534b206d3d2b33312e333833323735383139da39a3ee5e6b4b0d3255bfef95601890afd80709.png	1228-01-01	common
+ZelDen	\\x9cce1007da7559889e6580544759af15ff2ffc74b79a5e370653e54c15b16a09	\\x5a656c44656ed41d8cd98f00b204e9800998ecf8427e			male		2019-12-16	common
+dnlipko	\\x84b3afcd6a03f967ef60ca02f5398eb8e46b900c70272fe1483260c8ba4f8c00	\\x646e6c69706b6fd41d8cd98f00b204e9800998ecf8427e	Next	Level	male		2019-12-16	common
+vileven	\\x24f7674a96943b978737dcd6d2369e4afd757c812ab00ca3918a9e35be01bcbf	\\x76696c6576656ed41d8cd98f00b204e9800998ecf8427e	Next	Level	male	76696c6576656e3a323031392d31322d31362031383a34373a35332e313534393330323137202b30333030204d534b206d3d2b31363439382e303030373732363236d41d8cd98f00b204e9800998ecf8427e.png	2019-12-16	common
+vileven11	\\xd72f78e68058f6a35fe4b7c06449f1dbf235ec9d61fd48c5b27d6312ad22bede	\\x76696c6576656e3131d41d8cd98f00b204e9800998ecf8427e	sergey	volodin	male		1997-06-15	common
+andreykochnov	\\x1d1ec9a65f56d3c293729aa55abfa6e33a3be53da559c90fe53be155d31a9116	\\x616e647265796b6f63686e6f76d41d8cd98f00b204e9800998ecf8427e	Sisixioddoso	Didisosksok	male	616e647265796b6f63686e6f763a323031392d31322d31362031353a30373a30372e353835383932363839202b30333030204d534b206d3d2b333235322e343331373335313234d41d8cd98f00b204e9800998ecf8427e.jpg	2019-12-16	common
+sdhxjdbbdj	\\xeb3682caf5451523924bdc14d3531a82edf472f77bd6992a0f620e5577088962	\\x736468786a646262646ad41d8cd98f00b204e9800998ecf8427e	Nexto	Level	male	736468786a646262646a3a323031392d31322d31382031373a34333a35382e383638353036373633202b30333030204d534b206d3d2b35353734322e363334323330383733da39a3ee5e6b4b0d3255bfef95601890afd80709.jpg	2019-12-18	common
+jvnjkfdvn	\\x25d6359da5c3ac7e2f298c0e26ada35cfd9432d77d0df5d4c14da2ef83fa0f30	\\x6a766e6a6b6664766ed41d8cd98f00b204e9800998ecf8427e	Next	Level	male		2019-12-18	common
+rvasily	\\x2b14044752cf7e2e8f8d170a93bd789b1afd221fc5f8aeebd28e0617ae7b8656	\\x72766173696c79d41d8cd98f00b204e9800998ecf8427e	Next	Level	male		2019-12-18	common
+abcde	\\x9bc26b48431718a13f19d9716494cab60a79ea96006cd044de5fe97ff2472445	\\x6162636465d41d8cd98f00b204e9800998ecf8427e	Nextjjs	Levelsss	male	61626364653a323031392d31322d31362031353a32313a33332e363134393636313535202b30333030204d534b206d3d2b343131382e343630383038353631d41d8cd98f00b204e9800998ecf8427e.png	2019-12-16	common
+abcdef	\\xc0d793e32c9cae617dbc6dbc1c01116712c18e500e595cdc984960c28e005a3f	\\x616263646566d41d8cd98f00b204e9800998ecf8427e	Next	Level	male	6162636465663a323031392d31322d31362031333a31333a34332e383932343036313938202b30333030204d534b206d3d2b33353830302e353836313739313538d41d8cd98f00b204e9800998ecf8427e.PNG	2019-12-16	common
+aaaaaaa	\\xeb6e60aec4cba1f6057266ea88d397b021a78e7fe8f45f0e85f9cca3bd239d86	\\x61616161616161d41d8cd98f00b204e9800998ecf8427e	Ihj	Jhj	male	616161616161613a323031392d31322d31362031333a31363a30382e343036363830333633202b30333030204d534b206d3d2b33353934352e313030343533333338d41d8cd98f00b204e9800998ecf8427e.jpg	2019-12-16	common
+fuckfuck	\\xa5949a0a97f711aacfb54e4a0e989650418292f377a640711de78eb7bdf61dc2	\\x6675636b6675636bd41d8cd98f00b204e9800998ecf8427e	Next	Level	male		2019-12-16	common
+qwerty	\\x4b1a7112921f9f2dbbc04b468c3aee8228b9690606a3a019eda80a7017186814	\\x717765727479d41d8cd98f00b204e9800998ecf8427e	Nextq	Level	male	7177657274793a323031392d31322d32312031383a30383a33302e313231353131373836202b30333030204d534b206d3d2b3637332e333237393532303439da39a3ee5e6b4b0d3255bfef95601890afd80709.jpg	2019-12-21	common
+yury.baykov	\\x5ddfe2332dfc53d99d2b41db84575a8f95fbe8f0c80652d5a999a124f0898a3f	\\x797572792e6261796b6f76d41d8cd98f00b204e9800998ecf8427e	Next	Level	male		2019-12-21	common
+drujininii	\\xa0c4222941fcdfd2ec13980a1c70eab86c1f47d9bc6ca976640124a60db0e80a	\\x6472756a696e696e6969d41d8cd98f00b204e9800998ecf8427e	Igor	Drujinin	male	6472756a696e696e69693a323031392d31322d32322032323a34373a33352e313835363934363733202b30333030204d534b206d3d2b373335382e393234373137303336da39a3ee5e6b4b0d3255bfef95601890afd80709.png	2019-12-22	common
+fuckfuckqdwqd	\\x7a980a4cb3ba780e958a096b57b717d6ceb97d9d00b0adebed1848d8f6a65f16	\\x6675636b6675636b7164777164d41d8cd98f00b204e9800998ecf8427e	Next	Level	male		2019-12-23	common
+fuck	\\x171d9225fc7de5111cf09cfcacccdd2f028c90ed8d2a58e69b47e6e74e6e18ca	\\x6675636bd41d8cd98f00b204e9800998ecf8427e	Next	Level	male		2019-12-23	common
+\.
+
+
+--
+-- Name: chat_pkey; Type: CONSTRAINT; Schema: public; Owner: go; Tablespace: 
+--
+
+ALTER TABLE ONLY chat
+    ADD CONSTRAINT chat_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: chatmessage_pkey; Type: CONSTRAINT; Schema: public; Owner: go; Tablespace: 
+--
+
+ALTER TABLE ONLY chatmessage
+    ADD CONSTRAINT chatmessage_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: folder_name_owner_key; Type: CONSTRAINT; Schema: public; Owner: go; Tablespace: 
+--
+
+ALTER TABLE ONLY folder
+    ADD CONSTRAINT folder_name_owner_key UNIQUE (name, owner);
+
+
+--
+-- Name: message_pkey; Type: CONSTRAINT; Schema: public; Owner: go; Tablespace: 
+--
+
+ALTER TABLE ONLY message
+    ADD CONSTRAINT message_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: receiver_pkey; Type: CONSTRAINT; Schema: public; Owner: go; Tablespace: 
+--
+
+ALTER TABLE ONLY receiver
+    ADD CONSTRAINT receiver_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users_pkey; Type: CONSTRAINT; Schema: public; Owner: go; Tablespace: 
+--
+
+ALTER TABLE ONLY users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (login);
+
+
+--
+-- Name: idx_gin_document_en_body; Type: INDEX; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE INDEX idx_gin_document_en_body ON message USING gin (to_tsvector('english'::regconfig, body));
+
+
+--
+-- Name: idx_gin_document_en_subj; Type: INDEX; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE INDEX idx_gin_document_en_subj ON message USING gin (to_tsvector('english'::regconfig, subject));
+
+
+--
+-- Name: idx_gin_document_rus_body; Type: INDEX; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE INDEX idx_gin_document_rus_body ON message USING gin (to_tsvector('russian'::regconfig, body));
+
+
+--
+-- Name: idx_gin_document_rus_subj; Type: INDEX; Schema: public; Owner: go; Tablespace: 
+--
+
+CREATE INDEX idx_gin_document_rus_subj ON message USING gin (to_tsvector('russian'::regconfig, subject));
+
+
+--
+-- Name: folder_counter; Type: TRIGGER; Schema: public; Owner: go
+--
+
+CREATE CONSTRAINT TRIGGER folder_counter AFTER INSERT OR DELETE OR UPDATE ON message DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE PROCEDURE folder_counter();
+
+
+--
+-- Name: message_delete; Type: TRIGGER; Schema: public; Owner: go
+--
+
+CREATE TRIGGER message_delete BEFORE UPDATE ON message FOR EACH ROW EXECUTE PROCEDURE message_delete();
+
+
+--
+-- Name: message_owner; Type: TRIGGER; Schema: public; Owner: go
+--
+
+CREATE TRIGGER message_owner BEFORE INSERT ON message FOR EACH ROW EXECUTE PROCEDURE message_owner();
+
+
+--
+-- Name: on_remove_folder; Type: TRIGGER; Schema: public; Owner: go
+--
+
+CREATE TRIGGER on_remove_folder BEFORE DELETE ON folder FOR EACH ROW EXECUTE PROCEDURE on_remove_folder();
+
+
+--
+-- Name: receiver_own; Type: TRIGGER; Schema: public; Owner: go
+--
+
+CREATE TRIGGER receiver_own BEFORE INSERT ON receiver FOR EACH ROW EXECUTE PROCEDURE receiver_own();
+
+
+--
+-- Name: user_changed; Type: TRIGGER; Schema: public; Owner: go
+--
+
+CREATE TRIGGER user_changed BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE user_changed();
+
+
+--
+-- Name: user_created; Type: TRIGGER; Schema: public; Owner: go
+--
+
+CREATE TRIGGER user_created AFTER INSERT ON users FOR EACH ROW EXECUTE PROCEDURE user_created();
+
+
+--
+-- Name: chat_supportnick_fkey; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY chat
+    ADD CONSTRAINT chat_supportnick_fkey FOREIGN KEY (supportnick) REFERENCES users(login);
+
+
+--
+-- Name: chat_usernick_fkey; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY chat
+    ADD CONSTRAINT chat_usernick_fkey FOREIGN KEY (usernick) REFERENCES users(login);
+
+
+--
+-- Name: chatmessage_author_fkey; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY chatmessage
+    ADD CONSTRAINT chatmessage_author_fkey FOREIGN KEY (author) REFERENCES users(login);
+
+
+--
+-- Name: chatmessage_chatid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY chatmessage
+    ADD CONSTRAINT chatmessage_chatid_fkey FOREIGN KEY (chatid) REFERENCES chat(id);
+
+
+--
+-- Name: cnst; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY message
+    ADD CONSTRAINT cnst FOREIGN KEY (folder, owner) REFERENCES folder(name, owner);
+
+
+--
+-- Name: folder_owner_fkey; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY folder
+    ADD CONSTRAINT folder_owner_fkey FOREIGN KEY (owner) REFERENCES users(login) ON DELETE CASCADE;
+
+
+--
+-- Name: message_owner_fkey; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY message
+    ADD CONSTRAINT message_owner_fkey FOREIGN KEY (owner) REFERENCES users(login) ON DELETE CASCADE;
+
+
+--
+-- Name: receiver_mailid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY receiver
+    ADD CONSTRAINT receiver_mailid_fkey FOREIGN KEY (mailid) REFERENCES message(id) ON DELETE CASCADE;
+
+
+--
+-- Name: session_login_fkey; Type: FK CONSTRAINT; Schema: public; Owner: go
+--
+
+ALTER TABLE ONLY session
+    ADD CONSTRAINT session_login_fkey FOREIGN KEY (login) REFERENCES users(login) ON DELETE CASCADE;
+
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: postgres
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM postgres;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+

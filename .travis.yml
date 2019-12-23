@@ -23,14 +23,14 @@ script:
   - ssh-add ./deploy_key
   - make
   - cp -avr build/ deploy/
-  - scp -c arcfour -i ./deploy_key -r ./deploy/scripts ian@nl-mail.ru:/home/ian/deploy/
-  - scp -c arcfour -i ./deploy_key -o "StrictHostKeyChecking=no" -r ./deploy/scripts root@mail.nl-mail.ru:/root/deploy/
+  - scp -i ./deploy_key -r ./deploy/scripts ian@nl-mail.ru:/home/ian/deploy/
+  - scp -i ./deploy_key -o "StrictHostKeyChecking=no" -r ./deploy/scripts root@mail.nl-mail.ru:/root/deploy/
   - ssh -i ./deploy_key -t ian@nl-mail.ru "cd ./deploy/scripts; chmod +x stopall.sh && ./stopall.sh && ls"
   - ssh -i ./deploy_key -o "StrictHostKeyChecking=no" -t root@mail.nl-mail.ru "cd ./deploy/scripts; chmod +x stopall.sh && ./stopall.sh"
   - sleep 10
-  - scp -c arcfour -i ./deploy_key -o "StrictHostKeyChecking=no" -r ./deploy/* root@mail.nl-mail.ru:/root/deploy/
+  - scp -i ./deploy_key -o "StrictHostKeyChecking=no" -r ./deploy/* root@mail.nl-mail.ru:/root/deploy/
   - ssh -i ./deploy_key -o "StrictHostKeyChecking=no" -t root@mail.nl-mail.ru "cd ./deploy/; chmod +x scripts/post.sh && nohup scripts/post.sh"
-  - scp -c arcfour -i ./deploy_key -r ./deploy/* ian@nl-mail.ru:/home/ian/deploy/
+  - scp -i ./deploy_key -r ./deploy/* ian@nl-mail.ru:/home/ian/deploy/
   - sleep 5
   - ssh -i ./deploy_key -t ian@nl-mail.ru "cd ./deploy/scripts; chmod +x runall.sh && nohup ./runall.sh"
 before_install:
