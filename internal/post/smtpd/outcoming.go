@@ -28,7 +28,8 @@ func (s *SMTPSender) Send(from string, to []string, subject string, body []byte)
 	//auth := smtp.PlainAuth("", s.login, s.password, s.host)
 	//err := smtp.SendMail(s.host + ":" + s.port, auth, from, to, body)
 
-	msg := composeMimeMail(to[0], from, subject, string(body))
+	//msg := composeMimeMail(to[0], from, subject, string(body))
+	msg := body
 
 	mx, err := getMXRecord(to[0])
 	fmt.Println("MX: ", mx)

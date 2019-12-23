@@ -37,15 +37,15 @@ func (u *MailBoxUsecase) SendMail(email *model.Email) error 	{
 	if host==""{
 		email.To = login + "@"+config.Conf.HttpConfig.HostName
 	}
-	email, err := u.PrepareMessage(email)
+	emailToSend, err := u.PrepareMessage(*email)
 	if err != nil {
 		return err
 	}
 	postEmail := post.Email{
-		From: email.From,
-		To:   email.To,
-		Body: email.Body,
-		Subject:email.Header.Subject,
+		From: emailToSend.From,
+		To:   emailToSend.To,
+		Body: emailToSend.Body,
+		Subject:emailToSend.Header.Subject,
 	}
 	if err := u.smtpPort.Put(postEmail); err!=nil{
 		return err
@@ -98,12 +98,12 @@ func (u *MailBoxUsecase) FindMessages(login, request string) ([]int64, error) {
 	return u.repo.FindMessages(login, request)
 }
 
-func (u *MailBoxUsecase) PrepareMessage(from *model.Email) (*model.Email, error) {
+func (u *MailBoxUsecase) PrepareMessage(from model.Email) (*model.Email, error) {
 	fromLogin :=from.From
 	from.From =from.From+"@"+"mail.nl-mail.ru"
 	name, avatar, err := u.repo.GetUserData(fromLogin)
 	if err != nil {
-		return from, err
+		return &from, err
 	}
 	if avatar=="" {
 		avatar = config.Conf.HttpConfig.DefaultAvatar
@@ -120,10 +120,10 @@ func (u *MailBoxUsecase) PrepareMessage(from *model.Email) (*model.Email, error)
 	}
 	path += config.Conf.HttpConfig.AvatarDir+ "/"
 	path += avatar
-	new.Attach(path)
+	//new.Attach(path)
 
 	var bodyWriter bytes.Buffer
 	new.WriteTo(&bodyWriter)
 	from.Body = bodyWriter.String()
-	return from, nil
+	return &from, nil
 }
