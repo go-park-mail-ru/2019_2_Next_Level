@@ -113,7 +113,7 @@ func (u *MailBoxUsecase) PrepareMessage(from model.Email) (*model.Email, error) 
 	new.SetHeader("From", name + " <"+from.From+">")
 	new.SetHeader("To", from.To)
 	new.SetHeader("Subject", from.Header.Subject)
-	new.SetBody("text/plain", from.Body)
+	new.SetBody("text/html", from.Body)
 
 	path := config.Conf.HttpConfig.RootDir + "/" + config.Conf.HttpConfig.StaticDir
 	if path[len(path)-1] != '/' {
