@@ -102,9 +102,23 @@ func (s *Server) Send() {
 		err := sender.Send(email.From, []string{email.To}, email.Subject, []byte(email.Body))
 		if err != nil {
 			log.Log().E("Cannot send email: ", err)
+
 		}
 		log.Log().L("Email sent")
 	}
+}
+
+func (s *Server) getAndSendErrorMessage(err error, message post.Email) error{
+	newBody := "Sorry, but we cannot delivery your message since:\n " + err.Error()
+	newBody += "\n------Message-----\n"
+	newBody += message.Body
+	message.Body = newBody
+	message.To = message.From
+	message.From = "mailder-daemon@nl-mail.ru"
+	log.Log().L("Created an error message: ", newBody)
+	s.mailSenderChan.Out <- message
+	log.Log().E("Sent a message about error")
+	return nil
 }
 
 func (s *Server) GenAndSendMailTest() {

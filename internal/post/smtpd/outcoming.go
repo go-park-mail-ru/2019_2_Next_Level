@@ -5,7 +5,6 @@ import (
 	"2019_2_Next_Level/internal/post/smtpd/worker"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net"
 	"net/mail"
 	"net/smtp"
@@ -52,7 +51,7 @@ func (s *SMTPSender) Send(from string, to []string, subject string, body []byte)
 
 	err = smtp.SendMail(mx+":25", nil, from, to, msg)
 	if err != nil {
-		log.Fatal(err)
+		return err;
 	}
 	return err
 }
