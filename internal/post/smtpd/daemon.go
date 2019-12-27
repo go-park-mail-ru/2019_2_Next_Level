@@ -121,7 +121,7 @@ func (s *Server) getAndSendErrorMessage(err error, message post.Email) error{
 	newBody := "<div>Sorry, but we cannot delivery your message since:</div><div> " + err.Error()+"</div>"
 	newBody += "<div>------Message-----</div>"
 	newBody += "<div>" + message.Body + "</div>"
-	newBody = strings.ReplaceAll(newBody, "\n", "<br />")
+	newBody = strings.ReplaceAll(newBody, "\\n", "<br />")
 	new := gomail.NewMessage()
 	//new.SetHeader("From", from.From, name)
 	new.SetHeader("From", message.From)
