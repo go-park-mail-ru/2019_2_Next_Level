@@ -71,11 +71,11 @@ func (s *Secretary) Run(externwg *sync.WaitGroup) {
 		case err := <-s.errorChan:
 			_, ok := err.(e.Error)
 			if !ok{
-				log.Log().E("Daemon stopping due to error: ", err)
-				finish1()
-				finish2()
-				finish3()
-				return
+				log.Log().E("Daemon not stopping due to error: ", err)
+				//finish1()
+				//finish2()
+				//finish3()
+				//return
 			}
 			continue
 			break;

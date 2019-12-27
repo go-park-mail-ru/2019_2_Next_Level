@@ -4,7 +4,9 @@ import (
 	"2019_2_Next_Level/internal/post"
 	"2019_2_Next_Level/internal/post/log"
 	"2019_2_Next_Level/internal/post/smtpd/worker"
+	"bytes"
 	"fmt"
+	gomail "gopkg.in/gomail.v2"
 	"sync"
 	"time"
 
@@ -66,10 +68,12 @@ func (s *Server) Run(externwg *sync.WaitGroup) {
 	go s.GetIncomingMessages()
 	//go s.GenAndSendMailTest()
 	go s.Send()
-	select {
-	case <-s.quitChan:
-		log.Log().L("Data in quitChan. SMTP daemon stopping...")
-		return
+	for {
+		select {
+		case <-s.quitChan:
+			log.Log().L("Data in quitChan. SMTP daemon not stopping...")
+			//return
+		}
 	}
 }
 
@@ -110,12 +114,20 @@ func (s *Server) Send() {
 }
 
 func (s *Server) getAndSendErrorMessage(err error, message post.Email) error{
+	message.To = message.From
+	message.From = "mailder-daemon@nl-mail.ru"
 	newBody := "Sorry, but we cannot delivery your message since:\n " + err.Error()
 	newBody += "\n------Message-----\n"
 	newBody += message.Body
-	message.Body = newBody
-	message.To = message.From
-	message.From = "mailder-daemon@nl-mail.ru"
+	new := gomail.NewMessage()
+	//new.SetHeader("From", from.From, name)
+	new.SetHeader("From", "mailerDaemon" + " <"+message.From+">")
+	new.SetHeader("To", message.To)
+	new.SetHeader("Subject", message.Subject)
+	new.SetBody("text/html", newBody)
+	var bodyWriter bytes.Buffer
+	new.WriteTo(&bodyWriter)
+	message.Body = bodyWriter.String()
 	log.Log().L("Created an error message: ", newBody)
 	s.mailSenderChan.Out <- message
 	log.Log().E("Sent a message about error")
