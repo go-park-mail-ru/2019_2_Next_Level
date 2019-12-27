@@ -36,19 +36,23 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 			email.To = emailTemp.To
 			email.Body += "\n\n" // preventing the EOF error of bloody the parser
 			email.Header.Subject = emailTemp.Subject
-
-			reader := strings.NewReader(email.Body)
-			msg, err := gomail.ParseMessage(reader)
-			if err != nil {
-				w.errorChan <- err
-				return
+			var res model.Email
+			if email.From != "mailder-daemon@nl-mail.ru" {
+				reader := strings.NewReader(email.Body)
+				msg, err := gomail.ParseMessage(reader)
+				if err != nil {
+					w.errorChan <- err
+					return
+				}
+				if err := w.HandleMail(msg); err != nil {
+					w.errorChan <- err
+					return
+				}
+				res = w.Repack(msg)
+				log.Log().L(res)
+			} else {
+				res.Body = email.Body
 			}
-			if err := w.HandleMail(msg); err != nil {
-				w.errorChan <- err
-				return
-			}
-			res := w.Repack(msg)
-			log.Log().L(res)
 			res.From = emailTemp.From
 			res.To = strings.Split(emailTemp.To, "@")[0]
 			out <- res
