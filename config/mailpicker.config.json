@@ -2,9 +2,9 @@
     "RemotePort": "2001",
     "RemoteHost": "mail.nl-mail.ru",
     "remoteCheckTimeout": 100 ,
-    "pickerWorkerCount": 5,
-    "cleanerWorkerCount": 1,
-    "saverWorkerCount": 1,
+    "pickerWorkerCount": 20,
+    "cleanerWorkerCount": 10,
+    "saverWorkerCount": 20,
     "Database": {
         "Port": "5432",
         "Host": "127.0.0.1",

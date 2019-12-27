@@ -1,14 +1,14 @@
 {
     "IncomingQueue" : {
         "port": ":2001",
-        "ChannelCapasity": 100
+        "ChannelCapasity": 90
     },
     "OutcomingQueue": {
         "port": ":2000",
-        "ChannelCapasity": 100
+        "ChannelCapasity": 90
     },
     "SmtpServer": {
-        "ChannelCapasity": 100
+        "ChannelCapasity": 90
     },
     "ChannelCapasity": 100,
     "Login": "elnivelproximo@gmail.com",
