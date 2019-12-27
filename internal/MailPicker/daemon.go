@@ -39,9 +39,12 @@ func (s *Secretary) Run(externwg *sync.WaitGroup) {
 	defer externwg.Done()
 	wg := sync.WaitGroup{}
 
-	ctx1, finish1 := context.WithCancel(context.Background())
-	ctx2, finish2 := context.WithCancel(context.Background())
-	ctx3, finish3 := context.WithCancel(context.Background())
+	//ctx1, finish1 := context.WithCancel(context.Background())
+	//ctx2, finish2 := context.WithCancel(context.Background())
+	//ctx3, finish3 := context.WithCancel(context.Background())
+	ctx1, _ := context.WithCancel(context.Background())
+	ctx2, _ := context.WithCancel(context.Background())
+	ctx3, _ := context.WithCancel(context.Background())
 	chan1 := make(chan interface{}, 10)
 	picker := workers.NewMailPicker(s.errorChan, s.postRes, s.repo.UserExists)
 	for i:=0; i<config.Conf.PickerWorkerCount; i++ {
