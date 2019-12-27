@@ -37,7 +37,7 @@ func (h *UserHandler) InflateRouter(router *mux.Router) {
 }
 
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	// defer resp.Send()
 	login := r.Header.Get("X-Login")
 	user, err := h.usecase.GetUser(login)
@@ -65,7 +65,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := r.Header.Get("X-Login")
 
@@ -133,7 +133,7 @@ func (h *UserHandler) EditUserInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) EditUserPassword(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 
 	passStruct := struct {

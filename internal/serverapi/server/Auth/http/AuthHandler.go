@@ -36,7 +36,8 @@ func (a *AuthHandler) InflateRouter(router *mux.Router) {
 }
 
 func (a *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
-	resp := a.resp.SetWriter(w).Copy()
+	//resp := a.resp.InflateNew(w)
+	resp  := a.resp.InflateNew(w)
 	defer resp.Send()
 	tokenCookie, err := r.Cookie(sessionTokenCookieName)
 	if err != nil {
@@ -52,7 +53,7 @@ func (a *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
-	resp := a.resp.SetWriter(w).Copy()
+	resp := a.resp.InflateNew(w)
 	defer resp.Send()
 	userInput := model.User{}
 	err := HttpTools.StructFromBody(*r, &userInput)
@@ -116,7 +117,7 @@ func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
-	resp := a.resp.SetWriter(w).Copy()
+	resp := a.resp.InflateNew(w)
 	defer resp.Send()
 	credentials := struct {
 		Login    string
@@ -152,7 +153,7 @@ func (a *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthHandler) CheckAuthorization(w http.ResponseWriter, r *http.Request) {
-	resp := a.resp.SetWriter(w).Copy()
+	resp := a.resp.InflateNew(w)
 	defer resp.Send()
 	tokenCookie, err := r.Cookie(sessionTokenCookieName)
 	if err != nil {

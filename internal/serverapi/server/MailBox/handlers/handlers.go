@@ -42,7 +42,7 @@ func (h *MailHandler) InflateRouter(router *mux.Router) {
 }
 
 func (h *MailHandler) FindMessages(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := h.getLogin(r)
 	if login=="" {
@@ -66,7 +66,7 @@ func (h *MailHandler) FindMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := h.getLogin(r)
 	if login=="" {
@@ -94,7 +94,7 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MailHandler) GetMessagesInFolder(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := h.getLogin(r)
 	if login=="" {
@@ -128,7 +128,7 @@ func (h *MailHandler) GetMessagesInFolder(w http.ResponseWriter, r *http.Request
 }
 
 func (h *MailHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := h.getLogin(r)
 	if login=="" {
@@ -145,7 +145,7 @@ func (h *MailHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MailHandler) GetEmailsById (w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := h.getLogin(r)
 	if login=="" {
@@ -184,7 +184,7 @@ func (h *MailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MailHandler) markMail(w http.ResponseWriter, r *http.Request, mark int) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := h.getLogin(r)
 	if login=="" {
@@ -208,7 +208,7 @@ func (h *MailHandler) markMail(w http.ResponseWriter, r *http.Request, mark int)
 }
 
 func (h *MailHandler) ChangeMailFolder(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 
 	login := h.getLogin(r)
@@ -246,7 +246,7 @@ func (h *MailHandler) ChangeMailFolder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MailHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := h.getLogin(r)
 	if login == "" {
@@ -269,7 +269,7 @@ func (h *MailHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MailHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
-	resp := h.resp.SetWriter(w).Copy()
+	resp := h.resp.InflateNew(w)
 	defer resp.Send()
 	login := h.getLogin(r)
 	if login == "" {

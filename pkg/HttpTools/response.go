@@ -50,6 +50,11 @@ func (r *Response) Copy() Response {
 	return *r
 }
 
+func (r *Response) InflateNew(writer http.ResponseWriter) *Response{
+	newR := *r
+	return newR.SetWriter(writer)
+}
+
 func (r *Response) Send() {
 	if r.body == nil {
 		fmt.Println("Nil error")
