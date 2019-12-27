@@ -102,9 +102,10 @@ func (s *Server) Send() {
 		err := sender.Send(email.From, []string{email.To}, email.Subject, []byte(email.Body))
 		if err != nil {
 			log.Log().E("Cannot send email: ", err)
-
+			s.getAndSendErrorMessage(err, email)
+		} else {
+			log.Log().L("Email sent")
 		}
-		log.Log().L("Email sent")
 	}
 }
 
