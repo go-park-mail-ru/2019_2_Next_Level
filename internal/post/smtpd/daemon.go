@@ -119,7 +119,7 @@ func (s *Server) getAndSendErrorMessage(err error, message post.Email) error{
 	message.Subject = "Your message is not delivered"
 	newBody := "Sorry, but we cannot delivery your message since:\n " + err.Error()
 	newBody += "\n------Message-----\n"
-	newBody += message.Body
+	newBody += "\"" + message.Body + "\""
 	new := gomail.NewMessage()
 	//new.SetHeader("From", from.From, name)
 	new.SetHeader("From", message.From)
