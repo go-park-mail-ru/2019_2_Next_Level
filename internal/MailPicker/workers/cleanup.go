@@ -38,7 +38,7 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 			email.Header.Subject = emailTemp.Subject
 			var res model.Email
 
-			if email.From != "mailder-daemon@nl-mail.ru" {
+			//if email.From != "mailder-daemon@nl-mail.ru" {
 				reader := strings.NewReader(email.Body)
 				msg, err := gomail.ParseMessage(reader)
 				if err != nil {
@@ -51,9 +51,9 @@ func (w *MailCleanup) Run(externwg *sync.WaitGroup, ctx context.Context, in chan
 				}
 				res = w.Repack(msg)
 				log.Log().L(res)
-			} else {
-				res.Body = email.Body
-			}
+			//} else {
+			//	res.Body = email.Body
+			//}
 			res.From = emailTemp.From
 			res.To = strings.Split(emailTemp.To, "@")[0]
 			out <- res
