@@ -124,11 +124,12 @@ func (s *Server) getAndSendErrorMessage(err error, message post.Email) error{
 	new.SetHeader("From", message.From)
 	new.SetHeader("To", message.To)
 	new.SetHeader("Subject", message.Subject)
-	new.SetBody("text/html", newBody)
+	new.SetBody("text/plain", newBody)
 	var bodyWriter bytes.Buffer
 	new.WriteTo(&bodyWriter)
 	message.Body = bodyWriter.String()
 	log.Log().L("Created an error message: ", newBody)
+	log.Log().L("New body end")
 	s.mailSenderChan.Out <- message
 	log.Log().E("Sent a message about error")
 	return nil
